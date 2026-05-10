@@ -39,7 +39,10 @@ func InitRedis() *redis.Client {
 
 	rdb := redis.NewClient(options)
 
-	_, err = rdb.Ping(context.Background()).Result()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*context.Second)
+	defer cancel()
+
+	_, err = rdb.Ping(ctx).Result()
 	if err != nil {
 		fmt.Printf("Warning: Failed to connect to Redis: %v\n", err)
 	}

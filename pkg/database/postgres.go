@@ -31,7 +31,9 @@ func InitDB() *gorm.DB {
 
 	if db != nil {
 		// Enable PostGIS extension
-		db.Exec("CREATE EXTENSION IF NOT EXISTS postgis")
+		if err := db.Exec("CREATE EXTENSION IF NOT EXISTS postgis").Error; err != nil {
+			log.Printf("Warning: Failed to create PostGIS extension: %v. Ensure your database user has sufficient permissions.", err)
+		}
 	}
 
 	return db

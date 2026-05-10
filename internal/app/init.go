@@ -27,13 +27,14 @@ func CreateApp() *fiber.App {
 	db := database.InitDB()
 	rdb := database.InitRedis()
 
-	// Enable PostGIS extension
-	db.Exec("CREATE EXTENSION IF NOT EXISTS postgis")
-
-	// Auto-migrate models
-	err := db.AutoMigrate(&domain.User{}, &domain.Incident{}, &domain.Place{}, &domain.UserFavorite{}, &domain.TravelHistory{})
-	if err != nil {
-		log.Fatalf("Failed to auto-migrate: %v", err)
+	if db != nil {
+		// Auto-migrate models
+		err := db.AutoMigrate(&domain.User{}, &domain.Incident{}, &domain.Place{}, &domain.UserFavorite{}, &domain.TravelHistory{})
+		if err != nil {
+			log.Printf("Warning: Failed to auto-migrate: %v", err)
+		}
+	} else {
+		log.Println("Warning: Running without database connection")
 	}
 
 	// Initialize WebSocket Hub

@@ -25,11 +25,14 @@ func InitDB() *gorm.DB {
 	})
 
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Printf("Error: Failed to connect to database: %v", err)
+		return nil
 	}
 
-	// Enable PostGIS extension
-	db.Exec("CREATE EXTENSION IF NOT EXISTS postgis")
+	if db != nil {
+		// Enable PostGIS extension
+		db.Exec("CREATE EXTENSION IF NOT EXISTS postgis")
+	}
 
 	return db
 }

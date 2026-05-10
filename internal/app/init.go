@@ -28,17 +28,21 @@ func CreateApp() *fiber.App {
 	rdb := database.InitRedis()
 
 	if db != nil {
-		// Auto-migrate models
-		err := db.AutoMigrate(&domain.User{}, &domain.Incident{}, &domain.Place{}, &domain.UserFavorite{}, &domain.TravelHistory{})
-		if err != nil {
-			log.Printf("Warning: Failed to auto-migrate: %v", err)
+		// Auto-migrate models (Skip or handle error gracefully in production/Vercel)
+		if os.Getenv("ENV") != "production" {
+			log.Println("Running auto-migration...")
+			err := db.AutoMigrate(&domain.User{}, &domain.Incident{}, &domain.Place{}, &domain.UserFavorite{}, &domain.TravelHistory{})
+			if err != nil {
+				log.Printf("Warning: Failed to auto-migrate: %v", err)
+			}
 		}
 	} else {
-		log.Println("Warning: Running without database connection")
+		log.Println("Warning: Running without database connection. Some features will fail.")
 	}
 
 	// Initialize WebSocket Hub
 	hub := ws.NewHub()
+	// Goroutines in Vercel might not survive, but we start it anyway for compatibility
 	go hub.Run()
 
 	// Initialize Repositories

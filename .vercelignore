@@ -1,0 +1,6 @@
+api.exe
+user-server
+.env
+.dist/
+bin/
+*.exe

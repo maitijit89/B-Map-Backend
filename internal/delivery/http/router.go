@@ -16,10 +16,17 @@ func SetupRoutes(app *fiber.App, userHandler *UserHandler, incidentHandler *Inci
 	app.Use(logger.New())
 	app.Use(cors.New())
 
-	app.Get("/swagger/*", fiberSwagger.WrapHandler)
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.SendString("OK")
 	})
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"message": "B_map API is running",
+			"version": "1.0.0",
+			"status":  "healthy",
+		})
+	})
+	app.Get("/swagger/*", fiberSwagger.WrapHandler)
 
 	api := app.Group("/api/v1")
 

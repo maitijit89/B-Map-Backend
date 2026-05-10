@@ -9,5 +9,5 @@ import (
 
 func Handler(w http.ResponseWriter, r *http.Request) {
 	fiberApp := app.CreateApp()
-	adaptor.FiberAppToHandler(fiberApp)(w, r)
+	adaptor.FiberApp(fiberApp)(w, r)
 }

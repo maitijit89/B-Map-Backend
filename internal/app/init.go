@@ -2,6 +2,7 @@ package app
 
 import (
 	"log"
+	"os"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
@@ -29,7 +30,7 @@ func CreateApp() *fiber.App {
 
 	if db != nil {
 		// Auto-migrate models (Skip or handle error gracefully in production/Vercel)
-		if os.Getenv("ENV") != "production" {
+		if os.Getenv("ENV") != "production" && os.Getenv("VERCEL") != "1" {
 			log.Println("Running auto-migration...")
 			err := db.AutoMigrate(&domain.User{}, &domain.Incident{}, &domain.Place{}, &domain.UserFavorite{}, &domain.TravelHistory{})
 			if err != nil {

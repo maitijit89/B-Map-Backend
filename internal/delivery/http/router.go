@@ -7,8 +7,8 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/maitijit89/B-Map-Backend/internal/delivery/ws"
 	"github.com/maitijit89/B-Map-Backend/internal/middleware"
-	fiberSwagger "github.com/swaggo/fiber-swagger"
-	_ "github.com/maitijit89/B-Map-Backend/docs" // Import swagger docs
+	// fiberSwagger "github.com/swaggo/fiber-swagger"
+	// _ "github.com/maitijit89/B-Map-Backend/docs" // Import swagger docs
 )
 
 func SetupRoutes(app *fiber.App, userHandler *UserHandler, incidentHandler *IncidentHandler, placeHandler *PlaceHandler, timelineHandler *TimelineHandler, hub *ws.Hub) {
@@ -26,7 +26,7 @@ func SetupRoutes(app *fiber.App, userHandler *UserHandler, incidentHandler *Inci
 			"status":  "healthy",
 		})
 	})
-	app.Get("/swagger/*", fiberSwagger.WrapHandler)
+	// app.Get("/swagger/*", fiberSwagger.WrapHandler)
 
 	api := app.Group("/api/v1")
 

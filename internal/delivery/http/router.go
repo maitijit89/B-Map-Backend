@@ -74,6 +74,8 @@ func SetupRoutes(app *fiber.App, userHandler *UserHandler, incidentHandler *Inci
 	pins.Post("/", pinHandler.Create)
 	pins.Delete("/:id", pinHandler.Delete)
 
-	// WebSocket route
-	app.Get("/ws", ws.NewHandler(hub))
+	// WebSocket route (Disabled on Vercel)
+	if os.Getenv("VERCEL") != "1" {
+		app.Get("/ws", ws.NewHandler(hub))
+	}
 }

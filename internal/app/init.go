@@ -48,8 +48,10 @@ func CreateApp() *fiber.App {
 
 	// Initialize WebSocket Hub
 	hub := ws.NewHub()
-	// Goroutines in Vercel might not survive, but we start it anyway for compatibility
-	go hub.Run()
+	// Goroutines in Vercel do not survive and can cause invocation issues
+	if os.Getenv("VERCEL") != "1" {
+		go hub.Run()
+	}
 
 	// Initialize Repositories
 	userRepo := repository.NewUserRepository(db)

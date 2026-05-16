@@ -17,9 +17,13 @@ import (
 )
 
 func CreateApp() *fiber.App {
-	// Load environment variables
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, using environment variables")
+	// Load environment variables only in local development
+	if os.Getenv("VERCEL") != "1" {
+		if err := godotenv.Load(); err != nil {
+			log.Println("Note: No .env file found, using system environment variables")
+		}
+	} else {
+		log.Println("Running on Vercel, skipping .env load")
 	}
 
 	// Initialize Logger

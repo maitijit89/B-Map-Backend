@@ -15,10 +15,10 @@ var fiberApp *fiber.App
 func Handler(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Printf("Panic in Handler: %v", err)
+			log.Printf("CRITICAL: Panic in Handler: %v", err)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, `{"error": "Internal Server Error", "details": "%v"}`, err)
+			fmt.Fprintf(w, `{"error": "Internal Server Error", "message": "The server encountered a panic during invocation.", "details": "%v"}`, err)
 		}
 	}()
 

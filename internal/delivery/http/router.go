@@ -11,7 +11,7 @@ import (
 	// _ "github.com/maitijit89/B-Map-Backend/docs" // Import swagger docs
 )
 
-func SetupRoutes(app *fiber.App, userHandler *UserHandler, incidentHandler *IncidentHandler, placeHandler *PlaceHandler, timelineHandler *TimelineHandler, hub *ws.Hub) {
+func SetupRoutes(app *fiber.App, userHandler *UserHandler, incidentHandler *IncidentHandler, placeHandler *PlaceHandler, timelineHandler *TimelineHandler, reviewHandler *ReviewHandler, listHandler *ListHandler, pinHandler *PinHandler, hub *ws.Hub) {
 	app.Use(recover.New())
 	app.Use(logger.New())
 	app.Use(cors.New())
@@ -32,8 +32,6 @@ func SetupRoutes(app *fiber.App, userHandler *UserHandler, incidentHandler *Inci
 
 	// Public Auth routes
 	users := api.Group("/users")
-	users.Post("/register", userHandler.Register)
-	users.Post("/login", userHandler.Login)
 	users.Post("/google-login", userHandler.GoogleLogin)
 
 	// Protected routes
@@ -44,6 +42,7 @@ func SetupRoutes(app *fiber.App, userHandler *UserHandler, incidentHandler *Inci
 	incidents := protected.Group("/incidents")
 	incidents.Post("/", incidentHandler.Report)
 	incidents.Get("/", incidentHandler.GetNearby)
+	incidents.Post("/:id/upvote", incidentHandler.Upvote)
 
 	places := protected.Group("/places")
 	places.Get("/search", placeHandler.Search)
@@ -54,6 +53,26 @@ func SetupRoutes(app *fiber.App, userHandler *UserHandler, incidentHandler *Inci
 	timeline := protected.Group("/timeline")
 	timeline.Post("/", timelineHandler.RecordLocation)
 	timeline.Get("/", timelineHandler.GetHistory)
+
+	reviews := protected.Group("/reviews")
+	reviews.Post("", reviewHandler.PostReview)
+	reviews.Get("", reviewHandler.GetPlaceReviews)
+	reviews.Get("/me", reviewHandler.GetMyReviews)
+
+	lists := protected.Group("/lists")
+	lists.Post("/", listHandler.CreateList)
+	lists.Get("/", listHandler.GetMyLists)
+	lists.Post("/:id/places", listHandler.AddPlace)
+
+	// Navigation routes
+	navigation := protected.Group("/navigation")
+	navigation.Get("/directions", placeHandler.GetDirections)
+
+	// Pin routes
+	pins := protected.Group("/pins")
+	pins.Get("/", pinHandler.GetMyPins)
+	pins.Post("/", pinHandler.Create)
+	pins.Delete("/:id", pinHandler.Delete)
 
 	// WebSocket route
 	app.Get("/ws", ws.NewHandler(hub))

@@ -67,7 +67,7 @@ func (u *placeUsecase) GetDetails(ctx context.Context, id string) (*domain.Place
 	return place, nil
 }
 
-func (u *placeUsecase) FavoritePlace(ctx context.Context, userID, placeID uuid.UUID) error {
+func (u *placeUsecase) FavoritePlace(ctx context.Context, userID uuid.UUID, placeID string) error {
 	return u.repo.AddFavorite(ctx, userID, placeID)
 }
 
@@ -173,4 +173,27 @@ func (u *placeUsecase) fetchGoogleDetails(ctx context.Context, placeID string) (
 	}
 
 	return p, nil
+}
+func (u *placeUsecase) GetDirections(ctx context.Context, req *domain.DirectionsRequest) (*domain.DirectionsResponse, error) {
+	apiKey := os.Getenv("GOOGLE_PLACES_API_KEY") // We reuse the same API key if enabled
+	if req.Mode == "" {
+		req.Mode = "driving"
+	}
+
+	url := fmt.Sprintf("https://maps.googleapis.com/maps/api/directions/json?origin=%s&destination=%s&mode=%s&key=%s",
+		req.Origin, req.Destination, req.Mode, apiKey)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	var result domain.DirectionsResponse
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }

@@ -2,6 +2,7 @@ package ws
 
 import (
 	"encoding/json"
+	"math"
 	"sync"
 
 	"github.com/maitijit89/B-Map-Backend/internal/domain"
@@ -58,5 +59,30 @@ func (h *Hub) BroadcastIncident(incident *domain.Incident) {
 		"type": "NEW_INCIDENT",
 		"data": incident,
 	})
-	h.broadcast <- msg
+
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	for client := range h.clients {
+		// Only broadcast to clients within 5km
+		if distance(client.Lat, client.Lng, incident.Lat, incident.Lng) <= 5.0 {
+			select {
+			case client.send <- msg:
+			default:
+				// If buffer full, skip or handle (Run handles cleanup)
+			}
+		}
+	}
+}
+
+// distance calculates distance in km between two points using Haversine formula
+func distance(lat1, lon1, lat2, lon2 float64) float64 {
+	const R = 6371 // Earth radius in km
+	dLat := (lat2 - lat1) * math.Pi / 180
+	dLon := (lon2 - lon1) * math.Pi / 180
+	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
+		math.Cos(lat1*math.Pi/180)*math.Cos(lat2*math.Pi/180)*
+			math.Sin(dLon/2)*math.Sin(dLon/2)
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+	return R * c
 }

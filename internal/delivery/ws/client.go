@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"encoding/json"
 	"log"
 
 	"github.com/gofiber/websocket/v2"
@@ -10,6 +11,8 @@ type Client struct {
 	hub  *Hub
 	conn *websocket.Conn
 	send chan []byte
+	Lat  float64
+	Lng  float64
 }
 
 func (c *Client) ReadPump() {
@@ -26,9 +29,19 @@ func (c *Client) ReadPump() {
 			}
 			break
 		}
-		// Currently we don't process incoming messages from clients, 
-		// but we could handle location updates here.
-		_ = message 
+		
+		// Handle location updates from client
+		var msg struct {
+			Type string  `json:"type"`
+			Lat  float64 `json:"lat"`
+			Lng  float64 `json:"lng"`
+		}
+		if err := json.Unmarshal(message, &msg); err == nil {
+			if msg.Type == "LOCATION_UPDATE" {
+				c.Lat = msg.Lat
+				c.Lng = msg.Lng
+			}
+		}
 	}
 }
 

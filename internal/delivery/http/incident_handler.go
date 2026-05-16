@@ -65,3 +65,22 @@ func (h *IncidentHandler) GetNearby(c *fiber.Ctx) error {
 
 	return c.JSON(incidents)
 }
+// Upvote godoc
+// @Summary Upvote an incident
+// @Tags incidents
+// @Security ApiKeyAuth
+// @Param id path string true "Incident ID"
+// @Success 200 {object} map[string]string
+// @Router /incidents/{id}/upvote [post]
+func (h *IncidentHandler) Upvote(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid incident id"})
+	}
+
+	if err := h.usecase.Upvote(c.Context(), id); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{"message": "upvoted successfully"})
+}

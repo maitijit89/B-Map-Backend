@@ -22,6 +22,7 @@ func (u *incidentUsecase) Report(ctx context.Context, reporterID uuid.UUID, req 
 	
 	incident := &domain.Incident{
 		Type:        req.Type,
+		Severity:    req.Severity,
 		Description: req.Description,
 		Lat:         req.Lat,
 		Lng:         req.Lng,
@@ -48,4 +49,8 @@ func (u *incidentUsecase) GetNearby(ctx context.Context, query *domain.IncidentQ
 		query.Radius = 5000 // Default 5km
 	}
 	return u.repo.GetNearby(ctx, query.Lat, query.Lng, query.Radius)
+}
+
+func (u *incidentUsecase) Upvote(ctx context.Context, id uuid.UUID) error {
+	return u.repo.Upvote(ctx, id)
 }

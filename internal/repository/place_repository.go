@@ -72,10 +72,16 @@ func (r *placeRepository) SearchLocal(ctx context.Context, query *domain.PlaceSe
 	return places, nil
 }
 
-func (r *placeRepository) AddFavorite(ctx context.Context, userID, placeID uuid.UUID) error {
+func (r *placeRepository) AddFavorite(ctx context.Context, userID uuid.UUID, placeID string) error {
+	var internalID uuid.UUID
+	err := r.db.WithContext(ctx).Raw("SELECT id FROM places WHERE external_id = ?", placeID).Row().Scan(&internalID)
+	if err != nil {
+		return err
+	}
+
 	fav := domain.UserFavorite{
 		UserID:  userID,
-		PlaceID: placeID,
+		PlaceID: internalID,
 	}
 	return r.db.WithContext(ctx).Create(&fav).Error
 }

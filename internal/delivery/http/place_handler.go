@@ -66,12 +66,8 @@ func (h *PlaceHandler) FavoritePlace(c *fiber.Ctx) error {
 	userID, _ := uuid.Parse(userIDStr)
 	
 	placeIDStr := c.Params("id")
-	placeID, err := uuid.Parse(placeIDStr)
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid place id"})
-	}
 
-	if err := h.usecase.FavoritePlace(c.Context(), userID, placeID); err != nil {
+	if err := h.usecase.FavoritePlace(c.Context(), userID, placeIDStr); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 
@@ -95,4 +91,30 @@ func (h *PlaceHandler) GetFavorites(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(places)
+}
+// GetDirections godoc
+// @Summary Get directions between two points
+// @Tags navigation
+// @Produce json
+// @Param origin query string true "Origin location (address or lat,lng)"
+// @Param destination query string true "Destination location"
+// @Param mode query string false "Travel mode"
+// @Success 200 {object} domain.DirectionsResponse
+// @Router /navigation/directions [get]
+func (h *PlaceHandler) GetDirections(c *fiber.Ctx) error {
+	var req domain.DirectionsRequest
+	if err := c.QueryParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	if req.Origin == "" || req.Destination == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "origin and destination are required"})
+	}
+
+	directions, err := h.usecase.GetDirections(c.Context(), &req)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(directions)
 }

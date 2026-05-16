@@ -24,7 +24,7 @@ func AuthMiddleware() fiber.Handler {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid or expired token"})
 		}
 
-		c.Locals("user_id", claims.UserID)
+		c.Locals("user_id", claims.UserID.String())
 		return c.Next()
 	}
 }

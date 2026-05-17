@@ -4,7 +4,7 @@
       "type": "sse",
       "url": "https://mcp.render.com/mcp",
       "env": {
-        "RENDER_API_KEY": "YOUR_RENDER_API_KEY"
+        "RENDER_API_KEY": "rnd_OCPyXC74ZhKTwroWYTbit9wiXhLB"
       }
     }
   }

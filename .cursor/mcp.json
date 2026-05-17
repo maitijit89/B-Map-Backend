@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "render": {
+      "type": "sse",
+      "url": "https://mcp.render.com/mcp",
+      "env": {
+        "RENDER_API_KEY": "YOUR_RENDER_API_KEY"
+      }
+    }
+  }
+}

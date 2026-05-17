@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Query, Optional
+from fastapi import APIRouter, Query
+from typing import Optional
 from app.services.place_service import PlaceService
 
 router = APIRouter()

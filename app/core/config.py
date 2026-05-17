@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     def DATABASE_URL(self) -> str:
         if not all([self.DB_USER, self.DB_PASSWORD, self.DB_HOST, self.DB_NAME]):
             return "sqlite+aiosqlite:///./test.db" # Fallback for build/local test
-        return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}?ssl={self.DB_SSLMODE}"
+        return f"postgresql+psycopg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}?sslmode={self.DB_SSLMODE}"
 
     # Redis
     REDIS_URL: Optional[str] = None

@@ -95,9 +95,9 @@ class UserListService:
         if check_res.first():
             return True # already added
             
-        # Append place using association table insert or ORM relationship
-        # Since we mapped it as relationship we can do:
-        user_list.places.append(place)
+        # Append place using direct association table insert to avoid async lazy loading issues
+        insert_stmt = user_list_places.insert().values(list_id=list_id, place_id=place.id)
+        await self.db.execute(insert_stmt)
         await self.db.commit()
         return True
 
@@ -115,11 +115,14 @@ class UserListService:
         if not place:
             return False
             
-        if place in user_list.places:
-            user_list.places.remove(place)
-            await self.db.commit()
-            return True
-        return False
+        # Direct deletion from junction table to avoid async lazy loading issues
+        delete_stmt = user_list_places.delete().where(
+            user_list_places.c.list_id == list_id,
+            user_list_places.c.place_id == place_id
+        )
+        result = await self.db.execute(delete_stmt)
+        await self.db.commit()
+        return result.rowcount > 0
 
     async def get_list_details(self, user_id: UUID, list_id: UUID) -> Optional[UserListDetailResponse]:
         # Fetch list

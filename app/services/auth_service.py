@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi import HTTPException, status
 from app.db.models import User
-from app.schemas.user import UserCreate, UserLogin, AuthResponse, UserResponse
+from app.schemas.user import UserCreate, UserLogin, GoogleLogin, AuthResponse, UserResponse
 from app.core.security import get_password_hash, verify_password, create_access_token
 
 class AuthService:
@@ -43,6 +43,65 @@ class AuthService:
                 detail="Incorrect email or password"
             )
             
+        token = create_access_token(user.id)
+        return AuthResponse(
+            token=token,
+            user=UserResponse.from_orm(user)
+        )
+
+    async def login_google(self, google_login: GoogleLogin) -> AuthResponse:
+        from google.oauth2 import id_token
+        from google.auth.transport import requests
+        import uuid
+        from app.core.config import settings
+
+        try:
+            # Verify the token against Google Client ID
+            id_info = id_token.verify_oauth2_token(
+                google_login.id_token,
+                requests.Request(),
+                settings.GOOGLE_CLIENT_ID
+            )
+            
+            # Verify the issuer
+            if id_info.get("iss") not in ["accounts.google.com", "https://accounts.google.com"]:
+                raise ValueError("Wrong token issuer.")
+                
+            email = id_info.get("email")
+            display_name = id_info.get("name")
+            
+            if not email:
+                raise ValueError("Email not found in Google token.")
+                
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Invalid Google ID token: {str(e)}"
+            )
+
+        # Check if the user already exists in the database
+        result = await self.db.execute(select(User).where(User.email == email))
+        user = result.scalars().first()
+        
+        if not user:
+            # Create user with a secure random password since they sign in via Google
+            random_password = str(uuid.uuid4())
+            user = User(
+                email=email,
+                password_hash=get_password_hash(random_password),
+                display_name=display_name
+            )
+            self.db.add(user)
+            await self.db.commit()
+            await self.db.refresh(user)
+        else:
+            # Update their display name if it changed in Google
+            if display_name and user.display_name != display_name:
+                user.display_name = display_name
+                self.db.add(user)
+                await self.db.commit()
+                await self.db.refresh(user)
+
         token = create_access_token(user.id)
         return AuthResponse(
             token=token,

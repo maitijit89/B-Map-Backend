@@ -9,7 +9,7 @@ from app.db.models import User
 from uuid import UUID
 
 reusable_oauth2 = OAuth2PasswordBearer(
-    tokenUrl="/api/v1/auth/login"
+    tokenUrl="/api/v1/auth/google"
 )
 
 async def get_current_user(

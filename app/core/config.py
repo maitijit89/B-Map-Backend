@@ -1,9 +1,27 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
+from pydantic import field_validator
+from typing import Optional, Union
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "B-Map Backend"
     ENV: str = "development"
+    
+    # Security & CORS
+    CORS_ORIGINS: list[str] = ["*"]
+    SECURE_HEADERS_ENABLED: bool = True
+    RATE_LIMIT_REQUESTS_PER_MINUTE: int = 60
+    
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Union[str, list[str]]) -> list[str]:
+        if isinstance(v, str):
+            if v.startswith("[") and v.endswith("]"):
+                import json
+                return json.loads(v)
+            return [i.strip() for i in v.split(",") if i.strip()]
+        elif isinstance(v, list):
+            return v
+        return ["*"]
     
     # Database
     DB_HOST: Optional[str] = None
@@ -13,11 +31,20 @@ class Settings(BaseSettings):
     DB_PORT: str = "5432"
     DB_SSLMODE: str = "disable"
     
+    # Database Pool Tuning
+    DB_POOL_SIZE: int = 20
+    DB_MAX_OVERFLOW: int = 10
+    DB_POOL_RECYCLE: int = 1800
+    DB_POOL_TIMEOUT: int = 30
+    
     @property
     def DATABASE_URL(self) -> str:
         if not all([self.DB_USER, self.DB_PASSWORD, self.DB_HOST, self.DB_NAME]):
             return "sqlite+aiosqlite:///./test.db" # Fallback for build/local test
-        return f"postgresql+psycopg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}?sslmode={self.DB_SSLMODE}"
+        import urllib.parse
+        encoded_user = urllib.parse.quote_plus(self.DB_USER)
+        encoded_password = urllib.parse.quote_plus(self.DB_PASSWORD)
+        return f"postgresql+psycopg://{encoded_user}:{encoded_password}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}?sslmode={self.DB_SSLMODE}"
 
     # Redis
     REDIS_URL: Optional[str] = None
@@ -38,3 +65,4 @@ class Settings(BaseSettings):
     }
 
 settings = Settings()
+

@@ -1,6 +1,7 @@
 import enum
-from sqlalchemy import Column, String, DateTime, func, Integer, Boolean, Enum, ForeignKey
+from sqlalchemy import Column, String, DateTime, func, Integer, Boolean, Enum, ForeignKey, Table
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 from geoalchemy2 import Geography
 import uuid
 from app.db.session import Base
@@ -86,6 +87,14 @@ class Timeline(Base):
     location = Column(Geography(geometry_type='POINT', srid=4326), nullable=False)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
 
+# Junction table for many-to-many relationship between UserList and Place
+user_list_places = Table(
+    "user_list_places",
+    Base.metadata,
+    Column("list_id", UUID(as_uuid=True), ForeignKey("user_lists.id", ondelete="CASCADE"), primary_key=True),
+    Column("place_id", UUID(as_uuid=True), ForeignKey("places.id", ondelete="CASCADE"), primary_key=True)
+)
+
 class UserList(Base):
     __tablename__ = "user_lists"
 
@@ -94,3 +103,6 @@ class UserList(Base):
     name = Column(String, nullable=False)
     is_public = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Many-to-many relationship
+    places = relationship("Place", secondary=user_list_places, backref="lists")

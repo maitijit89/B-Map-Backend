@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.core.config import settings
-from app.api.v1 import auth, incidents, places, navigation, pins
+from app.api.v1 import auth, incidents, places, navigation, pins, reviews, lists, timeline, offline
 import logging
 
 # Configure logging
@@ -43,6 +43,10 @@ app.include_router(incidents.router, prefix="/api/v1/incidents", tags=["Incident
 app.include_router(places.router, prefix="/api/v1/places", tags=["Places"])
 app.include_router(navigation.router, prefix="/api/v1/navigation", tags=["Navigation"])
 app.include_router(pins.router, prefix="/api/v1/pins", tags=["User Pins"])
+app.include_router(reviews.router, prefix="/api/v1/reviews", tags=["Reviews & Ratings"])
+app.include_router(lists.router, prefix="/api/v1/lists", tags=["Saved Lists"])
+app.include_router(timeline.router, prefix="/api/v1/timeline", tags=["Timeline & History"])
+app.include_router(offline.router, prefix="/api/v1/offline", tags=["Offline Pre-fetching"])
 
 @app.get("/")
 async def root():

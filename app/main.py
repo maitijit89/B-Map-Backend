@@ -44,6 +44,10 @@ app = FastAPI(
     openapi_url="/api/v1/openapi.json",
     docs_url="/docs",
     lifespan=lifespan,
+    servers=[
+        {"url": "https://b-map-backend.vercel.app", "description": "Production environment"},
+        {"url": "http://localhost:8080", "description": "Local development"}
+    ]
 )
 
 # Custom In-Memory Rate Limiter

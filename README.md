@@ -1,4 +1,10 @@
-# B-Map Backend (Python Version)
+# B-Map Backend
+
+Production API Base URL: `https://b-map-backend.vercel.app`
+
+## API Documentation
+- **Swagger UI**: [https://b-map-backend.vercel.app/docs](https://b-map-backend.vercel.app/docs)
+- **Redoc**: [https://b-map-backend.vercel.app/redoc](https://b-map-backend.vercel.app/redoc) (Python Version)
 
 A high-performance backend for the B-Map application, migrated from Go to Python using FastAPI.
 

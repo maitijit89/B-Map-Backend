@@ -1,7 +1,7 @@
 # ==========================================
 # STAGE 1: Builder
 # ==========================================
-FROM python:3.11-slim AS builder
+FROM python:3.12-slim AS builder
 
 # Prevent python from writing pyc files and buffer stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -28,7 +28,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # ==========================================
 # STAGE 2: Runner
 # ==========================================
-FROM python:3.11-slim AS runner
+FROM python:3.12-slim AS runner
 
 # Environment configs for runner
 ENV PYTHONDONTWRITEBYTECODE=1 \

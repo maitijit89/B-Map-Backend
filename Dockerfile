@@ -67,7 +67,7 @@ EXPOSE 8080
 
 # Health check to monitor application health status in orchestration environments
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8080/health || exit 1
+  CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
 
-# Start the FastAPI application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Start the FastAPI application using the PORT environment variable
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}

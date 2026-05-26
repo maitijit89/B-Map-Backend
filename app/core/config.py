@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     DB_NAME: Optional[str] = None
     DB_PORT: str = "5432"
     DB_SSLMODE: str = "disable"
+    CLOUD_SQL_INSTANCE_NAME: Optional[str] = None
     
     # Database Pool Tuning
     DB_POOL_SIZE: int = 20
@@ -39,24 +40,47 @@ class Settings(BaseSettings):
     
     @property
     def DATABASE_URL(self) -> str:
-        if not all([self.DB_USER, self.DB_PASSWORD, self.DB_HOST, self.DB_NAME]):
+        if not all([self.DB_USER, self.DB_PASSWORD, self.DB_NAME]):
             return "sqlite+aiosqlite:///./test.db" # Fallback for build/local test
+            
         import urllib.parse
         encoded_user = urllib.parse.quote_plus(self.DB_USER)
         encoded_password = urllib.parse.quote_plus(self.DB_PASSWORD)
-        return f"postgresql+psycopg://{encoded_user}:{encoded_password}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}?sslmode={self.DB_SSLMODE}"
+        
+        # Connect to Cloud SQL via Unix Domain Socket if instance name is provided and host is not
+        if self.CLOUD_SQL_INSTANCE_NAME and not self.DB_HOST:
+            return f"postgresql+psycopg://{encoded_user}:{encoded_password}@/{self.DB_NAME}?host=/cloudsql/{self.CLOUD_SQL_INSTANCE_NAME}"
+            
+        host = self.DB_HOST or "localhost"
+        return f"postgresql+psycopg://{encoded_user}:{encoded_password}@{host}:{self.DB_PORT}/{self.DB_NAME}?sslmode={self.DB_SSLMODE}"
 
     # Redis
     REDIS_URL: Optional[str] = None
+    REDIS_PASSWORD: Optional[str] = None
+    REDIS_HOST: Optional[str] = None
+    REDIS_PORT: int = 6379
     
     # Auth
     JWT_SECRET: str = "b_map_secure_secret_2026_fallback"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 1 week
+    JWT_EXPIRATION: str = "1h"
+    SUPABASE_JWT_KEY_ID: Optional[str] = None
     
-    # Google Auth
+    # External APIs (Google)
     GOOGLE_PLACES_API_KEY: Optional[str] = None
+    GOOGLE_MAPS_API_SECRET: Optional[str] = None
     GOOGLE_CLIENT_ID: Optional[str] = None
+    GOOGLE_CLIENT_SECRET: Optional[str] = None
+    
+    # External APIs (Other)
+    OSM_NOMINATIM_URL: str = "https://nominatim.openstreetmap.org"
+    RENDER_API_KEY: Optional[str] = None
+    
+    # Supabase Configuration
+    SUPABASE_URL: Optional[str] = None
+    SUPABASE_KEY: Optional[str] = None
+    SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
     
     model_config = {
         "env_file": ".env",

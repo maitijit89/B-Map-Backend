@@ -1,10 +1,7 @@
 import enum
-from sqlalchemy import Column, String, DateTime, func, Integer, Boolean, Enum, ForeignKey, Table
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
-from geoalchemy2 import Geography
 import uuid
-from app.db.session import Base
+from datetime import datetime, timezone
+from typing import Optional, Dict, Any
 
 class IncidentType(str, enum.Enum):
     ACCIDENT = "accident"
@@ -23,88 +20,244 @@ class IncidentSeverity(str, enum.Enum):
     HIGH = "high"
     CRITICAL = "critical"
 
-class User(Base):
-    __tablename__ = "users"
+class User:
+    def __init__(self, id=None, email=None, password_hash=None, display_name=None, phone_number=None, firebase_uid=None, created_at=None, updated_at=None):
+        self.id = id or uuid.uuid4()
+        self.email = email
+        self.password_hash = password_hash
+        self.display_name = display_name
+        self.phone_number = phone_number
+        self.firebase_uid = firebase_uid
+        self.created_at = created_at or datetime.now(timezone.utc)
+        self.updated_at = updated_at or datetime.now(timezone.utc)
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    email = Column(String, unique=True, nullable=True, index=True)
-    password_hash = Column(String, nullable=True)
-    display_name = Column(String)
-    phone_number = Column(String, unique=True, nullable=True, index=True)
-    firebase_uid = Column(String, unique=True, nullable=True, index=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]):
+        if not data:
+            return None
+        return cls(
+            id=data.get("_id"),
+            email=data.get("email"),
+            password_hash=data.get("password_hash"),
+            display_name=data.get("display_name"),
+            phone_number=data.get("phone_number"),
+            firebase_uid=data.get("firebase_uid"),
+            created_at=data.get("created_at"),
+            updated_at=data.get("updated_at")
+        )
 
-class Incident(Base):
-    __tablename__ = "incidents"
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "_id": self.id,
+            "email": self.email,
+            "password_hash": self.password_hash,
+            "display_name": self.display_name,
+            "phone_number": self.phone_number,
+            "firebase_uid": self.firebase_uid,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at
+        }
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    type = Column(Enum(IncidentType), nullable=False)
-    severity = Column(Enum(IncidentSeverity), default=IncidentSeverity.MEDIUM)
-    description = Column(String)
-    location = Column(Geography(geometry_type='POINT', srid=4326), nullable=False)
-    reporter_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
-    is_active = Column(Boolean, default=True)
-    upvotes = Column(Integer, default=0)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    expires_at = Column(DateTime(timezone=True), nullable=True)
+class Incident:
+    def __init__(self, id=None, type=None, severity=IncidentSeverity.MEDIUM, description=None, location=None, reporter_id=None, is_active=True, upvotes=0, created_at=None, expires_at=None):
+        self.id = id or uuid.uuid4()
+        self.type = type
+        self.severity = severity
+        self.description = description
+        self.location = location  # {"type": "Point", "coordinates": [lng, lat]}
+        self.reporter_id = reporter_id
+        self.is_active = is_active
+        self.upvotes = upvotes
+        self.created_at = created_at or datetime.now(timezone.utc)
+        self.expires_at = expires_at
 
-class Place(Base):
-    __tablename__ = "places"
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]):
+        if not data:
+            return None
+        return cls(
+            id=data.get("_id"),
+            type=IncidentType(data.get("type")) if data.get("type") else None,
+            severity=IncidentSeverity(data.get("severity")) if data.get("severity") else IncidentSeverity.MEDIUM,
+            description=data.get("description"),
+            location=data.get("location"),
+            reporter_id=data.get("reporter_id"),
+            is_active=data.get("is_active", True),
+            upvotes=data.get("upvotes", 0),
+            created_at=data.get("created_at"),
+            expires_at=data.get("expires_at")
+        )
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    google_place_id = Column(String, unique=True, index=True)
-    name = Column(String, nullable=False)
-    address = Column(String)
-    location = Column(Geography(geometry_type='POINT', srid=4326), nullable=False)
-    rating = Column(Integer)
-    user_ratings_total = Column(Integer)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "_id": self.id,
+            "type": self.type.value if hasattr(self.type, "value") else self.type,
+            "severity": self.severity.value if hasattr(self.severity, "value") else self.severity,
+            "description": self.description,
+            "location": self.location,
+            "reporter_id": self.reporter_id,
+            "is_active": self.is_active,
+            "upvotes": self.upvotes,
+            "created_at": self.created_at,
+            "expires_at": self.expires_at
+        }
 
-class Review(Base):
-    __tablename__ = "reviews"
+class Place:
+    def __init__(self, id=None, google_place_id=None, name=None, address=None, location=None, rating=0, user_ratings_total=0, created_at=None):
+        self.id = id or uuid.uuid4()
+        self.google_place_id = google_place_id
+        self.name = name
+        self.address = address
+        self.location = location  # {"type": "Point", "coordinates": [lng, lat]}
+        self.rating = rating
+        self.user_ratings_total = user_ratings_total
+        self.created_at = created_at or datetime.now(timezone.utc)
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    place_id = Column(UUID(as_uuid=True), ForeignKey("places.id"), nullable=False)
-    rating = Column(Integer, nullable=False)
-    comment = Column(String)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]):
+        if not data:
+            return None
+        return cls(
+            id=data.get("_id"),
+            google_place_id=data.get("google_place_id"),
+            name=data.get("name"),
+            address=data.get("address"),
+            location=data.get("location"),
+            rating=data.get("rating", 0),
+            user_ratings_total=data.get("user_ratings_total", 0),
+            created_at=data.get("created_at")
+        )
 
-class Pin(Base):
-    __tablename__ = "pins"
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "_id": self.id,
+            "google_place_id": self.google_place_id,
+            "name": self.name,
+            "address": self.address,
+            "location": self.location,
+            "rating": self.rating,
+            "user_ratings_total": self.user_ratings_total,
+            "created_at": self.created_at
+        }
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    name = Column(String, nullable=False)
-    description = Column(String)
-    location = Column(Geography(geometry_type='POINT', srid=4326), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+class Review:
+    def __init__(self, id=None, user_id=None, place_id=None, rating=None, comment=None, created_at=None):
+        self.id = id or uuid.uuid4()
+        self.user_id = user_id
+        self.place_id = place_id
+        self.rating = rating
+        self.comment = comment
+        self.created_at = created_at or datetime.now(timezone.utc)
 
-class Timeline(Base):
-    __tablename__ = "timeline"
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]):
+        if not data:
+            return None
+        return cls(
+            id=data.get("_id"),
+            user_id=data.get("user_id"),
+            place_id=data.get("place_id"),
+            rating=data.get("rating"),
+            comment=data.get("comment"),
+            created_at=data.get("created_at")
+        )
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    location = Column(Geography(geometry_type='POINT', srid=4326), nullable=False)
-    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "_id": self.id,
+            "user_id": self.user_id,
+            "place_id": self.place_id,
+            "rating": self.rating,
+            "comment": self.comment,
+            "created_at": self.created_at
+        }
 
-# Junction table for many-to-many relationship between UserList and Place
-user_list_places = Table(
-    "user_list_places",
-    Base.metadata,
-    Column("list_id", UUID(as_uuid=True), ForeignKey("user_lists.id", ondelete="CASCADE"), primary_key=True),
-    Column("place_id", UUID(as_uuid=True), ForeignKey("places.id", ondelete="CASCADE"), primary_key=True)
-)
+class Pin:
+    def __init__(self, id=None, user_id=None, name=None, description=None, location=None, created_at=None):
+        self.id = id or uuid.uuid4()
+        self.user_id = user_id
+        self.name = name
+        self.description = description
+        self.location = location  # {"type": "Point", "coordinates": [lng, lat]}
+        self.created_at = created_at or datetime.now(timezone.utc)
 
-class UserList(Base):
-    __tablename__ = "user_lists"
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]):
+        if not data:
+            return None
+        return cls(
+            id=data.get("_id"),
+            user_id=data.get("user_id"),
+            name=data.get("name"),
+            description=data.get("description"),
+            location=data.get("location"),
+            created_at=data.get("created_at")
+        )
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    name = Column(String, nullable=False)
-    is_public = Column(Boolean, default=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "_id": self.id,
+            "user_id": self.user_id,
+            "name": self.name,
+            "description": self.description,
+            "location": self.location,
+            "created_at": self.created_at
+        }
 
-    # Many-to-many relationship
-    places = relationship("Place", secondary=user_list_places, backref="lists")
+class Timeline:
+    def __init__(self, id=None, user_id=None, location=None, timestamp=None):
+        self.id = id or uuid.uuid4()
+        self.user_id = user_id
+        self.location = location  # {"type": "Point", "coordinates": [lng, lat]}
+        self.timestamp = timestamp or datetime.now(timezone.utc)
+
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]):
+        if not data:
+            return None
+        return cls(
+            id=data.get("_id"),
+            user_id=data.get("user_id"),
+            location=data.get("location"),
+            timestamp=data.get("timestamp")
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "_id": self.id,
+            "user_id": self.user_id,
+            "location": self.location,
+            "timestamp": self.timestamp
+        }
+
+class UserList:
+    def __init__(self, id=None, user_id=None, name=None, is_public=False, created_at=None, place_ids=None):
+        self.id = id or uuid.uuid4()
+        self.user_id = user_id
+        self.name = name
+        self.is_public = is_public
+        self.created_at = created_at or datetime.now(timezone.utc)
+        self.place_ids = place_ids or []
+
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]):
+        if not data:
+            return None
+        return cls(
+            id=data.get("_id"),
+            user_id=data.get("user_id"),
+            name=data.get("name"),
+            is_public=data.get("is_public", False),
+            created_at=data.get("created_at"),
+            place_ids=data.get("place_ids", [])
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "_id": self.id,
+            "user_id": self.user_id,
+            "name": self.name,
+            "is_public": self.is_public,
+            "created_at": self.created_at,
+            "place_ids": self.place_ids
+        }

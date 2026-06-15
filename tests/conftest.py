@@ -8,12 +8,10 @@ from unittest.mock import MagicMock, AsyncMock
 from uuid import uuid4
 from fastapi.testclient import TestClient
 
-# Override settings to force SQLite database url
+# Override settings to force SQLite database url (cleaned up for MongoDB)
 from app.core.config import settings
-settings.DB_USER = None
-settings.DB_PASSWORD = None
-settings.DB_NAME = None
-settings.DB_HOST = None
+settings.MONGODB_URL = "mongodb://localhost:27017"
+settings.MONGODB_DB_NAME = "b_map_test"
 settings.GOOGLE_PLACES_API_KEY = "mock_key"
 settings.REDIS_HOST = None
 settings.REDIS_URL = None
@@ -31,29 +29,53 @@ MOCK_USER = User(
     password_hash="mockhashedpassword"
 )
 
-# Mock DB Session
-class MockAsyncSession:
+class MockCursor:
+    def __init__(self, results):
+        self.results = results or []
+        self.index = 0
+
+    def sort(self, *args, **kwargs):
+        return self
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        if self.index >= len(self.results):
+            raise StopAsyncIteration
+        val = self.results[self.index]
+        self.index += 1
+        return val
+
+    async def to_list(self, length=None):
+        if length is not None:
+            return self.results[:length]
+        return self.results
+
+class MockCollection:
     def __init__(self):
-        self.add = MagicMock()
-        self.commit = AsyncMock()
-        self.flush = AsyncMock(side_effect=self._mock_refresh)
-        self.refresh = AsyncMock(side_effect=self._mock_refresh)
-        self.delete = AsyncMock()
-        self.execute = AsyncMock()
+        self.find_one = AsyncMock(return_value=None)
+        self.insert_one = AsyncMock(return_value=MagicMock(inserted_id=uuid4()))
+        self.delete_one = AsyncMock(return_value=MagicMock(deleted_count=1))
+        self.update_one = AsyncMock(return_value=MagicMock(modified_count=1))
+        self.replace_one = AsyncMock(return_value=MagicMock(modified_count=1))
+        self.find = MagicMock(return_value=MockCursor([]))
+        self.aggregate = MagicMock(return_value=MockCursor([]))
 
-    async def _mock_refresh(self, *args, **kwargs):
-        if not args:
-            return
-        instance = args[0]
-        import uuid
-        from datetime import datetime
-        if hasattr(instance, "id") and getattr(instance, "id", None) is None:
-            instance.id = uuid.uuid4()
-        if hasattr(instance, "created_at") and getattr(instance, "created_at", None) is None:
-            instance.created_at = datetime.utcnow()
-        if hasattr(instance, "timestamp") and getattr(instance, "timestamp", None) is None:
-            instance.timestamp = datetime.utcnow()
+class MockMotorDatabase:
+    def __init__(self):
+        self.users = MockCollection()
+        self.incidents = MockCollection()
+        self.places = MockCollection()
+        self.pins = MockCollection()
+        self.timeline = MockCollection()
+        self.user_lists = MockCollection()
+        self.reviews = MockCollection()
 
+    async def command(self, cmd):
+        if cmd == "ping":
+            return {"ok": 1.0}
+        return {}
 
 @pytest.fixture(scope="session")
 def event_loop():
@@ -63,7 +85,7 @@ def event_loop():
 
 @pytest.fixture
 def mock_db():
-    return MockAsyncSession()
+    return MockMotorDatabase()
 
 @pytest.fixture
 def client(mock_db):

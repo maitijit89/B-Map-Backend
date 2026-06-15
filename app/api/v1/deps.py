@@ -1,8 +1,7 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.core.config import settings
 from app.db.session import get_db
 from app.db.models import User
@@ -13,7 +12,7 @@ reusable_oauth2 = OAuth2PasswordBearer(
 )
 
 async def get_current_user(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
     token: str = Depends(reusable_oauth2)
 ) -> User:
     try:
@@ -32,8 +31,8 @@ async def get_current_user(
             detail="Could not validate credentials",
         )
         
-    result = await db.execute(select(User).where(User.id == UUID(user_id)))
-    user = result.scalars().first()
+    user_doc = await db.users.find_one({"_id": UUID(user_id)})
+    user = User.from_dict(user_doc)
     
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

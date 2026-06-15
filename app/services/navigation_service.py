@@ -1,5 +1,7 @@
 import httpx
+import json
 from app.core.config import settings
+from app.core.cache import cache
 from typing import List, Dict, Any
 import logging
 
@@ -17,6 +19,11 @@ class NavigationService:
         return not (val.startswith("your_") or "mock" in val or val == "")
 
     async def get_directions(self, origin: str, destination: str, mode: str = "driving"):
+        cache_key = f"nav:dir:{origin}:{destination}:{mode}"
+        cached = await cache.get(cache_key)
+        if cached:
+            return cached
+
         def get_mock():
             return {
                 "routes": [
@@ -36,7 +43,9 @@ class NavigationService:
             }
 
         if not self._is_api_key_valid():
-            return get_mock()
+            mock_data = get_mock()
+            await cache.set(cache_key, mock_data, expire=3600)
+            return mock_data
 
         params = {
             "origin": origin,
@@ -52,12 +61,26 @@ class NavigationService:
                 data = response.json()
                 if data.get("status") not in ["OK", "ZERO_RESULTS"]:
                     raise Exception(f"API status {data.get('status')}")
+                await cache.set(cache_key, data, expire=3600)
                 return data
         except Exception as e:
             logger.warning(f"Directions query failed: {e}. Falling back to mock.")
-            return get_mock()
+            mock_data = get_mock()
+            await cache.set(cache_key, mock_data, expire=3600)
+            return mock_data
 
     async def compute_routes(self, origin: Dict[str, Any], destination: Dict[str, Any], travel_mode: str = "DRIVE", routing_preference: str = "TRAFFIC_AWARE"):
+        body = {
+            "origin": origin,
+            "destination": destination,
+            "travelMode": travel_mode,
+            "routingPreference": routing_preference
+        }
+        cache_key = f"nav:comp_routes:{json.dumps(origin)}:{json.dumps(destination)}:{travel_mode}:{routing_preference}"
+        cached = await cache.get(cache_key)
+        if cached:
+            return cached
+
         def get_mock():
             return {
                 "routes": [
@@ -78,19 +101,15 @@ class NavigationService:
             }
 
         if not self._is_api_key_valid():
-            return get_mock()
+            mock_data = get_mock()
+            await cache.set(cache_key, mock_data, expire=3600)
+            return mock_data
 
         url = "https://routes.googleapis.com/v2:computeRoutes"
         headers = {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": self.api_key,
             "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline,routes.legs"
-        }
-        body = {
-            "origin": origin,
-            "destination": destination,
-            "travelMode": travel_mode,
-            "routingPreference": routing_preference
         }
         try:
             async with httpx.AsyncClient() as client:
@@ -100,12 +119,22 @@ class NavigationService:
                 data = response.json()
                 if "error" in data or "routes" not in data:
                     raise Exception("ComputeRoutes API Error")
+                await cache.set(cache_key, data, expire=3600)
                 return data
         except Exception as e:
             logger.warning(f"ComputeRoutes failed: {e}. Falling back to mock.")
-            return get_mock()
+            mock_data = get_mock()
+            await cache.set(cache_key, mock_data, expire=3600)
+            return mock_data
 
     async def get_distance_matrix(self, origins: List[str], destinations: List[str], mode: str = "driving"):
+        origins_str = "|".join(origins)
+        destinations_str = "|".join(destinations)
+        cache_key = f"nav:dist_matrix:{origins_str}:{destinations_str}:{mode}"
+        cached = await cache.get(cache_key)
+        if cached:
+            return cached
+
         def get_mock():
             rows = []
             for _ in origins:
@@ -126,12 +155,14 @@ class NavigationService:
             }
 
         if not self._is_api_key_valid():
-            return get_mock()
+            mock_data = get_mock()
+            await cache.set(cache_key, mock_data, expire=3600)
+            return mock_data
 
         url = "https://maps.googleapis.com/maps/api/distancematrix/json"
         params = {
-            "origins": "|".join(origins),
-            "destinations": "|".join(destinations),
+            "origins": origins_str,
+            "destinations": destinations_str,
             "mode": mode,
             "key": self.api_key
         }
@@ -143,10 +174,13 @@ class NavigationService:
                 data = response.json()
                 if data.get("status") not in ["OK", "ZERO_RESULTS"]:
                     raise Exception(f"API status {data.get('status')}")
+                await cache.set(cache_key, data, expire=3600)
                 return data
         except Exception as e:
             logger.warning(f"Distance matrix failed: {e}. Falling back to mock.")
-            return get_mock()
+            mock_data = get_mock()
+            await cache.set(cache_key, mock_data, expire=3600)
+            return mock_data
 
     async def optimize_routes(self, model: Dict[str, Any]):
         def get_mock():
@@ -192,6 +226,11 @@ class NavigationService:
             return get_mock()
 
     async def snap_to_roads(self, path: str):
+        cache_key = f"nav:snap_roads:{path}"
+        cached = await cache.get(cache_key)
+        if cached:
+            return cached
+
         def get_mock():
             return {
                 "snappedPoints": [
@@ -204,7 +243,9 @@ class NavigationService:
             }
 
         if not self._is_api_key_valid():
-            return get_mock()
+            mock_data = get_mock()
+            await cache.set(cache_key, mock_data, expire=86400)
+            return mock_data
 
         url = "https://roads.googleapis.com/v1/snapToRoads"
         params = {
@@ -220,12 +261,20 @@ class NavigationService:
                 data = response.json()
                 if "error" in data:
                     raise Exception("Roads API Error")
+                await cache.set(cache_key, data, expire=86400)
                 return data
         except Exception as e:
             logger.warning(f"Snap to roads failed: {e}. Falling back to mock.")
-            return get_mock()
+            mock_data = get_mock()
+            await cache.set(cache_key, mock_data, expire=86400)
+            return mock_data
 
     async def get_speed_limits(self, path: str):
+        cache_key = f"nav:speed_limits:{path}"
+        cached = await cache.get(cache_key)
+        if cached:
+            return cached
+
         def get_mock():
             return {
                 "speedLimits": [
@@ -238,7 +287,9 @@ class NavigationService:
             }
 
         if not self._is_api_key_valid():
-            return get_mock()
+            mock_data = get_mock()
+            await cache.set(cache_key, mock_data, expire=86400)
+            return mock_data
 
         url = "https://roads.googleapis.com/v1/speedLimits"
         params = {
@@ -253,7 +304,10 @@ class NavigationService:
                 data = response.json()
                 if "error" in data:
                     raise Exception("Speed limits API Error")
+                await cache.set(cache_key, data, expire=86400)
                 return data
         except Exception as e:
             logger.warning(f"Speed limits query failed: {e}. Falling back to mock.")
-            return get_mock()
+            mock_data = get_mock()
+            await cache.set(cache_key, mock_data, expire=86400)
+            return mock_data

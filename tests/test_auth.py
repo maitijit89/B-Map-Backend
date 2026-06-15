@@ -1,11 +1,11 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from app.db.models import User
+import uuid
+from datetime import datetime, timezone
 
 def test_register_and_login_functional(client, mock_db):
-    # Mock database responses for user lookup
-    mock_result = MagicMock()
-    mock_result.scalars.return_value.first.return_value = None  # user doesn't exist
-    mock_db.execute.return_value = mock_result
+    # Mock database user lookup to return None (user doesn't exist)
+    mock_db.users.find_one.return_value = None
 
     # Verify regular register
     response_register = client.post("/api/v1/auth/register", json={
@@ -20,20 +20,15 @@ def test_register_and_login_functional(client, mock_db):
     assert data_reg["user"]["display_name"] == "Test User"
 
     # Mock database returns user for login
-    from app.db.models import User
     from app.core.security import get_password_hash
-    import uuid
-    from datetime import datetime, UTC
     mock_user = User(
         id=uuid.uuid4(),
         email="test@example.com",
         password_hash=get_password_hash("securepassword123"),
         display_name="Test User",
-        created_at=datetime.now(UTC)
+        created_at=datetime.now(timezone.utc)
     )
-    mock_result_login = MagicMock()
-    mock_result_login.scalars.return_value.first.return_value = mock_user
-    mock_db.execute.return_value = mock_result_login
+    mock_db.users.find_one.return_value = mock_user.to_dict()
 
     # Verify regular login
     response_login = client.post("/api/v1/auth/login", json={
@@ -56,9 +51,7 @@ def test_google_login_new_user(mock_verify, client, mock_db):
     }
 
     # Mock DB returns None (user does not exist yet)
-    mock_result = MagicMock()
-    mock_result.scalars.return_value.first.return_value = None
-    mock_db.execute.return_value = mock_result
+    mock_db.users.find_one.return_value = None
 
     payload = {
         "id_token": "valid_mock_google_id_token"
@@ -87,9 +80,7 @@ def test_google_login_existing_user(mock_verify, client, mock_db):
         password_hash="somepasswordhash",
         display_name="Old Name"
     )
-    mock_result = MagicMock()
-    mock_result.scalars.return_value.first.return_value = mock_user
-    mock_db.execute.return_value = mock_result
+    mock_db.users.find_one.return_value = mock_user.to_dict()
 
     payload = {
         "id_token": "valid_mock_google_id_token"
@@ -102,7 +93,6 @@ def test_google_login_existing_user(mock_verify, client, mock_db):
     # Display name should be updated to "Google User"
     assert data["user"]["display_name"] == "Google User"
 
-
 @patch("app.services.firebase_service.FirebaseService.verify_id_token")
 def test_firebase_login_new_user(mock_verify, client, mock_db):
     # Mock Firebase token verification response
@@ -113,9 +103,7 @@ def test_firebase_login_new_user(mock_verify, client, mock_db):
     }
 
     # Mock DB returns None (user does not exist yet)
-    mock_result = MagicMock()
-    mock_result.scalars.return_value.first.return_value = None
-    mock_db.execute.return_value = mock_result
+    mock_db.users.find_one.return_value = None
 
     payload = {
         "id_token": "valid_mock_firebase_id_token"
@@ -127,7 +115,6 @@ def test_firebase_login_new_user(mock_verify, client, mock_db):
     assert "token" in data
     assert data["user"]["email"] == "firebaseuser@example.com"
     assert data["user"]["display_name"] == "Firebase User"
-
 
 @patch("app.services.firebase_service.FirebaseService.verify_id_token")
 def test_firebase_login_existing_user(mock_verify, client, mock_db):
@@ -144,9 +131,7 @@ def test_firebase_login_existing_user(mock_verify, client, mock_db):
         password_hash="somepasswordhash",
         display_name="Old Firebase Name"
     )
-    mock_result = MagicMock()
-    mock_result.scalars.return_value.first.return_value = mock_user
-    mock_db.execute.return_value = mock_result
+    mock_db.users.find_one.return_value = mock_user.to_dict()
 
     payload = {
         "id_token": "valid_mock_firebase_id_token"
@@ -158,7 +143,6 @@ def test_firebase_login_existing_user(mock_verify, client, mock_db):
     assert "token" in data
     assert data["user"]["display_name"] == "Firebase User"
 
-
 @patch("app.services.firebase_service.FirebaseService.verify_id_token")
 def test_firebase_phone_login_new_user(mock_verify, client, mock_db):
     # Mock Firebase phone verification token response
@@ -168,9 +152,7 @@ def test_firebase_phone_login_new_user(mock_verify, client, mock_db):
     }
 
     # Mock DB returns None for all lookups (user does not exist)
-    mock_result = MagicMock()
-    mock_result.scalars.return_value.first.return_value = None
-    mock_db.execute.return_value = mock_result
+    mock_db.users.find_one.return_value = None
 
     payload = {
         "id_token": "valid_mock_firebase_phone_token"
@@ -183,7 +165,6 @@ def test_firebase_phone_login_new_user(mock_verify, client, mock_db):
     assert data["user"]["email"] is None
     assert data["user"]["phone_number"] == "+1234567890"
     assert data["user"]["firebase_uid"] == "firebase-phone-uid-123"
-
 
 @patch("app.services.firebase_service.FirebaseService.verify_id_token")
 def test_firebase_phone_login_existing_user(mock_verify, client, mock_db):
@@ -199,9 +180,7 @@ def test_firebase_phone_login_existing_user(mock_verify, client, mock_db):
         password_hash="somepasswordhash",
         display_name="Phone User"
     )
-    mock_result = MagicMock()
-    mock_result.scalars.return_value.first.return_value = mock_user
-    mock_db.execute.return_value = mock_result
+    mock_db.users.find_one.return_value = mock_user.to_dict()
 
     payload = {
         "id_token": "valid_mock_firebase_phone_token"
@@ -213,5 +192,3 @@ def test_firebase_phone_login_existing_user(mock_verify, client, mock_db):
     assert "token" in data
     assert data["user"]["phone_number"] == "+1234567890"
     assert data["user"]["firebase_uid"] == "firebase-phone-uid-123"
-
-

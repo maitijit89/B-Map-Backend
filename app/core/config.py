@@ -24,35 +24,8 @@ class Settings(BaseSettings):
         return ["*"]
     
     # Database
-    DB_HOST: Optional[str] = None
-    DB_USER: Optional[str] = None
-    DB_PASSWORD: Optional[str] = None
-    DB_NAME: Optional[str] = None
-    DB_PORT: str = "5432"
-    DB_SSLMODE: str = "disable"
-    CLOUD_SQL_INSTANCE_NAME: Optional[str] = None
-    
-    # Database Pool Tuning
-    DB_POOL_SIZE: int = 20
-    DB_MAX_OVERFLOW: int = 10
-    DB_POOL_RECYCLE: int = 1800
-    DB_POOL_TIMEOUT: int = 30
-    
-    @property
-    def DATABASE_URL(self) -> str:
-        if not all([self.DB_USER, self.DB_PASSWORD, self.DB_NAME]):
-            return "sqlite+aiosqlite:///./test.db" # Fallback for build/local test
-            
-        import urllib.parse
-        encoded_user = urllib.parse.quote_plus(self.DB_USER)
-        encoded_password = urllib.parse.quote_plus(self.DB_PASSWORD)
-        
-        # Connect to Cloud SQL via Unix Domain Socket if instance name is provided and host is not
-        if self.CLOUD_SQL_INSTANCE_NAME and not self.DB_HOST:
-            return f"postgresql+psycopg://{encoded_user}:{encoded_password}@/{self.DB_NAME}?host=/cloudsql/{self.CLOUD_SQL_INSTANCE_NAME}"
-            
-        host = self.DB_HOST or "localhost"
-        return f"postgresql+psycopg://{encoded_user}:{encoded_password}@{host}:{self.DB_PORT}/{self.DB_NAME}?sslmode={self.DB_SSLMODE}"
+    MONGODB_URL: str = "mongodb://localhost:27017"
+    MONGODB_DB_NAME: str = "b_map"
 
     # Redis
     REDIS_URL: Optional[str] = None

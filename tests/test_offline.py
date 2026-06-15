@@ -1,7 +1,7 @@
 from uuid import uuid4
-from datetime import datetime
-from unittest.mock import MagicMock
+from datetime import datetime, timezone
 from app.db.models import Place, Incident, IncidentSeverity, IncidentType
+from tests.conftest import MockCursor
 
 def test_get_offline_cache(client, mock_db):
     mock_place = Place(
@@ -11,39 +11,40 @@ def test_get_offline_cache(client, mock_db):
         address="Campbell Parade, Bondi",
         rating=4,
         user_ratings_total=10,
-        created_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc)
     )
     
-    class MockRow(tuple):
-        def __new__(cls, obj, lng, lat):
-            return super().__new__(cls, (obj,))
-        def __init__(self, obj, lng, lat):
-            self.lng = lng
-            self.lat = lat
-
     mock_incident = Incident(
         id=uuid4(),
         description="Road closure near beach: Fallen tree",
         type=IncidentType.TRAFFIC,
         severity=IncidentSeverity.MEDIUM,
-        created_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc)
     )
     
-    # Executer chain:
-    # 1. Fetch places in envelope
-    # 2. Fetch incidents in envelope
-    mock_res_places = [
-        MockRow(mock_place, 151.2743, -33.8908)
-    ]
+    # Configure mock responses for places and incidents find queries
+    place_doc = {
+        "_id": mock_place.id,
+        "google_place_id": mock_place.google_place_id,
+        "name": mock_place.name,
+        "address": mock_place.address,
+        "location": {"type": "Point", "coordinates": [151.2743, -33.8908]},
+        "rating": mock_place.rating,
+        "user_ratings_total": mock_place.user_ratings_total,
+        "created_at": mock_place.created_at
+    }
     
-    mock_res_incidents = [
-        MockRow(mock_incident, 151.2720, -33.8890)
-    ]
+    incident_doc = {
+        "_id": mock_incident.id,
+        "description": mock_incident.description,
+        "type": mock_incident.type.value,
+        "severity": mock_incident.severity.value,
+        "location": {"type": "Point", "coordinates": [151.2720, -33.8890]},
+        "created_at": mock_incident.created_at
+    }
     
-    mock_db.execute.side_effect = [
-        mock_res_places,
-        mock_res_incidents
-    ]
+    mock_db.places.find.return_value = MockCursor([place_doc])
+    mock_db.incidents.find.return_value = MockCursor([incident_doc])
     
     response = client.get("/api/v1/offline/cache?lat_min=-34.0&lng_min=151.0&lat_max=-33.0&lng_max=152.0")
     assert response.status_code == 200
@@ -56,4 +57,3 @@ def test_get_offline_cache(client, mock_db):
     assert len(data["incidents"]) == 1
     assert data["incidents"][0]["description"] == "Road closure near beach: Fallen tree"
     assert data["incidents"][0]["lng"] == 151.2720
-

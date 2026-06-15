@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.db.session import get_db
 from app.schemas.user_list import UserListCreate, UserListResponse, UserListDetailResponse, AddPlaceRequest
 from app.services.user_list_service import UserListService
@@ -13,7 +13,7 @@ router = APIRouter()
 @router.post("/", response_model=UserListResponse, status_code=status.HTTP_201_CREATED)
 async def create_list(
     list_in: UserListCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     service = UserListService(db)
@@ -21,7 +21,7 @@ async def create_list(
 
 @router.get("/", response_model=List[UserListResponse])
 async def get_user_lists(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     service = UserListService(db)
@@ -31,7 +31,7 @@ async def get_user_lists(
 async def add_place_to_list(
     list_id: UUID,
     req: AddPlaceRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     service = UserListService(db)
@@ -47,7 +47,7 @@ async def add_place_to_list(
 async def remove_place_from_list(
     list_id: UUID,
     place_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     service = UserListService(db)
@@ -62,7 +62,7 @@ async def remove_place_from_list(
 @router.get("/{list_id}", response_model=UserListDetailResponse)
 async def get_list_details(
     list_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user)
 ):
     service = UserListService(db)

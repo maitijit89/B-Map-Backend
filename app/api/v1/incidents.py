@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, status, Query
-from sqlalchemy.ext.asyncio import AsyncSession
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.db.session import get_db
 from app.schemas.incident import IncidentCreate, IncidentResponse, IncidentQuery
 from app.services.incident_service import IncidentService
@@ -13,7 +13,7 @@ router = APIRouter()
 @router.post("/", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED)
 async def report_incident(
     incident_in: IncidentCreate, 
-    db: AsyncSession = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     service = IncidentService(db)
@@ -38,7 +38,7 @@ async def get_nearby(
     lat: float = Query(...),
     lng: float = Query(...),
     radius: float = Query(5000),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     service = IncidentService(db)
     query = IncidentQuery(lat=lat, lng=lng, radius=radius)

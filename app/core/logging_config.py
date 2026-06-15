@@ -93,4 +93,4 @@ def setup_logging() -> None:
     # Suppress verbose third-party loggers
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
     logging.getLogger("uvicorn.error").setLevel(logging.INFO)
-    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+    logging.getLogger("pymongo").setLevel(logging.WARNING)

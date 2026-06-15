@@ -1,18 +1,17 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from fastapi import HTTPException, status
 from app.db.models import User
 from app.schemas.user import UserCreate, UserLogin, GoogleLogin, FirebaseLogin, AuthResponse, UserResponse
 from app.core.security import get_password_hash, verify_password, create_access_token
 
 class AuthService:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncIOMotorDatabase):
         self.db = db
 
     async def register(self, user_in: UserCreate) -> AuthResponse:
         # Check if user exists
-        result = await self.db.execute(select(User).where(User.email == user_in.email))
-        if result.scalars().first():
+        user_doc = await self.db.users.find_one({"email": user_in.email})
+        if user_doc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User with this email already exists"
@@ -23,9 +22,7 @@ class AuthService:
             password_hash=get_password_hash(user_in.password),
             display_name=user_in.display_name
         )
-        self.db.add(user)
-        await self.db.commit()
-        await self.db.refresh(user)
+        await self.db.users.insert_one(user.to_dict())
         
         token = create_access_token(user.id)
         return AuthResponse(
@@ -34,8 +31,8 @@ class AuthService:
         )
 
     async def login(self, user_in: UserLogin) -> AuthResponse:
-        result = await self.db.execute(select(User).where(User.email == user_in.email))
-        user = result.scalars().first()
+        user_doc = await self.db.users.find_one({"email": user_in.email})
+        user = User.from_dict(user_doc)
         
         if not user or not verify_password(user_in.password, user.password_hash):
             raise HTTPException(
@@ -80,8 +77,8 @@ class AuthService:
             )
 
         # Check if the user already exists in the database
-        result = await self.db.execute(select(User).where(User.email == email))
-        user = result.scalars().first()
+        user_doc = await self.db.users.find_one({"email": email})
+        user = User.from_dict(user_doc)
         
         if not user:
             # Create user with a secure random password since they sign in via Google
@@ -91,16 +88,15 @@ class AuthService:
                 password_hash=get_password_hash(random_password),
                 display_name=display_name
             )
-            self.db.add(user)
-            await self.db.commit()
-            await self.db.refresh(user)
+            await self.db.users.insert_one(user.to_dict())
         else:
             # Update their display name if it changed in Google
             if display_name and user.display_name != display_name:
                 user.display_name = display_name
-                self.db.add(user)
-                await self.db.commit()
-                await self.db.refresh(user)
+                await self.db.users.update_one(
+                    {"_id": user.id},
+                    {"$set": {"display_name": display_name}}
+                )
 
         token = create_access_token(user.id)
         return AuthResponse(
@@ -133,21 +129,21 @@ class AuthService:
         # Look up user:
         # 1. By firebase_uid
         user = None
-        result = await self.db.execute(select(User).where(User.firebase_uid == firebase_uid))
-        user = result.scalars().first()
+        user_doc = await self.db.users.find_one({"firebase_uid": firebase_uid})
+        user = User.from_dict(user_doc)
         
         # 2. By email (if email is present in the token)
         if not user and email:
-            result = await self.db.execute(select(User).where(User.email == email))
-            user = result.scalars().first()
+            user_doc = await self.db.users.find_one({"email": email})
+            user = User.from_dict(user_doc)
             if user:
                 # Link existing user by email
                 user.firebase_uid = firebase_uid
                 
         # 3. By phone_number (if phone_number is present in the token)
         if not user and phone_number:
-            result = await self.db.execute(select(User).where(User.phone_number == phone_number))
-            user = result.scalars().first()
+            user_doc = await self.db.users.find_one({"phone_number": phone_number})
+            user = User.from_dict(user_doc)
             if user:
                 # Link existing user by phone
                 user.firebase_uid = firebase_uid
@@ -163,9 +159,7 @@ class AuthService:
                 phone_number=phone_number,
                 firebase_uid=firebase_uid
             )
-            self.db.add(user)
-            await self.db.commit()
-            await self.db.refresh(user)
+            await self.db.users.insert_one(user.to_dict())
         else:
             # Update fields if changed
             updated = False
@@ -183,9 +177,7 @@ class AuthService:
                 updated = True
                 
             if updated:
-                self.db.add(user)
-                await self.db.commit()
-                await self.db.refresh(user)
+                await self.db.users.replace_one({"_id": user.id}, user.to_dict())
 
         token = create_access_token(user.id)
         return AuthResponse(

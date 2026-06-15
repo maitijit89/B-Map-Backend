@@ -1,12 +1,9 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy import func
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.db.models import Timeline
 from app.schemas.timeline import LocationLog, TimelineResponse, TimelineStatsResponse
 from uuid import UUID
-from datetime import datetime, date
+from datetime import datetime
 from typing import List, Optional, Dict, Any
-from geoalchemy2.functions import ST_X, ST_Y, ST_AsText
 from math import radians, cos, sin, asin, sqrt
 
 def haversine(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
@@ -21,18 +18,19 @@ def haversine(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
     return c * r
 
 class TimelineService:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncIOMotorDatabase):
         self.db = db
 
     async def log_location(self, user_id: UUID, location_in: LocationLog) -> TimelineResponse:
-        location = f"POINT({location_in.lng} {location_in.lat})"
+        location = {
+            "type": "Point",
+            "coordinates": [location_in.lng, location_in.lat]
+        }
         timeline_entry = Timeline(
             user_id=user_id,
             location=location
         )
-        self.db.add(timeline_entry)
-        await self.db.commit()
-        await self.db.refresh(timeline_entry)
+        await self.db.timeline.insert_one(timeline_entry.to_dict())
         
         return TimelineResponse(
             id=timeline_entry.id,
@@ -44,41 +42,38 @@ class TimelineService:
     async def get_timeline(
         self, user_id: UUID, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None
     ) -> List[TimelineResponse]:
-        stmt = select(
-            Timeline,
-            ST_X(ST_AsText(Timeline.location)).label("lng"),
-            ST_Y(ST_AsText(Timeline.location)).label("lat")
-        ).where(Timeline.user_id == user_id)
-        
-        if start_date:
-            stmt = stmt.where(Timeline.timestamp >= start_date)
-        if end_date:
-            stmt = stmt.where(Timeline.timestamp <= end_date)
-            
-        stmt = stmt.order_by(Timeline.timestamp.desc())
-        
-        result = await self.db.execute(stmt)
+        query = {"user_id": user_id}
+        if start_date or end_date:
+            query["timestamp"] = {}
+            if start_date:
+                query["timestamp"]["$gte"] = start_date
+            if end_date:
+                query["timestamp"]["$lte"] = end_date
+                
+        cursor = self.db.timeline.find(query).sort("timestamp", -1)
         timeline = []
-        for row in result:
-            t = row[0]
+        async for doc in cursor:
             timeline.append(TimelineResponse(
-                id=t.id,
-                lat=row.lat,
-                lng=row.lng,
-                timestamp=t.timestamp
+                id=doc["_id"],
+                lat=doc["location"]["coordinates"][1],
+                lng=doc["location"]["coordinates"][0],
+                timestamp=doc["timestamp"]
             ))
         return timeline
 
     async def get_timeline_stats(self, user_id: UUID) -> TimelineStatsResponse:
         # Fetch all points chronologically
-        stmt = select(
-            ST_X(ST_AsText(Timeline.location)).label("lng"),
-            ST_Y(ST_AsText(Timeline.location)).label("lat"),
-            Timeline.timestamp
-        ).where(Timeline.user_id == user_id).order_by(Timeline.timestamp.asc())
+        cursor = self.db.timeline.find({"user_id": user_id}).sort("timestamp", 1)
         
-        result = await self.db.execute(stmt)
-        rows = result.all()
+        class Row:
+            def __init__(self, doc):
+                self.lng = doc["location"]["coordinates"][0]
+                self.lat = doc["location"]["coordinates"][1]
+                self.timestamp = doc["timestamp"]
+                
+        rows = []
+        async for doc in cursor:
+            rows.append(Row(doc))
         
         if not rows:
             return TimelineStatsResponse(

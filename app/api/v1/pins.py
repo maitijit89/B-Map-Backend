@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.db.session import get_db
 from app.schemas.pin import PinCreate, PinResponse, PinUpdate
 from app.services.pin_service import PinService
@@ -13,7 +13,7 @@ router = APIRouter()
 @router.post("/", response_model=PinResponse, status_code=status.HTTP_201_CREATED)
 async def create_pin(
     pin_in: PinCreate, 
-    db: AsyncSession = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     service = PinService(db)
@@ -21,7 +21,7 @@ async def create_pin(
 
 @router.get("/", response_model=List[PinResponse])
 async def list_pins(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     service = PinService(db)
@@ -31,7 +31,7 @@ async def list_pins(
 async def update_pin(
     pin_id: UUID, 
     pin_in: PinUpdate, 
-    db: AsyncSession = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     service = PinService(db)
@@ -43,7 +43,7 @@ async def update_pin(
 @router.delete("/{pin_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_pin(
     pin_id: UUID, 
-    db: AsyncSession = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     service = PinService(db)

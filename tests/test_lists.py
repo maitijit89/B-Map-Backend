@@ -1,7 +1,7 @@
-from datetime import datetime
-from uuid import uuid4, UUID
-from unittest.mock import MagicMock, AsyncMock
+from datetime import datetime, timezone
+from uuid import uuid4
 from app.db.models import UserList, Place
+from tests.conftest import MockCursor
 
 def test_create_list(client, mock_db):
     payload = {
@@ -21,14 +21,11 @@ def test_get_user_lists(client, mock_db):
         user_id=uuid4(),
         name="Coffee Spots",
         is_public=False,
-        created_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc),
+        place_ids=[uuid4()] * 5 # list has 5 place IDs
     )
-
     
-    # Mocking select returns (UserList, count) tuple
-    mock_db.execute.return_value = [
-        (mock_list, 5)
-    ]
+    mock_db.user_lists.find.return_value = MockCursor([mock_list.to_dict()])
     
     response = client.get("/api/v1/lists/")
     assert response.status_code == 200
@@ -51,26 +48,8 @@ def test_add_place_to_list(client, mock_db):
         name="Blue Mountains"
     )
     
-    # Execute chain:
-    # 1. Check list ownership
-    # 2. Check place existence
-    # 3. Check if place already in list (junction row check)
-    # 4. Association row insertion (execute user_list_places.insert())
-    mock_res_list = MagicMock()
-    mock_res_list.scalars = MagicMock(return_value=MagicMock(first=MagicMock(return_value=mock_list)))
-    
-    mock_res_place = MagicMock()
-    mock_res_place.scalars = MagicMock(return_value=MagicMock(first=MagicMock(return_value=mock_place)))
-    
-    mock_res_check = MagicMock()
-    mock_res_check.first = MagicMock(return_value=None) # Not in list yet
-    
-    mock_db.execute.side_effect = [
-        mock_res_list,
-        mock_res_place,
-        mock_res_check,
-        MagicMock() # insert execute
-    ]
+    mock_db.user_lists.find_one.return_value = mock_list.to_dict()
+    mock_db.places.find_one.return_value = mock_place.to_dict()
     
     list_id = mock_list.id
     payload = {
@@ -94,10 +73,7 @@ def test_get_list_details_private_denied(client, mock_db):
         is_public=False
     )
     
-    mock_res_list = MagicMock()
-    mock_res_list.scalars = MagicMock(return_value=MagicMock(first=MagicMock(return_value=mock_list)))
-    
-    mock_db.execute.return_value = mock_res_list
+    mock_db.user_lists.find_one.return_value = mock_list.to_dict()
     
     list_id = mock_list.id
     response = client.get(f"/api/v1/lists/{list_id}")

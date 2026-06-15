@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
-from unittest.mock import MagicMock, AsyncMock
 from app.db.models import Place, Review, User
+from tests.conftest import MockCursor
 
 def test_add_review(client, mock_db):
     # Mock Place loading or creation
@@ -10,32 +10,20 @@ def test_add_review(client, mock_db):
         google_place_id="ChIJN1t_tDeuEmsRUsoyG83A16Y",
         name="Sydney Coffee Shop",
         address="123 George St, Sydney",
-        location="POINT(151.2093 -33.8688)",
+        location={"type": "Point", "coordinates": [151.2093, -33.8688]},
         rating=4,
         user_ratings_total=1
     )
+    mock_db.places.find_one.return_value = mock_place.to_dict()
     
-    # Mock stats response for recalculation
-    mock_stats = MagicMock()
-    mock_stats.avg_rating = 4.5
-    mock_stats.total_ratings = 2
+    # Recalculate average ratings mock response
+    mock_db.reviews.aggregate.return_value = MockCursor([
+        {"avg_rating": 4.5, "total_ratings": 2}
+    ])
     
-    # Mock the SQLAlchemy executers
-    mock_res_first = MagicMock()
-    mock_res_first.scalars = MagicMock(return_value=MagicMock(first=MagicMock(return_value=mock_place)))
-    
-    mock_res_stats = MagicMock()
-    mock_res_stats.first = MagicMock(return_value=mock_stats)
-    
-    mock_res_user = MagicMock()
-    mock_res_user.scalars = MagicMock(return_value=MagicMock(first=MagicMock(return_value=User(email="test@example.com"))))
-    
-    mock_db.execute.side_effect = [
-        mock_res_first,  # get_or_create_place first check
-        mock_res_stats,  # stats recalculation check
-        mock_res_user    # user fetch
-    ]
-
+    # Mock user fetch
+    mock_user = User(email="test@example.com")
+    mock_db.users.find_one.return_value = mock_user.to_dict()
     
     payload = {
         "google_place_id": "ChIJN1t_tDeuEmsRUsoyG83A16Y",
@@ -61,6 +49,7 @@ def test_get_place_reviews(client, mock_db):
         name="Sydney Coffee Shop",
         address="123 George St, Sydney"
     )
+    mock_db.places.find_one.return_value = mock_place.to_dict()
     
     mock_review = Review(
         id=uuid4(),
@@ -68,22 +57,24 @@ def test_get_place_reviews(client, mock_db):
         place_id=mock_place.id,
         rating=5,
         comment="Awesome place!",
-        created_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc)
     )
-
     
-    mock_res_place = MagicMock()
-    mock_res_place.scalars = MagicMock(return_value=MagicMock(first=MagicMock(return_value=mock_place)))
+    # Result document with lookup aggregation joined user
+    mock_aggregation_result = {
+        "_id": mock_review.id,
+        "user_id": mock_review.user_id,
+        "place_id": mock_review.place_id,
+        "rating": mock_review.rating,
+        "comment": mock_review.comment,
+        "created_at": mock_review.created_at,
+        "user_list": {
+            "email": "reviewer@example.com",
+            "display_name": "reviewer"
+        }
+    }
     
-    # Result rows for get reviews (Review object and Email string)
-    mock_res_reviews = [
-        (mock_review, "reviewer@example.com")
-    ]
-    
-    mock_db.execute.side_effect = [
-        mock_res_place,
-        mock_res_reviews
-    ]
+    mock_db.reviews.aggregate.return_value = MockCursor([mock_aggregation_result])
     
     response = client.get("/api/v1/reviews/place/ChIJN1t_tDeuEmsRUsoyG83A16Y")
     assert response.status_code == 200

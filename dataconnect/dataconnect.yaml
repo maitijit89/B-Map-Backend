@@ -1,0 +1,12 @@
+specVersion: "v1alpha"
+serviceId: "b-map-c78bf-service"
+location: "asia-south1"
+schema:
+  source: "schema"
+  datasource:
+    postgresql:
+      database: "b-map-c78bf-database"
+      cloudSql:
+        instanceId: "b-map-c78bf-instance"
+connectorDirs:
+  - "connector"

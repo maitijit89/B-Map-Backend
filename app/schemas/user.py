@@ -1,10 +1,10 @@
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from uuid import UUID
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional
 
 class UserBase(BaseModel):
-    email: EmailStr
+    email: Optional[EmailStr] = None
     display_name: Optional[str] = None
 
 class UserCreate(UserBase):
@@ -17,8 +17,13 @@ class UserLogin(BaseModel):
 class GoogleLogin(BaseModel):
     id_token: str
 
+class FirebaseLogin(BaseModel):
+    id_token: str
+
 class UserResponse(UserBase):
     id: UUID
+    phone_number: Optional[str] = None
+    firebase_uid: Optional[str] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

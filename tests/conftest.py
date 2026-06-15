@@ -1,8 +1,23 @@
+import os
+# Force testing environment before importing the app
+os.environ["ENV"] = "testing"
+
 import pytest
 import asyncio
 from unittest.mock import MagicMock, AsyncMock
 from uuid import uuid4
 from fastapi.testclient import TestClient
+
+# Override settings to force SQLite database url
+from app.core.config import settings
+settings.DB_USER = None
+settings.DB_PASSWORD = None
+settings.DB_NAME = None
+settings.DB_HOST = None
+settings.GOOGLE_PLACES_API_KEY = "mock_key"
+settings.REDIS_HOST = None
+settings.REDIS_URL = None
+
 from app.main import app
 from app.db.session import get_db
 from app.api.v1.deps import get_current_user

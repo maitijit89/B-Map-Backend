@@ -2,39 +2,52 @@
 import sys
 import os
 import asyncio
+import uuid
+import time
+import logging
+from collections import defaultdict
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Request, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, HTMLResponse
+
+from app.core.logging_config import setup_logging
+from app.core.config import settings
+from app.api.v1 import auth, incidents, places, navigation, pins, reviews, lists, timeline, offline, maps, environment
+from app.db.session import verify_db_connection
 
 # Resolve ProactorEventLoop issue on Windows with psycopg async
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-import uuid
-import time
-from collections import defaultdict
 # Ensure the parent directory is in sys.path to support running directly as `python app/main.py`
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.core.logging_config import setup_logging
 setup_logging()
-
-from fastapi import FastAPI, Request, status
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from app.core.config import settings
-from app.api.v1 import auth, incidents, places, navigation, pins, reviews, lists, timeline, offline
-import logging
-
 logger = logging.getLogger(__name__)
-
-from contextlib import asynccontextmanager
-from app.db.session import verify_db_connection
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup logic
     logger.info("Initializing application startup services...")
+    
+    # Initialize Firebase Admin SDK
+    from app.services.firebase_service import FirebaseService
+    try:
+        FirebaseService.initialize()
+    except Exception as e:
+        logger.error(f"Firebase initialization failed during startup: {e}")
+        
     db_ok = await verify_db_connection(max_retries=3, retry_interval=1.0)
     if not db_ok:
         logger.error("Database connection check failed! Proceeding anyway, but database dependent operations may fail.")
+    else:
+        from app.db.session import init_db
+        try:
+            await init_db()
+        except Exception as e:
+            logger.error(f"Database schema initialization failed: {e}")
     yield
     # Shutdown logic
     logger.info("Shutting down application services...")
@@ -45,7 +58,6 @@ app = FastAPI(
     docs_url="/docs",
     lifespan=lifespan,
     servers=[
-        {"url": "https://b-map-backend.vercel.app", "description": "Production environment"},
         {"url": "http://localhost:8080", "description": "Local development"}
     ]
 )
@@ -164,10 +176,16 @@ app.include_router(reviews.router, prefix="/api/v1/reviews", tags=["Reviews & Ra
 app.include_router(lists.router, prefix="/api/v1/lists", tags=["Saved Lists"])
 app.include_router(timeline.router, prefix="/api/v1/timeline", tags=["Timeline & History"])
 app.include_router(offline.router, prefix="/api/v1/offline", tags=["Offline Pre-fetching"])
+app.include_router(maps.router, prefix="/api/v1/maps", tags=["Maps"])
+app.include_router(environment.router, prefix="/api/v1/environment", tags=["Environment"])
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 async def root():
-    return {"message": "Welcome to B-Map API (Python Version)"}
+    try:
+        with open("app/static/index.html", "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        return HTMLResponse("Welcome to B-Map API. Developer console not found.", status_code=404)
 
 @app.get("/health")
 async def health_check():

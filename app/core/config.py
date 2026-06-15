@@ -65,7 +65,6 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 1 week
     JWT_EXPIRATION: str = "1h"
-    SUPABASE_JWT_KEY_ID: Optional[str] = None
     
     # External APIs (Google)
     GOOGLE_PLACES_API_KEY: Optional[str] = None
@@ -77,10 +76,8 @@ class Settings(BaseSettings):
     OSM_NOMINATIM_URL: str = "https://nominatim.openstreetmap.org"
     RENDER_API_KEY: Optional[str] = None
     
-    # Supabase Configuration
-    SUPABASE_URL: Optional[str] = None
-    SUPABASE_KEY: Optional[str] = None
-    SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
+    # Firebase Configuration
+    FIREBASE_CREDENTIALS_PATH: Optional[str] = None
     
     model_config = {
         "env_file": ".env",

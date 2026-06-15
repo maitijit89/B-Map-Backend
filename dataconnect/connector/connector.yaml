@@ -1,0 +1,4 @@
+connectorId: "b-map-c78bf-connector"
+generate:
+  javascriptSdk:
+    outputDir: "../sdk/js"

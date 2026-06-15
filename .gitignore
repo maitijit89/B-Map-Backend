@@ -11,3 +11,6 @@ __pycache__/
 *.sqlite
 /dist
 /build
+venv/
+b-map-c78bf-firebase-adminsdk-fbsvc-fbc36c7cbb.json
+

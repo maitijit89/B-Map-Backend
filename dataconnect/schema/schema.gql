@@ -1,0 +1,102 @@
+# schema.gql - Firebase SQL Connect Schema for B-Map
+
+# 1. Users Table
+type User @table(name: "users", key: ["id"]) {
+  id: UUID! @default(expr: "uuidv4()")
+  email: String @unique
+  passwordHash: String @col(name: "password_hash")
+  displayName: String @col(name: "display_name")
+  phoneNumber: String @unique @col(name: "phone_number")
+  firebaseUid: String @unique @col(name: "firebase_uid")
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+  updatedAt: Timestamp! @col(name: "updated_at") @default(expr: "request.time")
+}
+
+# 2. Places Table
+type Place @table(name: "places", key: ["id"]) {
+  id: UUID! @default(expr: "uuidv4()")
+  googlePlaceId: String! @unique @col(name: "google_place_id")
+  name: String!
+  address: String
+  # Map custom geography column datatype
+  location: String! @col(dataType: "geography(Point, 4326)")
+  rating: Int
+  userRatingsTotal: Int @col(name: "user_ratings_total")
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+}
+
+# 3. Incidents Table
+enum IncidentType {
+  accident
+  closure
+  hazard
+  traffic
+  waterlogging
+  pothole
+  stray_animal
+  police_check
+  event
+}
+
+enum IncidentSeverity {
+  low
+  medium
+  high
+  critical
+}
+
+type Incident @table(name: "incidents", key: ["id"]) {
+  id: UUID! @default(expr: "uuidv4()")
+  type: IncidentType!
+  severity: IncidentSeverity!
+  description: String
+  location: String! @col(dataType: "geography(Point, 4326)")
+  reporter: User @col(name: "reporter_id")
+  isActive: Boolean! @col(name: "is_active") @default(value: true)
+  upvotes: Int! @default(value: 0)
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+  expiresAt: Timestamp @col(name: "expires_at")
+}
+
+# 4. Reviews Table
+type Review @table(name: "reviews", key: ["id"]) {
+  id: UUID! @default(expr: "uuidv4()")
+  user: User! @col(name: "user_id")
+  place: Place! @col(name: "place_id")
+  rating: Int!
+  comment: String
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+}
+
+# 5. Pins Table
+type Pin @table(name: "pins", key: ["id"]) {
+  id: UUID! @default(expr: "uuidv4()")
+  user: User! @col(name: "user_id")
+  name: String!
+  description: String
+  location: String! @col(dataType: "geography(Point, 4326)")
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+}
+
+# 6. Timeline Table
+type Timeline @table(name: "timeline", key: ["id"]) {
+  id: UUID! @default(expr: "uuidv4()")
+  user: User! @col(name: "user_id")
+  location: String! @col(dataType: "geography(Point, 4326)")
+  timestamp: Timestamp! @default(expr: "request.time")
+}
+
+# 7. User Saved Lists Table
+type UserList @table(name: "user_lists", key: ["id"]) {
+  id: UUID! @default(expr: "uuidv4()")
+  user: User! @col(name: "user_id")
+  name: String!
+  isPublic: Boolean! @col(name: "is_public") @default(value: false)
+  createdAt: Timestamp! @col(name: "created_at") @default(expr: "request.time")
+}
+
+# 8. UserListPlaces Table (Junction Table for Many-to-Many relationship)
+type UserListPlace @table(name: "user_list_places", key: ["listId", "placeId"]) {
+  list: UserList! @col(name: "list_id")
+  place: Place! @col(name: "place_id")
+}

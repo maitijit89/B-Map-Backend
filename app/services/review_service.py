@@ -6,6 +6,22 @@ from app.schemas.review import ReviewCreate, ReviewResponse
 from uuid import UUID
 from typing import List, Optional
 
+def _get_reviewer_name(user: Optional[User | str]) -> str:
+    if not user:
+        return "Anonymous"
+    if isinstance(user, str):
+        return user.split("@")[0] if "@" in user else user
+    if user.display_name:
+        return user.display_name
+    if user.email:
+        return user.email.split("@")[0]
+    if user.phone_number:
+        pn = user.phone_number
+        if len(pn) > 6:
+            return pn[:3] + "*****" + pn[-4:]
+        return "User"
+    return "User"
+
 class ReviewService:
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -66,7 +82,7 @@ class ReviewService:
         user_stmt = select(User).where(User.id == user_id)
         user_res = await self.db.execute(user_stmt)
         user = user_res.scalars().first()
-        reviewer_name = user.email.split("@")[0] if user else "Anonymous"
+        reviewer_name = _get_reviewer_name(user)
         
         return ReviewResponse(
             id=review.id,
@@ -85,13 +101,13 @@ class ReviewService:
         if not place:
             return []
             
-        stmt = select(Review, User.email).join(User, Review.user_id == User.id).where(Review.place_id == place.id)
+        stmt = select(Review, User).join(User, Review.user_id == User.id).where(Review.place_id == place.id)
         result = await self.db.execute(stmt)
         reviews = []
         for row in result:
             review = row[0]
-            email = row[1]
-            reviewer_name = email.split("@")[0] if email else "Anonymous"
+            user = row[1]
+            reviewer_name = _get_reviewer_name(user)
             reviews.append(ReviewResponse(
                 id=review.id,
                 user_id=review.user_id,

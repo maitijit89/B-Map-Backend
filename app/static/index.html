@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B-Map Developer Console</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0b0f19;
+            --bg-secondary: #111827;
+            --bg-glass: rgba(17, 24, 39, 0.7);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --primary: #06b6d4;
+            --primary-glow: rgba(6, 182, 212, 0.4);
+            --secondary: #8b5cf6;
+            --secondary-glow: rgba(139, 92, 246, 0.4);
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.4);
+            --accent: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(6, 182, 212, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 40%);
+        }
+
+        /* App Layout */
+        .app-container {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--border-glass);
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            backdrop-filter: blur(12px);
+            z-index: 10;
+            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        .logo-icon {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        .logo-text {
+            font-family: 'Outfit', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(to right, #ffffff, #9ca3af);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Auth Panel */
+        .auth-card {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            padding: 24px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
+        }
+
+        .auth-tabs {
+            display: flex;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 20px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .auth-tab.active {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-glass);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.15);
+        }
+
+        .btn-submit {
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.2);
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(6, 182, 212, 0.3);
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 12px;
+            margin: 20px 0;
+        }
+
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--border-glass);
+        }
+
+        .divider:not(:empty)::before {
+            margin-right: .55em;
+        }
+
+        .divider:not(:empty)::after {
+            margin-left: .55em;
+        }
+
+        .btn-google {
+            width: 100%;
+            background: white;
+            color: #1f2937;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-google:hover {
+            transform: translateY(-2px);
+            background: #f9fafb;
+            box-shadow: 0 6px 16px rgba(255, 255, 255, 0.15);
+        }
+
+        /* Mock Token Helper Banner */
+        .token-helper-banner {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px dashed var(--secondary);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: auto;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .btn-helper {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            display: inline-block;
+            transition: all 0.2s ease;
+        }
+
+        .btn-helper:hover {
+            background: #7c3aed;
+        }
+
+        /* Dashboard Main Layout */
+        .main-panel {
+            display: grid;
+            grid-template-rows: 70px 1fr;
+            height: 100vh;
+        }
+
+        /* Header Styling */
+        .header {
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-glass);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            z-index: 9;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .user-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+        }
+
+        .status-badge {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #ef4444; /* Default: disconnected */
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+        }
+
+        .status-badge.connected {
+            background-color: var(--success);
+            box-shadow: 0 0 8px var(--success-glow);
+        }
+
+        /* Workspace Grid */
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            padding: 24px;
+            gap: 24px;
+            overflow-y: auto;
+        }
+
+        .panel-card {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+            max-height: calc(100vh - 140px);
+        }
+
+        .panel-card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--primary);
+        }
+
+        /* Interactive Tabs in Playground */
+        .playground-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+
+        .playground-tabs::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .playground-tabs::-webkit-scrollbar-thumb {
+            background: var(--border-glass);
+            border-radius: 2px;
+        }
+
+        .playground-tab {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s ease;
+        }
+
+        .playground-tab.active, .playground-tab:hover {
+            background: var(--primary-glow);
+            border-color: var(--primary);
+            color: var(--text-primary);
+        }
+
+        /* Map Box Mockup */
+        .map-mockup {
+            width: 100%;
+            height: 200px;
+            background: #151d30;
+            border-radius: 12px;
+            border: 1px solid var(--border-glass);
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .map-grid-lines {
+            position: absolute;
+            inset: 0;
+            background-size: 20px 20px;
+            background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+        }
+
+        .map-landmark {
+            width: 16px;
+            height: 16px;
+            background-color: var(--secondary);
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin-top: -8px;
+            margin-left: -8px;
+            box-shadow: 0 0 10px var(--secondary-glow);
+            animation: pulse 2s infinite;
+        }
+
+        .map-route-line {
+            width: 150px;
+            height: 2px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            position: absolute;
+            top: 52%;
+            left: 30%;
+            transform: rotate(-10deg);
+            box-shadow: 0 0 8px var(--primary-glow);
+            display: none;
+        }
+
+        /* Form Layout inside tabs */
+        .tab-content {
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+            flex-grow: 1;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        .row-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .btn-call-api {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
+            margin-top: auto;
+        }
+
+        .btn-call-api:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Visual Outputs */
+        .visual-container {
+            display: none;
+            background: rgba(0, 0, 0, 0.15);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 10px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .visual-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        /* Weather output widgets */
+        .weather-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .weather-temp {
+            font-size: 32px;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(to right, #fff, var(--primary));
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* AQI output widgets */
+        .aqi-widget {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .aqi-val {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            border: 3px solid var(--success);
+            box-shadow: 0 0 10px var(--success-glow);
+        }
+
+        /* Code Console Panel */
+        .console-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .console-status-code {
+            font-size: 12px;
+            font-weight: 600;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+            padding: 3px 8px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .console-wrapper {
+            background: #05070c;
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 16px;
+            overflow-y: auto;
+            flex-grow: 1;
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #38bdf8;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .console-wrapper::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .console-wrapper::-webkit-scrollbar-thumb {
+            background: var(--border-glass);
+            border-radius: 3px;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0% { transform: rotate(-45deg) scale(1); }
+            50% { transform: rotate(-45deg) scale(1.15); box-shadow: 0 0 20px var(--secondary-glow); }
+            100% { transform: rotate(-45deg) scale(1); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .app-container {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                border-right: none;
+                border-bottom: 1px solid var(--border-glass);
+                height: auto;
+            }
+            .main-panel {
+                height: auto;
+            }
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Utility helper classes to avoid inline styles */
+        .auth-helper-title {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        .auth-helper-desc {
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+        .user-status-text {
+            color: var(--text-secondary);
+        }
+        .weather-condition {
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .weather-humidity {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+        .aqi-category {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--success);
+        }
+        .aqi-pollutant-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        .console-card-title {
+            color: var(--secondary);
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation & Authentication -->
+        <div class="sidebar">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-map-pin"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                </div>
+                <span class="logo-text">B-Map Console</span>
+            </div>
+
+            <div class="auth-card">
+                <div class="auth-tabs">
+                    <button type="button" class="auth-tab active" onclick="switchAuthTab('login')">Login</button>
+                    <button type="button" class="auth-tab" onclick="switchAuthTab('signup')">Sign Up</button>
+                </div>
+
+                <!-- Form Login -->
+                <div id="auth-form-container">
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" id="auth-email" class="form-input" autocomplete="email" placeholder="you@example.com" value="user@example.com">
+                    </div>
+                    <div class="form-group" id="group-password">
+                        <label class="form-label">Password</label>
+                        <input type="password" id="auth-password" class="form-input" autocomplete="current-password" placeholder="••••••••" value="securepassword123">
+                    </div>
+                    <div class="form-group" id="group-displayname" style="display: none;">
+                        <label class="form-label">Display Name</label>
+                        <input type="text" id="auth-displayname" class="form-input" autocomplete="name" placeholder="John Doe">
+                    </div>
+                    <button type="button" class="btn-submit" onclick="submitAuth()">Submit</button>
+                </div>
+
+                <div class="divider">or</div>
+
+                <!-- Google / Firebase Custom Sign In Button -->
+                <button type="button" class="btn-google" onclick="signInWithGoogle()">
+                    <svg width="18" height="18" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                    </svg>
+                    Sign in with Google
+                </button>
+
+                <!-- Token Helper Panel -->
+                <div class="token-helper-banner">
+                    <p class="auth-helper-title">Simulated Firebase Authenticator</p>
+                    <p class="auth-helper-desc">If you are testing local credentials, load a mock Firebase ID token to bypass live server verification.</p>
+                    <button type="button" class="btn-helper" onclick="loadMockFirebaseToken()">Load Mock Token</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Workspace -->
+        <div class="main-panel">
+            <!-- Header bar -->
+            <div class="header">
+                <div class="header-title">Developer Playground</div>
+                <div class="user-status">
+                    <div id="user-status-badge" class="status-badge"></div>
+                    <span id="user-status-text" class="user-status-text">Unauthorized (Guest Mode)</span>
+                </div>
+            </div>
+
+            <!-- Workspace cards -->
+            <div class="workspace">
+                <!-- API Testing Playground Panel -->
+                <div class="panel-card">
+                    <div class="panel-card-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-terminal"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+                        API Endpoints Playground
+                    </div>
+
+                    <div class="playground-tabs">
+                        <div class="playground-tab active" onclick="switchPlaygroundTab('geocode')">Geocoding</div>
+                        <div class="playground-tab" onclick="switchPlaygroundTab('routes')">Routes</div>
+                        <div class="playground-tab" onclick="switchPlaygroundTab('weather')">Weather</div>
+                        <div class="playground-tab" onclick="switchPlaygroundTab('airquality')">Air Quality</div>
+                        <div class="playground-tab" onclick="switchPlaygroundTab('pollen')">Pollen</div>
+                        <div class="playground-tab" onclick="switchPlaygroundTab('solar')">Solar</div>
+                    </div>
+
+                    <!-- Map/Visualization Widget -->
+                    <div class="map-mockup">
+                        <div class="map-grid-lines"></div>
+                        <div id="map-landmark" class="map-landmark"></div>
+                        <div id="map-route-line" class="map-route-line"></div>
+                    </div>
+
+                    <!-- Geocoding Tab Form -->
+                    <div id="play-geocode" class="tab-content active">
+                        <div class="form-group">
+                            <label class="form-label">Street Address</label>
+                            <input type="text" id="geocode-address" class="form-input" value="1600 Amphitheatre Parkway, Mountain View, CA">
+                        </div>
+                        <button type="button" class="btn-call-api" onclick="callGeocode()">Run Forward Geocode</button>
+                    </div>
+
+                    <!-- Routes Tab Form -->
+                    <div id="play-routes" class="tab-content">
+                        <div class="form-group">
+                            <label class="form-label">Origin Coordinates / Address</label>
+                            <input type="text" id="route-origin" class="form-input" value="37.42,-122.08">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Destination Coordinates / Address</label>
+                            <input type="text" id="route-destination" class="form-input" value="37.43,-122.09">
+                        </div>
+                        <button type="button" class="btn-call-api" onclick="callRoutes()">Calculate Directions</button>
+                    </div>
+
+                    <!-- Weather Tab Form -->
+                    <div id="play-weather" class="tab-content">
+                        <div class="row-inputs">
+                            <div class="form-group">
+                                <label class="form-label">Latitude</label>
+                                <input type="number" step="any" id="weather-lat" class="form-input" value="37.42">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Longitude</label>
+                                <input type="number" step="any" id="weather-lng" class="form-input" value="-122.08">
+                            </div>
+                        </div>
+                        <button type="button" class="btn-call-api" onclick="callWeather()">Lookup Weather</button>
+                        <!-- Visual representation of weather -->
+                        <div id="visual-weather" class="visual-container">
+                            <div class="visual-title">Current Weather Details</div>
+                            <div class="weather-card">
+                                <div>
+                                    <div id="w-cond" class="weather-condition">Sunny</div>
+                                    <div id="w-hum" class="weather-humidity">Humidity: 50%</div>
+                                </div>
+                                <div id="w-temp" class="weather-temp">24°C</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Air Quality Tab Form -->
+                    <div id="play-airquality" class="tab-content">
+                        <div class="row-inputs">
+                            <div class="form-group">
+                                <label class="form-label">Latitude</label>
+                                <input type="number" step="any" id="aqi-lat" class="form-input" value="37.42">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Longitude</label>
+                                <input type="number" step="any" id="aqi-lng" class="form-input" value="-122.08">
+                            </div>
+                        </div>
+                        <button type="button" class="btn-call-api" onclick="callAirQuality()">Get Air Quality Index</button>
+
+                        <div id="visual-aqi" class="visual-container">
+                            <div class="visual-title">AQI Breakdown</div>
+                            <div class="aqi-widget">
+                                <div id="aqi-circle" class="aqi-val">72</div>
+                                <div>
+                                    <div id="aqi-cat" class="aqi-category">Good</div>
+                                    <div id="aqi-pollutant" class="aqi-pollutant-desc">Dominant Pollutant: pm25</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pollen Tab Form -->
+                    <div id="play-pollen" class="tab-content">
+                        <div class="row-inputs">
+                            <div class="form-group">
+                                <label class="form-label">Latitude</label>
+                                <input type="number" step="any" id="pollen-lat" class="form-input" value="37.42">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Longitude</label>
+                                <input type="number" step="any" id="pollen-lng" class="form-input" value="-122.08">
+                            </div>
+                        </div>
+                        <button type="button" class="btn-call-api" onclick="callPollen()">Query Pollen Levels</button>
+                    </div>
+
+                    <!-- Solar Tab -->
+                    <div id="play-solar" class="tab-content">
+                        <div class="row-inputs">
+                            <div class="form-group">
+                                <label class="form-label">Latitude</label>
+                                <input type="number" step="any" id="solar-lat" class="form-input" value="37.42">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Longitude</label>
+                                <input type="number" step="any" id="solar-lng" class="form-input" value="-122.08">
+                            </div>
+                        </div>
+                        <button type="button" class="btn-call-api" onclick="callSolar()">Analyze Solar Potential</button>
+                    </div>
+                </div>
+
+                <!-- API Log Console Panel -->
+                <div class="panel-card">
+                    <div class="console-header">
+                        <div class="panel-card-title console-card-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-code"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                            Response Log Console
+                        </div>
+                        <span id="response-code" class="console-status-code">HTTP 200</span>
+                    </div>
+                    <div id="response-console" class="console-wrapper">
+// Make API calls in the playground to display server JSON response payload logs here...
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JS Implementation -->
+    <script>
+        let currentAuthMode = 'login';
+        let jwtToken = null;
+
+        function switchAuthTab(mode) {
+            currentAuthMode = mode;
+            document.querySelectorAll('.auth-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            const passGroup = document.getElementById('group-password');
+            const nameGroup = document.getElementById('group-displayname');
+
+            if (mode === 'login') {
+                passGroup.style.display = 'block';
+                nameGroup.style.display = 'none';
+            } else if (mode === 'signup') {
+                passGroup.style.display = 'block';
+                nameGroup.style.display = 'block';
+            }
+        }
+
+        function switchPlaygroundTab(tabName) {
+            document.querySelectorAll('.playground-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById('play-' + tabName).classList.add('active');
+
+            // Hide/Show route line on simulated map
+            const routeLine = document.getElementById('map-route-line');
+            if (tabName === 'routes') {
+                routeLine.style.display = 'block';
+            } else {
+                routeLine.style.display = 'none';
+            }
+        }
+
+        // Load mock firebase token inside email field for testing
+        function loadMockFirebaseToken() {
+            document.getElementById('auth-email').value = "mock_firebase_id_token_xyz_123456";
+            document.getElementById('auth-password').value = "";
+            document.getElementById('group-password').style.display = 'none';
+            alert("Simulated Firebase ID token loaded into the Email input! Click 'Sign in with Google' to send this token directly to /api/v1/auth/firebase.");
+        }
+
+        // Mock Firebase Auth -> Backend Auth Login
+        async function submitAuth() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const displayName = document.getElementById('auth-displayname').value;
+
+            // In actual workflow, regular credentials signup/login is disabled (returns 404) in this backend configuration.
+            // Let's show this error in the console.
+            const url = currentAuthMode === 'login' ? '/api/v1/auth/login' : '/api/v1/auth/register';
+            const body = currentAuthMode === 'login' ? { email, password } : { email, password, display_name: displayName };
+
+            updateConsole("Sending POST request to " + url + "...", "PENDING");
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                
+                const data = await response.json();
+                updateConsole(JSON.stringify(data, null, 2), "HTTP " + response.status);
+            } catch (err) {
+                updateConsole(err.message, "ERROR");
+            }
+        }
+
+        async function signInWithGoogle() {
+            const idTokenInput = document.getElementById('auth-email').value;
+            // Check if user is using mock token or real token
+            const token = idTokenInput.startsWith("mock_") ? idTokenInput : "mock_firebase_token_google_signin";
+            
+            const url = "/api/v1/auth/firebase";
+            updateConsole("Authenticating with Firebase OAuth token...\nPOST " + url, "PENDING");
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id_token: token })
+                });
+                
+                const data = await response.json();
+                updateConsole(JSON.stringify(data, null, 2), "HTTP " + response.status);
+
+                if (response.status === 200 && data.token) {
+                    jwtToken = data.token;
+                    document.getElementById('user-status-badge').classList.add('connected');
+                    document.getElementById('user-status-text').innerText = "Logged In: " + (data.user.display_name || data.user.email || "Google User");
+                    document.getElementById('user-status-text').style.color = "var(--success)";
+                }
+            } catch (err) {
+                updateConsole(err.message, "ERROR");
+            }
+        }
+
+        // Helper API Callers
+        async function callGeocode() {
+            const address = document.getElementById('geocode-address').value;
+            const url = `/api/v1/places/geocode?address=${encodeURIComponent(address)}`;
+            
+            await makeGetRequest(url);
+        }
+
+        async function callRoutes() {
+            const origin = document.getElementById('route-origin').value;
+            const destination = document.getElementById('route-destination').value;
+            
+            // Format coordinates correctly or use query string
+            const url = `/api/v1/navigation/distance-matrix?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(destination)}`;
+            await makeGetRequest(url);
+        }
+
+        async function callWeather() {
+            const lat = document.getElementById('weather-lat').value;
+            const lng = document.getElementById('weather-lng').value;
+            const url = `/api/v1/environment/weather?lat=${lat}&lng=${lng}&query_type=current`;
+
+            const data = await makeGetRequest(url);
+            if (data && data.temperature) {
+                document.getElementById('visual-weather').style.display = 'block';
+                document.getElementById('w-temp').innerText = `${data.temperature.value}°C`;
+                document.getElementById('w-cond').innerText = data.condition;
+                document.getElementById('w-hum').innerText = `Humidity: ${data.humidity}%`;
+            }
+        }
+
+        async function callAirQuality() {
+            const lat = document.getElementById('aqi-lat').value;
+            const lng = document.getElementById('aqi-lng').value;
+            const url = `/api/v1/environment/air-quality?lat=${lat}&lng=${lng}`;
+
+            const data = await makeGetRequest(url);
+            if (data && data.indexes) {
+                document.getElementById('visual-aqi').style.display = 'block';
+                const aqiVal = data.indexes[0].aqi;
+                const aqiCircle = document.getElementById('aqi-circle');
+                aqiCircle.innerText = aqiVal;
+                
+                // Color code AQI
+                if (aqiVal < 50) {
+                    aqiCircle.style.borderColor = "var(--success)";
+                    document.getElementById('aqi-cat').style.color = "var(--success)";
+                } else {
+                    aqiCircle.style.borderColor = "var(--accent)";
+                    document.getElementById('aqi-cat').style.color = "var(--accent)";
+                }
+                document.getElementById('aqi-cat').innerText = data.indexes[0].category;
+                document.getElementById('aqi-pollutant').innerText = `Dominant Pollutant: ${data.indexes[0].dominantPollutant}`;
+            }
+        }
+
+        async function callPollen() {
+            const lat = document.getElementById('pollen-lat').value;
+            const lng = document.getElementById('pollen-lng').value;
+            const url = `/api/v1/environment/pollen?lat=${lat}&lng=${lng}`;
+
+            await makeGetRequest(url);
+        }
+
+        async function callSolar() {
+            const lat = document.getElementById('solar-lat').value;
+            const lng = document.getElementById('solar-lng').value;
+            const url = `/api/v1/environment/solar?lat=${lat}&lng=${lng}`;
+
+            await makeGetRequest(url);
+        }
+
+        // Generic AJAX caller
+        async function makeGetRequest(url) {
+            updateConsole(`Fetching GET ${url}...`, "PENDING");
+            
+            const headers = {};
+            if (jwtToken) {
+                headers['Authorization'] = `Bearer ${jwtToken}`;
+            }
+
+            try {
+                const response = await fetch(url, { headers });
+                const data = await response.json();
+                updateConsole(JSON.stringify(data, null, 2), "HTTP " + response.status);
+                return data;
+            } catch (err) {
+                updateConsole(err.message, "ERROR");
+                return null;
+            }
+        }
+
+        // Console logger helper
+        function updateConsole(content, status) {
+            const consoleBox = document.getElementById('response-console');
+            const statusBox = document.getElementById('response-code');
+
+            consoleBox.innerText = content;
+            statusBox.innerText = status;
+            statusBox.style.display = 'inline-block';
+
+            if (status.includes("200")) {
+                statusBox.style.background = "rgba(16, 185, 129, 0.15)";
+                statusBox.style.color = "var(--success)";
+            } else if (status === "PENDING") {
+                statusBox.style.background = "rgba(6, 182, 212, 0.15)";
+                statusBox.style.color = "var(--primary)";
+            } else {
+                statusBox.style.background = "rgba(239, 68, 68, 0.15)";
+                statusBox.style.color = "#ef4444";
+            }
+        }
+    </script>
+</body>
+</html>

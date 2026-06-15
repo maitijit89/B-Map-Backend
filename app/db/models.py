@@ -27,9 +27,11 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    email = Column(String, unique=True, nullable=False, index=True)
-    password_hash = Column(String, nullable=False)
+    email = Column(String, unique=True, nullable=True, index=True)
+    password_hash = Column(String, nullable=True)
     display_name = Column(String)
+    phone_number = Column(String, unique=True, nullable=True, index=True)
+    firebase_uid = Column(String, unique=True, nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

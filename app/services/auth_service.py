@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi import HTTPException, status
 from app.db.models import User
-from app.schemas.user import UserCreate, UserLogin, GoogleLogin, AuthResponse, UserResponse
+from app.schemas.user import UserCreate, UserLogin, GoogleLogin, FirebaseLogin, AuthResponse, UserResponse
 from app.core.security import get_password_hash, verify_password, create_access_token
 
 class AuthService:
@@ -30,7 +30,7 @@ class AuthService:
         token = create_access_token(user.id)
         return AuthResponse(
             token=token,
-            user=UserResponse.from_orm(user)
+            user=UserResponse.model_validate(user)
         )
 
     async def login(self, user_in: UserLogin) -> AuthResponse:
@@ -46,7 +46,7 @@ class AuthService:
         token = create_access_token(user.id)
         return AuthResponse(
             token=token,
-            user=UserResponse.from_orm(user)
+            user=UserResponse.model_validate(user)
         )
 
     async def login_google(self, google_login: GoogleLogin) -> AuthResponse:
@@ -105,5 +105,90 @@ class AuthService:
         token = create_access_token(user.id)
         return AuthResponse(
             token=token,
-            user=UserResponse.from_orm(user)
+            user=UserResponse.model_validate(user)
+        )
+
+    async def login_firebase(self, firebase_login: FirebaseLogin) -> AuthResponse:
+        from app.services.firebase_service import FirebaseService
+        import uuid
+
+        try:
+            # Verify Firebase ID token
+            decoded_token = FirebaseService.verify_id_token(firebase_login.id_token)
+            
+            email = decoded_token.get("email")
+            display_name = decoded_token.get("name")
+            phone_number = decoded_token.get("phone_number")
+            firebase_uid = decoded_token.get("uid") or decoded_token.get("sub")
+            
+            if not firebase_uid:
+                raise ValueError("UID not found in Firebase ID token.")
+                
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Invalid Firebase ID token: {str(e)}"
+            )
+
+        # Look up user:
+        # 1. By firebase_uid
+        user = None
+        result = await self.db.execute(select(User).where(User.firebase_uid == firebase_uid))
+        user = result.scalars().first()
+        
+        # 2. By email (if email is present in the token)
+        if not user and email:
+            result = await self.db.execute(select(User).where(User.email == email))
+            user = result.scalars().first()
+            if user:
+                # Link existing user by email
+                user.firebase_uid = firebase_uid
+                
+        # 3. By phone_number (if phone_number is present in the token)
+        if not user and phone_number:
+            result = await self.db.execute(select(User).where(User.phone_number == phone_number))
+            user = result.scalars().first()
+            if user:
+                # Link existing user by phone
+                user.firebase_uid = firebase_uid
+
+        # Upsert logic:
+        if not user:
+            # Create user with a secure random password since they sign in via Firebase
+            random_password = str(uuid.uuid4())
+            user = User(
+                email=email,
+                password_hash=get_password_hash(random_password),
+                display_name=display_name,
+                phone_number=phone_number,
+                firebase_uid=firebase_uid
+            )
+            self.db.add(user)
+            await self.db.commit()
+            await self.db.refresh(user)
+        else:
+            # Update fields if changed
+            updated = False
+            if display_name and user.display_name != display_name:
+                user.display_name = display_name
+                updated = True
+            if email and user.email != email:
+                user.email = email
+                updated = True
+            if phone_number and user.phone_number != phone_number:
+                user.phone_number = phone_number
+                updated = True
+            if not user.firebase_uid:
+                user.firebase_uid = firebase_uid
+                updated = True
+                
+            if updated:
+                self.db.add(user)
+                await self.db.commit()
+                await self.db.refresh(user)
+
+        token = create_access_token(user.id)
+        return AuthResponse(
+            token=token,
+            user=UserResponse.model_validate(user)
         )

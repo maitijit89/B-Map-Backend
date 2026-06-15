@@ -1,11 +1,11 @@
 fastapi[all]==0.111.0
 uvicorn[standard]==0.29.0
-sqlalchemy[asyncio]==2.0.30
+sqlalchemy[asyncio]>=2.0.32
 psycopg[binary]
 pg8000
 geoalchemy2==0.15.1
-pydantic[email]==2.7.1
-pydantic-settings==2.2.1
+pydantic[email]>=2.9.0
+pydantic-settings>=2.5.0
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.1.2
@@ -19,5 +19,5 @@ aiosqlite==0.20.0
 pytest==8.2.0
 pytest-asyncio==0.23.6
 alembic==1.13.1
-supabase==2.4.6
 requests==2.32.3
+firebase-admin>=6.5.0

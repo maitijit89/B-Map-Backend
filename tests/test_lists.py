@@ -79,3 +79,54 @@ def test_get_list_details_private_denied(client, mock_db):
     response = client.get(f"/api/v1/lists/{list_id}")
     assert response.status_code == 404
     assert response.json()["detail"] == "List not found or private access denied"
+
+
+def test_get_list_details_public_unauthenticated(client, mock_db):
+    from app.main import app
+    from app.api.v1.deps import get_current_user_optional
+    
+    # Temporarily override get_current_user_optional to return None for unauthenticated
+    async def override_none():
+        return None
+        
+    app.dependency_overrides[get_current_user_optional] = override_none
+    
+    try:
+        mock_list = UserList(
+            id=uuid4(),
+            user_id=uuid4(), # Owned by someone else
+            name="Public Secrets",
+            is_public=True
+        )
+        mock_db.user_lists.find_one.return_value = mock_list.to_dict()
+        
+        list_id = mock_list.id
+        response = client.get(f"/api/v1/lists/{list_id}")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "Public Secrets"
+        assert data["is_public"] is True
+    finally:
+        # Restore the default mock override
+        async def override_mock():
+            from tests.conftest import MOCK_USER
+            return MOCK_USER
+        app.dependency_overrides[get_current_user_optional] = override_mock
+
+
+def test_get_list_details_public_authenticated(client, mock_db):
+    mock_list = UserList(
+        id=uuid4(),
+        user_id=uuid4(), # Owned by someone else
+        name="Public Secret List",
+        is_public=True
+    )
+    mock_db.user_lists.find_one.return_value = mock_list.to_dict()
+    
+    list_id = mock_list.id
+    response = client.get(f"/api/v1/lists/{list_id}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "Public Secret List"
+    assert data["is_public"] is True
+

@@ -16,3 +16,18 @@ async def get_offline_cache(
 ):
     service = OfflineService(db)
     return await service.cache_region_data(lat_min, lng_min, lat_max, lng_max)
+
+@router.get("/cities", status_code=status.HTTP_200_OK)
+async def get_offline_cities(
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    service = OfflineService(db)
+    return await service.get_offline_cities()
+
+@router.get("/download", status_code=status.HTTP_200_OK)
+async def download_offline_package(
+    city_id: str = Query(...),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    service = OfflineService(db)
+    return await service.get_offline_package(city_id)

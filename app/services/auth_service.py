@@ -1,7 +1,7 @@
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from fastapi import HTTPException, status
 from app.db.models import User
-from app.schemas.user import UserCreate, UserLogin, GoogleLogin, FirebaseLogin, AuthResponse, UserResponse
+from app.schemas.user import UserCreate, UserLogin, GoogleLogin, FirebaseLogin, AuthResponse, UserResponse, UserMeResponse, GamificationProgress
 from app.core.security import get_password_hash, verify_password, create_access_token
 
 class AuthService:
@@ -183,4 +183,66 @@ class AuthService:
         return AuthResponse(
             token=token,
             user=UserResponse.model_validate(user)
+        )
+
+    async def get_user_profile(self, user: User) -> UserMeResponse:
+        # Count user's contributions
+        reviews_count = await self.db.reviews.count_documents({"user_id": user.id})
+        incidents_count = await self.db.incidents.count_documents({"reporter_id": user.id})
+        pins_count = await self.db.pins.count_documents({"user_id": user.id})
+
+        # Calculate XP
+        xp = (reviews_count * 50) + (incidents_count * 100) + (pins_count * 20)
+
+        level = 1
+        next_level_xp = 100
+        current_level_base = 0
+
+        if xp >= 1000:
+            level = 5
+            next_level_xp = 1000
+            current_level_base = 1000
+        elif xp >= 600:
+            level = 4
+            next_level_xp = 1000
+            current_level_base = 600
+        elif xp >= 300:
+            level = 3
+            next_level_xp = 600
+            current_level_base = 300
+        elif xp >= 100:
+            level = 2
+            next_level_xp = 300
+            current_level_base = 100
+
+        # Calculate progress percentage
+        if level == 5:
+            xp_progress_pct = 100.0
+        else:
+            denom = next_level_xp - current_level_base
+            xp_progress_pct = round(((xp - current_level_base) / denom) * 100, 2) if denom > 0 else 0.0
+
+        # Dynamic Badges
+        badges = []
+        if level >= 1:
+            badges.append("LV.1 VIP")
+        if reviews_count >= 5:
+            badges.append("Reviewer Bronze")
+        if incidents_count >= 3:
+            badges.append("Road Safety Pioneer")
+        if pins_count >= 10:
+            badges.append("Mapper Extraordinaire")
+
+        contribution_count = reviews_count + incidents_count + pins_count
+
+        return UserMeResponse(
+            user=UserResponse.model_validate(user),
+            gamification=GamificationProgress(
+                level=level,
+                xp=xp,
+                next_level_xp=next_level_xp,
+                xp_progress_pct=xp_progress_pct,
+                contribution_count=contribution_count,
+                badges=badges
+            )
         )

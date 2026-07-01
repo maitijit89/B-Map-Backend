@@ -8,14 +8,42 @@ import logging
 from collections import defaultdict
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, status, WebSocket, WebSocketDisconnect
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse
 
+from app.core.websocket import manager
+
 from app.core.logging_config import setup_logging
 from app.core.config import settings
-from app.api.v1 import auth, incidents, places, navigation, pins, reviews, lists, timeline, offline, maps, environment
+from app.api.v1.router import api_router
 from app.db.session import verify_db_connection
+
+# Simple in‑memory token bucket rate limiter
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, max_requests: int = 60, window_seconds: int = 60):
+        super().__init__(app)
+        self.max_requests = max_requests
+        self.window = window_seconds
+        self.allowance = max_requests
+        self.last_check = time.time()
+
+    async def dispatch(self, request: Request, call_next):
+        current = time.time()
+        time_passed = current - self.last_check
+        self.last_check = current
+        self.allowance += time_passed * (self.max_requests / self.window)
+        if self.allowance > self.max_requests:
+            self.allowance = self.max_requests
+        if self.allowance < 1:
+            # Too many requests – return 429 with Retry‑After header
+            retry_after = int(self.window - (self.max_requests - self.allowance) * self.window / self.max_requests)
+            return Response(status_code=429, content="Too Many Requests", headers={"Retry-After": str(retry_after)})
+        self.allowance -= 1
+        response = await call_next(request)
+        return response
 
 # Resolve ProactorEventLoop issue on Windows with psycopg async
 if sys.platform == "win32":
@@ -166,18 +194,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Include centralized api_router with V1 prefix
+app.include_router(api_router, prefix="/api/v1")
 
-app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
-app.include_router(incidents.router, prefix="/api/v1/incidents", tags=["Incidents"])
-app.include_router(places.router, prefix="/api/v1/places", tags=["Places"])
-app.include_router(navigation.router, prefix="/api/v1/navigation", tags=["Navigation"])
-app.include_router(pins.router, prefix="/api/v1/pins", tags=["User Pins"])
-app.include_router(reviews.router, prefix="/api/v1/reviews", tags=["Reviews & Ratings"])
-app.include_router(lists.router, prefix="/api/v1/lists", tags=["Saved Lists"])
-app.include_router(timeline.router, prefix="/api/v1/timeline", tags=["Timeline & History"])
-app.include_router(offline.router, prefix="/api/v1/offline", tags=["Offline Pre-fetching"])
-app.include_router(maps.router, prefix="/api/v1/maps", tags=["Maps"])
-app.include_router(environment.router, prefix="/api/v1/environment", tags=["Environment"])
+# Root-level router aliases to match Flutter client relative pathing
+app.include_router(api_router)
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
@@ -188,8 +209,25 @@ async def root():
         return HTMLResponse("Welcome to B-Map API. Developer console not found.", status_code=404)
 
 @app.get("/health")
+@app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    db_ok = await verify_db_connection(max_retries=1, retry_interval=0.5)
+    return {"status": "healthy", "db_connected": db_ok}
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_json()
+            logger.info(f"Received websocket message: {data}")
+            if isinstance(data, dict) and data.get("type") == "LOCATION_UPDATE":
+                logger.info(f"User location update: lat={data.get('lat')}, lng={data.get('lng')}")
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+        manager.disconnect(websocket)
 
 if __name__ == "__main__":
     import uvicorn

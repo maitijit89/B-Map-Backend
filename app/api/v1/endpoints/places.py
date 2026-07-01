@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Query, Body
+from fastapi import APIRouter, Query, Body, Depends, Header
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
 from app.services.place_service import PlaceService
+from app.db.session import get_db
 
 router = APIRouter()
 service = PlaceService()
@@ -32,8 +33,15 @@ async def nearby_search(
     return await service.search_nearby(lat, lng, radius, type)
 
 @router.get("/details/{place_id}")
-async def get_details(place_id: str):
-    return await service.get_details(place_id)
+async def get_details(
+    place_id: str,
+    lang: str = Query("en", description="Language: en or hi"),
+    accept_language: Optional[str] = Header(None, alias="Accept-Language")
+):
+    preferred_lang = lang
+    if accept_language and "hi" in accept_language.lower():
+        preferred_lang = "hi"
+    return await service.get_details(place_id, preferred_lang)
 
 @router.get("/autocomplete")
 async def autocomplete(
@@ -47,9 +55,14 @@ async def autocomplete(
 async def search_text(
     q: str = Query(...),
     lat: Optional[float] = None,
-    lng: Optional[float] = None
+    lng: Optional[float] = None,
+    lang: str = Query("en", description="Language: en or hi"),
+    accept_language: Optional[str] = Header(None, alias="Accept-Language")
 ):
-    return await service.search_text(q, lat, lng)
+    preferred_lang = lang
+    if accept_language and "hi" in accept_language.lower():
+        preferred_lang = "hi"
+    return await service.search_text(q, lat, lng, preferred_lang)
 
 @router.get("/geocode")
 async def geocode(address: str = Query(...)):
@@ -81,4 +94,25 @@ async def get_timezone(
 @router.post("/aggregate")
 async def aggregate_places(payload: PlaceAggregateRequest = Body(...)):
     return await service.aggregate_places(payload.lat, payload.lng, payload.radius, payload.place_types)
+
+@router.get("/nearby/feed")
+async def get_nearby_feed(
+    lat: float = Query(...),
+    lng: float = Query(...),
+    radius: int = Query(3000),
+    lang: str = Query("en"),
+    accept_language: Optional[str] = Header(None, alias="Accept-Language")
+):
+    preferred_lang = lang
+    if accept_language and "hi" in accept_language.lower():
+        preferred_lang = "hi"
+    return await service.get_nearby_feed(lat, lng, radius, preferred_lang)
+
+@router.get("/{place_id}/slots")
+async def get_place_slots(place_id: str):
+    return await service.get_place_slots(place_id)
+
+@router.get("/{place_id}/availability")
+async def get_place_availability(place_id: str):
+    return await service.get_place_slots(place_id)
 

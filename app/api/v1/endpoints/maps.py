@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Query, Body
+from fastapi import APIRouter, Query, Body, Depends
 from pydantic import BaseModel
 from app.services.maps_service import MapsService
+from app.db.session import get_db
 
 router = APIRouter()
 service = MapsService()
@@ -49,3 +50,33 @@ async def create_dataset(payload: CreateDatasetRequest = Body(...)):
 @router.delete("/datasets/{dataset_id}")
 async def delete_dataset(dataset_id: str):
     return await service.delete_dataset(dataset_id)
+
+@router.get("/convert-coordinates")
+async def convert_coordinates(
+    lat: float = Query(...),
+    lng: float = Query(...),
+    from_sys: str = Query("WGS84", description="Original coordinate system (WGS84, GCJ02, BD09)"),
+    to_sys: str = Query("BD09", description="Target coordinate system (WGS84, GCJ02, BD09)")
+):
+    return await service.convert_coordinates(lat, lng, from_sys, to_sys)
+
+@router.get("/3d-metadata")
+async def get_3d_metadata(
+    city: str = Query(..., description="City name (e.g. Beijing, Shanghai, Guangzhou, Shenzhen)")
+):
+    return await service.get_3d_metadata(city)
+
+@router.get("/indoor")
+async def get_indoor_map(
+    location_name: str = Query(..., description="Name of the indoor station/mall"),
+    db = Depends(get_db)
+):
+    return await service.get_indoor_map(location_name, db)
+
+@router.get("/panoramas")
+async def get_streetview_panoramas(
+    lat: float = Query(...),
+    lng: float = Query(...),
+    db = Depends(get_db)
+):
+    return await service.get_streetview_panoramas(lat, lng, db)

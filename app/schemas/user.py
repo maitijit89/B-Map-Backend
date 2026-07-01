@@ -35,3 +35,15 @@ class Token(BaseModel):
 class AuthResponse(BaseModel):
     token: str
     user: UserResponse
+
+class GamificationProgress(BaseModel):
+    level: int
+    xp: int
+    next_level_xp: int
+    xp_progress_pct: float
+    contribution_count: int
+    badges: list[str]
+
+class UserMeResponse(BaseModel):
+    user: UserResponse
+    gamification: GamificationProgress

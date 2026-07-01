@@ -18,7 +18,7 @@ settings.REDIS_URL = None
 
 from app.main import app
 from app.db.session import get_db
-from app.api.v1.deps import get_current_user
+from app.api.v1.deps import get_current_user, get_current_user_optional
 from app.db.models import User
 
 # Sample User for Mock Authentication
@@ -61,6 +61,7 @@ class MockCollection:
         self.replace_one = AsyncMock(return_value=MagicMock(modified_count=1))
         self.find = MagicMock(return_value=MockCursor([]))
         self.aggregate = MagicMock(return_value=MockCursor([]))
+        self.count_documents = AsyncMock(return_value=0)
 
 class MockMotorDatabase:
     def __init__(self):
@@ -71,6 +72,11 @@ class MockMotorDatabase:
         self.timeline = MockCollection()
         self.user_lists = MockCollection()
         self.reviews = MockCollection()
+        self.shortcuts = MockCollection()
+        self.parking = MockCollection()
+        self.panoramas = MockCollection()
+        self.indoor_floor_plans = MockCollection()
+        self.sync_sessions = MockCollection()
 
     async def command(self, cmd):
         if cmd == "ping":
@@ -97,8 +103,12 @@ def client(mock_db):
     async def override_get_current_user():
         return MOCK_USER
         
+    async def override_get_current_user_optional():
+        return MOCK_USER
+        
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = override_get_current_user
+    app.dependency_overrides[get_current_user_optional] = override_get_current_user_optional
     
     with TestClient(app) as test_client:
         yield test_client

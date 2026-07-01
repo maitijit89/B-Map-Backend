@@ -25,6 +25,13 @@ Welcome to the API documentation for **B-Map Backend**, a high-performance Pytho
 20. [Lifestyle & On-Demand (`/api/v1/lifestyle`)](#lifestyle--on-demand-apiv1lifestyle)
 21. [System/Utilities (`/`)](#systemutilities-)
 
+### Health Check
+
+- **HTTP Method**: `GET`
+- **Path**: `/health`
+- **Authentication Required**: No
+- **Response Body** (`200 OK`): `{ "status": "healthy", "db_connected": true/false }`
+
 ---
 
 ## Backend Setup & Startup Commands

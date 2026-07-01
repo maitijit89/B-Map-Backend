@@ -3,7 +3,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.db.session import get_db
 from app.schemas.user_list import UserListCreate, UserListResponse, UserListDetailResponse, AddPlaceRequest
 from app.services.user_list_service import UserListService
-from app.api.v1.deps import get_current_user
+from app.api.v1.deps import get_current_user, get_current_user_optional
 from app.db.models import User
 from typing import List, Optional
 from uuid import UUID
@@ -63,7 +63,7 @@ async def remove_place_from_list(
 async def get_list_details(
     list_id: UUID,
     db: AsyncIOMotorDatabase = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user)
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     service = UserListService(db)
     # Flexible user ID - if no user authenticated, pass None

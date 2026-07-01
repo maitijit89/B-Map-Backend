@@ -165,3 +165,32 @@ class ReviewService:
             )
             
         return True
+
+    async def get_user_reviews(self, user_id: UUID) -> List[ReviewResponse]:
+        pipeline = [
+            {"$match": {"user_id": user_id}},
+            {"$lookup": {
+                "from": "places",
+                "localField": "place_id",
+                "foreignField": "_id",
+                "as": "place_list"
+            }},
+            {"$unwind": {"path": "$place_list", "preserveNullAndEmptyArrays": True}}
+        ]
+        
+        cursor = self.db.reviews.aggregate(pipeline)
+        reviews = []
+        async for doc in cursor:
+            user_doc = await self.db.users.find_one({"_id": user_id})
+            user = User.from_dict(user_doc) if user_doc else None
+            reviewer_name = _get_reviewer_name(user)
+            reviews.append(ReviewResponse(
+                id=doc["_id"],
+                user_id=doc["user_id"],
+                place_id=doc["place_id"],
+                rating=doc["rating"],
+                comment=doc.get("comment"),
+                created_at=doc["created_at"],
+                reviewer_name=reviewer_name
+            ))
+        return reviews

@@ -13,6 +13,9 @@ class IncidentType(str, enum.Enum):
     STRAY_ANIMAL = "stray_animal"
     POLICE_CHECK = "police_check"
     EVENT = "event"
+    SPEED_CAMERA = "speed_camera"
+    CONSTRUCTION = "construction"
+    ROAD_DAMAGE = "road_damage"
 
 class IncidentSeverity(str, enum.Enum):
     LOW = "low"
@@ -59,7 +62,7 @@ class User:
         }
 
 class Incident:
-    def __init__(self, id=None, type=None, severity=IncidentSeverity.MEDIUM, description=None, location=None, reporter_id=None, is_active=True, upvotes=0, created_at=None, expires_at=None):
+    def __init__(self, id=None, type=None, severity=IncidentSeverity.MEDIUM, description=None, location=None, reporter_id=None, is_active=True, upvotes=0, created_at=None, expires_at=None, traffic_linkage_status="pending", government_feed_id=None):
         self.id = id or uuid.uuid4()
         self.type = type
         self.severity = severity
@@ -70,6 +73,8 @@ class Incident:
         self.upvotes = upvotes
         self.created_at = created_at or datetime.now(timezone.utc)
         self.expires_at = expires_at
+        self.traffic_linkage_status = traffic_linkage_status
+        self.government_feed_id = government_feed_id
 
     @classmethod
     def from_dict(cls, data: Optional[Dict[str, Any]]):
@@ -85,7 +90,9 @@ class Incident:
             is_active=data.get("is_active", True),
             upvotes=data.get("upvotes", 0),
             created_at=data.get("created_at"),
-            expires_at=data.get("expires_at")
+            expires_at=data.get("expires_at"),
+            traffic_linkage_status=data.get("traffic_linkage_status", "pending"),
+            government_feed_id=data.get("government_feed_id")
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -99,7 +106,9 @@ class Incident:
             "is_active": self.is_active,
             "upvotes": self.upvotes,
             "created_at": self.created_at,
-            "expires_at": self.expires_at
+            "expires_at": self.expires_at,
+            "traffic_linkage_status": self.traffic_linkage_status,
+            "government_feed_id": self.government_feed_id
         }
 
 class Place:
@@ -260,4 +269,164 @@ class UserList:
             "is_public": self.is_public,
             "created_at": self.created_at,
             "place_ids": self.place_ids
+        }
+
+class ParkingSpace:
+    def __init__(self, id=None, name=None, location=None, total_spots=100, available_spots=100, price_per_hour=0.0, created_at=None):
+        self.id = id or uuid.uuid4()
+        self.name = name
+        self.location = location  # {"type": "Point", "coordinates": [lng, lat]}
+        self.total_spots = total_spots
+        self.available_spots = available_spots
+        self.price_per_hour = price_per_hour
+        self.created_at = created_at or datetime.now(timezone.utc)
+
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]):
+        if not data:
+            return None
+        return cls(
+            id=data.get("_id"),
+            name=data.get("name"),
+            location=data.get("location"),
+            total_spots=data.get("total_spots", 100),
+            available_spots=data.get("available_spots", 100),
+            price_per_hour=data.get("price_per_hour", 0.0),
+            created_at=data.get("created_at")
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "_id": self.id,
+            "name": self.name,
+            "location": self.location,
+            "total_spots": self.total_spots,
+            "available_spots": self.available_spots,
+            "price_per_hour": self.price_per_hour,
+            "created_at": self.created_at
+        }
+
+class StreetPanorama:
+    def __init__(self, id=None, location=None, heading=0.0, pitch=0.0, capture_date=None, historical_captures=None):
+        self.id = id or uuid.uuid4()
+        self.location = location  # {"type": "Point", "coordinates": [lng, lat]}
+        self.heading = heading
+        self.pitch = pitch
+        self.capture_date = capture_date or datetime.now(timezone.utc)
+        self.historical_captures = historical_captures or []  # [{"id": str, "year": int}]
+
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]):
+        if not data:
+            return None
+        return cls(
+            id=data.get("_id"),
+            location=data.get("location"),
+            heading=data.get("heading", 0.0),
+            pitch=data.get("pitch", 0.0),
+            capture_date=data.get("capture_date"),
+            historical_captures=data.get("historical_captures", [])
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "_id": self.id,
+            "location": self.location,
+            "heading": self.heading,
+            "pitch": self.pitch,
+            "capture_date": self.capture_date,
+            "historical_captures": self.historical_captures
+        }
+
+class IndoorFloorPlan:
+    def __init__(self, id=None, name=None, location=None, floors=None):
+        self.id = id or uuid.uuid4()
+        self.name = name
+        self.location = location  # {"type": "Point", "coordinates": [lng, lat]}
+        self.floors = floors or []  # [{"level": int, "shops": [{"name": str, "type": str}]}]
+
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]):
+        if not data:
+            return None
+        return cls(
+            id=data.get("_id"),
+            name=data.get("name"),
+            location=data.get("location"),
+            floors=data.get("floors", [])
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "_id": self.id,
+            "name": self.name,
+            "location": self.location,
+            "floors": self.floors
+        }
+
+class SyncSession:
+    def __init__(self, id=None, user_id=None, device_id=None, device_type="car", active_route=None, favorites=None, synced_at=None):
+        self.id = id or uuid.uuid4()
+        self.user_id = user_id
+        self.device_id = device_id
+        self.device_type = device_type  # "car", "watch", "mirror"
+        self.active_route = active_route
+        self.favorites = favorites or []
+        self.synced_at = synced_at or datetime.now(timezone.utc)
+
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]):
+        if not data:
+            return None
+        return cls(
+            id=data.get("_id"),
+            user_id=data.get("user_id"),
+            device_id=data.get("device_id"),
+            device_type=data.get("device_type", "car"),
+            active_route=data.get("active_route"),
+            favorites=data.get("favorites", []),
+            synced_at=data.get("synced_at")
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "_id": self.id,
+            "user_id": self.user_id,
+            "device_id": self.device_id,
+            "device_type": self.device_type,
+            "active_route": self.active_route,
+            "favorites": self.favorites,
+            "synced_at": self.synced_at
+        }
+
+class UserShortcut:
+    def __init__(self, id=None, user_id=None, name=None, address=None, location=None, created_at=None):
+        self.id = id or uuid.uuid4()
+        self.user_id = user_id
+        self.name = name  # e.g., "Home", "Office"
+        self.address = address
+        self.location = location  # {"type": "Point", "coordinates": [lng, lat]}
+        self.created_at = created_at or datetime.now(timezone.utc)
+
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]):
+        if not data:
+            return None
+        return cls(
+            id=data.get("_id"),
+            user_id=data.get("user_id"),
+            name=data.get("name"),
+            address=data.get("address"),
+            location=data.get("location"),
+            created_at=data.get("created_at")
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "_id": self.id,
+            "user_id": self.user_id,
+            "name": self.name,
+            "address": self.address,
+            "location": self.location,
+            "created_at": self.created_at
         }

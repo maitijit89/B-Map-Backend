@@ -62,6 +62,10 @@ async def init_db() -> None:
         await database.places.create_index([("location", "2dsphere")])
         await database.pins.create_index([("location", "2dsphere")])
         await database.timeline.create_index([("location", "2dsphere")])
+        await database.parking.create_index([("location", "2dsphere")])
+        await database.panoramas.create_index([("location", "2dsphere")])
+        await database.indoor_floor_plans.create_index([("location", "2dsphere")])
+        await database.shortcuts.create_index([("location", "2dsphere")])
         
         # Unique and sparse lookup indexes
         await database.users.create_index("email", unique=True, sparse=True)
@@ -70,6 +74,9 @@ async def init_db() -> None:
         
         # Unique place id
         await database.places.create_index("google_place_id", unique=True)
+        
+        # Unique device id for sync sessions
+        await database.sync_sessions.create_index("device_id", unique=True)
         
         logger.info("MongoDB indexes created successfully.")
     except Exception as e:

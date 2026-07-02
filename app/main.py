@@ -202,7 +202,10 @@ app.include_router(api_router)
 
 from fastapi.staticfiles import StaticFiles
 # Create static/uploads directory if not exists
-os.makedirs("app/static/uploads", exist_ok=True)
+try:
+    os.makedirs("app/static/uploads", exist_ok=True)
+except Exception as e:
+    logger.warning(f"Could not create static uploads directory: {e}")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 @app.get("/", response_class=HTMLResponse)

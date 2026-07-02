@@ -97,3 +97,23 @@ def test_delete_account(client, mock_db):
     mock_db.timeline.delete_many.assert_called_once()
     mock_db.shortcuts.delete_many.assert_called_once()
     mock_db.sync_sessions.delete_many.assert_called_once()
+
+@patch("app.services.twilio_service.TwilioService.send_otp")
+def test_phone_number_formatting(mock_send, client):
+    mock_send.return_value = {"status": "pending"}
+    
+    # 1. 10-digit number should prepend +91
+    response = client.post("/api/v1/auth/otp/send", json={"phone_number": "9155501000"})
+    assert response.status_code == 200
+    mock_send.assert_called_with("+919155501000")
+    
+    # 2. 12-digit number starting with 91 should add +
+    response = client.post("/api/v1/auth/otp/send", json={"phone_number": "919155501000"})
+    assert response.status_code == 200
+    mock_send.assert_called_with("+919155501000")
+
+    # 3. Already containing + should be preserved
+    response = client.post("/api/v1/auth/otp/send", json={"phone_number": "+1555010000"})
+    assert response.status_code == 200
+    mock_send.assert_called_with("+1555010000")
+

@@ -107,9 +107,10 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 * **Request Body** (`application/json`):
   ```json
   {
-    "phone_number": "+15550100"
+    "phone_number": "9876543210"
   }
   ```
+  > **Note**: If a 10-digit phone number is passed, the API automatically prepends the Indian country code (`+91`). Otherwise, the number must be provided in full E.164 format with the `+` prefix.
 * **Response Body** (`200 OK`):
   ```json
   {
@@ -124,10 +125,12 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 * **Request Body** (`application/json`):
   ```json
   {
-    "phone_number": "+15550100",
+    "phone_number": "9876543210",
     "code": "123456"
   }
   ```
+  > **Note**: Follows the same phone number formatting rules as Send OTP.
+
 * **Response Body** (`200 OK`):
   * **Case A: User is already registered (Logs in directly)**:
     ```json

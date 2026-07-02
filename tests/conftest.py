@@ -57,7 +57,9 @@ class MockCollection:
         self.find_one = AsyncMock(return_value=None)
         self.insert_one = AsyncMock(return_value=MagicMock(inserted_id=uuid4()))
         self.delete_one = AsyncMock(return_value=MagicMock(deleted_count=1))
+        self.delete_many = AsyncMock(return_value=MagicMock(deleted_count=1))
         self.update_one = AsyncMock(return_value=MagicMock(modified_count=1))
+
         self.replace_one = AsyncMock(return_value=MagicMock(modified_count=1))
         self.find = MagicMock(return_value=MockCursor([]))
         self.aggregate = MagicMock(return_value=MockCursor([]))

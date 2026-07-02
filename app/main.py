@@ -200,6 +200,11 @@ app.include_router(api_router, prefix="/api/v1")
 # Root-level router aliases to match Flutter client relative pathing
 app.include_router(api_router)
 
+from fastapi.staticfiles import StaticFiles
+# Create static/uploads directory if not exists
+os.makedirs("app/static/uploads", exist_ok=True)
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
 @app.get("/", response_class=HTMLResponse)
 async def root():
     try:

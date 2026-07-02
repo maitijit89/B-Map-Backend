@@ -51,6 +51,13 @@ class Settings(BaseSettings):
     
     # Firebase Configuration
     FIREBASE_CREDENTIALS_PATH: Optional[str] = None
+
+    # Twilio Configuration
+    TWILIO_ACCOUNT_SID: str = "your_twilio_account_sid_placeholder"
+    TWILIO_AUTH_TOKEN: str = "your_twilio_auth_token_placeholder"
+    TWILIO_VERIFY_SERVICE_SID: str = "your_twilio_verify_service_sid_placeholder"
+    TWILIO_API_KEY_SID: Optional[str] = None
+    TWILIO_API_SECRET: Optional[str] = None
     
     model_config = {
         "env_file": ".env",

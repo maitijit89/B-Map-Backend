@@ -28,7 +28,7 @@ Welcome to the API documentation for **B-Map Backend**, a high-performance Pytho
 ### Health Check
 
 - **HTTP Method**: `GET`
-- **Path**: `/health`
+- **Path**: `/health` (Production deployment: `https://deploytemp-rust.vercel.app/health`)
 - **Authentication Required**: No
 - **Response Body** (`200 OK`): `{ "status": "healthy", "db_connected": true/false }`
 
@@ -100,71 +100,113 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 
 ## Authentication (`/api/v1/auth`)
 
-### 1. Register User
+### 1. Send OTP
 * **HTTP Method**: `POST`
-* **Path**: `/api/v1/auth/register`
+* **Path**: `/api/v1/auth/otp/send`
 * **Authentication Required**: No
 * **Request Body** (`application/json`):
   ```json
   {
-    "email": "user@example.com",
-    "display_name": "John Doe",
-    "password": "securepassword123"
+    "phone_number": "+15550100"
   }
   ```
+* **Response Body** (`200 OK`):
+  ```json
+  {
+    "message": "OTP sent successfully."
+  }
+  ```
+
+### 2. Verify OTP
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/auth/otp/verify`
+* **Authentication Required**: No
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "phone_number": "+15550100",
+    "code": "123456"
+  }
+  ```
+* **Response Body** (`200 OK`):
+  * **Case A: User is already registered (Logs in directly)**:
+    ```json
+    {
+      "registered": true,
+      "token": "eyJhbGciOi...",
+      "temp_token": null,
+      "user": {
+        "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "email": null,
+        "display_name": "Jane Doe",
+        "phone_number": "+15550100",
+        "gender": "female",
+        "dob": "1995-05-15",
+        "profile_pic_url": "/static/uploads/avatar.png",
+        "created_at": "2026-06-15T16:00:00Z"
+      }
+    }
+    ```
+  * **Case B: User is not registered yet**:
+    ```json
+    {
+      "registered": false,
+      "token": null,
+      "temp_token": "eyJhbGciOi...",
+      "user": null
+    }
+    ```
+
+### 3. Complete Mobile Registration
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/auth/register-mobile`
+* **Authentication Required**: No
+* **Request Body** (`multipart/form-data`):
+  * `temp_token` (string, required): Short-lived token received from `/otp/verify`.
+  * `display_name` (string, required): The user's name.
+  * `gender` (string, optional): One of `male`, `female`, `other`.
+  * `dob` (string, optional): Date of birth (e.g. `YYYY-MM-DD`).
+  * `profile_pic` (file, optional): Profile picture image file.
 * **Response Body** (`200 OK`):
   ```json
   {
     "token": "eyJhbGciOi...",
     "user": {
       "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "email": "user@example.com",
-      "display_name": "John Doe",
-      "phone_number": null,
-      "firebase_uid": null,
+      "email": null,
+      "display_name": "Jane Doe",
+      "phone_number": "+15550100",
+      "gender": "female",
+      "dob": "1995-05-15",
+      "profile_pic_url": "/static/uploads/avatar.png",
       "created_at": "2026-06-15T16:00:00Z"
     }
   }
   ```
 
-### 2. Login User
+### 4. Logout User
 * **HTTP Method**: `POST`
-* **Path**: `/api/v1/auth/login`
-* **Authentication Required**: No
-* **Request Body** (`application/json`):
+* **Path**: `/api/v1/auth/logout`
+* **Authentication Required**: Yes (Bearer Token)
+* **Response Body** (`200 OK`):
   ```json
   {
-    "email": "user@example.com",
-    "password": "securepassword123"
+    "message": "Logged out successfully."
   }
   ```
-* **Response Body** (`200 OK`): Returns the same `AuthResponse` schema as Register.
 
-### 3. Google OAuth Login
-* **HTTP Method**: `POST`
-* **Path**: `/api/v1/auth/google`
-* **Authentication Required**: No
-* **Request Body** (`application/json`):
+### 5. Delete Account
+* **HTTP Method**: `DELETE`
+* **Path**: `/api/v1/auth/delete-account`
+* **Authentication Required**: Yes (Bearer Token)
+* **Response Body** (`200 OK`):
   ```json
   {
-    "id_token": "google_id_token_here"
+    "message": "Account permanently deleted."
   }
   ```
-* **Response Body** (`200 OK`): Returns the same `AuthResponse` schema as Register.
 
-### 4. Firebase Authentication Login
-* **HTTP Method**: `POST`
-* **Path**: `/api/v1/auth/firebase`
-* **Authentication Required**: No
-* **Request Body** (`application/json`):
-  ```json
-  {
-    "id_token": "firebase_id_token_here"
-  }
-  ```
-* **Response Body** (`200 OK`): Returns the same `AuthResponse` schema as Register.
-
-### 5. Get User Profile and Progress
+### 6. Get User Profile and Progress
 * **HTTP Method**: `GET`
 * **Path**: `/api/v1/auth/me`
 * **Authentication Required**: Yes
@@ -173,10 +215,12 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
   {
     "user": {
       "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "email": "user@example.com",
-      "display_name": "John Doe",
-      "phone_number": null,
-      "firebase_uid": null,
+      "email": null,
+      "display_name": "Jane Doe",
+      "phone_number": "+15550100",
+      "gender": "female",
+      "dob": "1995-05-15",
+      "profile_pic_url": "/static/uploads/avatar.png",
       "created_at": "2026-06-15T16:00:00Z"
     },
     "gamification": {
@@ -190,7 +234,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
   }
   ```
 
-### 6. Get Splash Ads Configuration
+### 7. Get Splash Ads Configuration
 * **HTTP Method**: `GET`
 * **Path**: `/api/v1/auth/splash-ads`
 * **Authentication Required**: No
@@ -202,6 +246,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
     "message": "Splash-screen ads have been permanently removed."
   }
   ```
+
 
 ---
 

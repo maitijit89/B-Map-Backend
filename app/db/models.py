@@ -24,13 +24,16 @@ class IncidentSeverity(str, enum.Enum):
     CRITICAL = "critical"
 
 class User:
-    def __init__(self, id=None, email=None, password_hash=None, display_name=None, phone_number=None, firebase_uid=None, created_at=None, updated_at=None):
+    def __init__(self, id=None, email=None, password_hash=None, display_name=None, phone_number=None, firebase_uid=None, gender=None, dob=None, profile_pic_url=None, created_at=None, updated_at=None):
         self.id = id or uuid.uuid4()
         self.email = email
         self.password_hash = password_hash
         self.display_name = display_name
         self.phone_number = phone_number
         self.firebase_uid = firebase_uid
+        self.gender = gender
+        self.dob = dob
+        self.profile_pic_url = profile_pic_url
         self.created_at = created_at or datetime.now(timezone.utc)
         self.updated_at = updated_at or datetime.now(timezone.utc)
 
@@ -45,6 +48,9 @@ class User:
             display_name=data.get("display_name"),
             phone_number=data.get("phone_number"),
             firebase_uid=data.get("firebase_uid"),
+            gender=data.get("gender"),
+            dob=data.get("dob"),
+            profile_pic_url=data.get("profile_pic_url"),
             created_at=data.get("created_at"),
             updated_at=data.get("updated_at")
         )
@@ -57,9 +63,13 @@ class User:
             "display_name": self.display_name,
             "phone_number": self.phone_number,
             "firebase_uid": self.firebase_uid,
+            "gender": self.gender,
+            "dob": self.dob,
+            "profile_pic_url": self.profile_pic_url,
             "created_at": self.created_at,
             "updated_at": self.updated_at
         }
+
 
 class Incident:
     def __init__(self, id=None, type=None, severity=IncidentSeverity.MEDIUM, description=None, location=None, reporter_id=None, is_active=True, upvotes=0, created_at=None, expires_at=None, traffic_linkage_status="pending", government_feed_id=None):

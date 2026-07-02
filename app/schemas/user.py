@@ -14,16 +14,26 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
-class GoogleLogin(BaseModel):
-    id_token: str
+class SendOTPRequest(BaseModel):
+    phone_number: str
 
-class FirebaseLogin(BaseModel):
-    id_token: str
+class VerifyOTPRequest(BaseModel):
+    phone_number: str
+    code: str
+
+class VerifyOTPResponse(BaseModel):
+    registered: bool
+    token: Optional[str] = None
+    temp_token: Optional[str] = None
+    user: Optional["UserResponse"] = None
 
 class UserResponse(UserBase):
     id: UUID
     phone_number: Optional[str] = None
     firebase_uid: Optional[str] = None
+    gender: Optional[str] = None
+    dob: Optional[str] = None
+    profile_pic_url: Optional[str] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -47,3 +57,4 @@ class GamificationProgress(BaseModel):
 class UserMeResponse(BaseModel):
     user: UserResponse
     gamification: GamificationProgress
+

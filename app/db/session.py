@@ -16,6 +16,7 @@ def get_mongodb_client():
         logger.info(f"Connecting to MongoDB at {mongodb_url}")
         client = AsyncIOMotorClient(
             mongodb_url,
+            uuidRepresentation="standard",
             serverSelectionTimeoutMS=2000,
             maxPoolSize=100,
             minPoolSize=10,

@@ -73,3 +73,16 @@ async def get_current_user_optional(
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
+async def get_user_from_token(token: str, db: AsyncIOMotorDatabase) -> Optional[User]:
+    try:
+        payload = jwt.decode(
+            token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM]
+        )
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            return None
+        user_doc = await db.users.find_one({"_id": UUID(user_id)})
+        return User.from_dict(user_doc)
+    except Exception:
+        return None
+

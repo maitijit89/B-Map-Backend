@@ -78,6 +78,19 @@ async def init_db() -> None:
         
         # Unique device id for sync sessions
         await database.sync_sessions.create_index("device_id", unique=True)
+
+        # Production Query Indexes
+        # 1. Timeline history fetching (compound index user_id & timestamp descending)
+        await database.timeline.create_index([("user_id", 1), ("timestamp", -1)])
+        # 2. OTP attempts tracking (compound unique index & TTL automatic expiration after 60 mins)
+        await database.otp_attempts.create_index([("phone_number", 1), ("flow", 1)], unique=True)
+        await database.otp_attempts.create_index("first_sent_at", expireAfterSeconds=3600)
+        # 3. Reviews list by place or user
+        await database.reviews.create_index("place_id")
+        await database.reviews.create_index("user_id")
+        # 4. User pins and shortcuts index
+        await database.pins.create_index("user_id")
+        await database.shortcuts.create_index("user_id")
         
         logger.info("MongoDB indexes created successfully.")
     except Exception as e:

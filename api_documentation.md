@@ -23,7 +23,8 @@ Welcome to the API documentation for **B-Map Backend**, a high-performance Pytho
 18. [Cab Aggregator (`/api/v1/cabs`)](#cab-aggregator-apiv1cabs)
 19. [Car & Device Sync (`/api/v1/car-sync`)](#car--device-sync-apiv1car-sync)
 20. [Lifestyle & On-Demand (`/api/v1/lifestyle`)](#lifestyle--on-demand-apiv1lifestyle)
-21. [System/Utilities (`/`)](#systemutilities-)
+21. [WebSockets (`/ws`)](#websockets-ws)
+22. [System/Utilities (`/`)](#systemutilities-)
 
 ### Health Check
 
@@ -100,7 +101,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 
 ## Authentication (`/api/v1/auth`)
 
-### 1. Send OTP
+### 1. Send OTP (Legacy / Generic fallback)
 * **HTTP Method**: `POST`
 * **Path**: `/api/v1/auth/otp/send`
 * **Authentication Required**: No
@@ -117,8 +118,74 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
     "message": "OTP sent successfully."
   }
   ```
+* **Rate Limiting**: Cooldown of 60 seconds.
 
-### 2. Verify OTP
+### 2. Send Signup OTP
+Sends an OTP specifically for new registrations. Pre-validates that the phone number is not already registered.
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/auth/otp/send/signup`
+* **Authentication Required**: No
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "phone_number": "9876543210"
+  }
+  ```
+* **Response Body** (`200 OK`):
+  ```json
+  {
+    "message": "Signup OTP sent successfully."
+  }
+  ```
+* **Error Responses**:
+  - `400 Bad Request`: If the phone number is already registered. Detail: `"Phone number already registered. Please login."`
+  - `429 Too Many Requests`: If rate-limiting cooldown (60 seconds) or window count (max 5 per hour) is exceeded.
+
+### 3. Send Login OTP
+Sends an OTP specifically for logins. Pre-validates that the phone number is already registered in the system.
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/auth/otp/send/login`
+* **Authentication Required**: No
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "phone_number": "9876543210"
+  }
+  ```
+* **Response Body** (`200 OK`):
+  ```json
+  {
+    "message": "Login OTP sent successfully."
+  }
+  ```
+* **Error Responses**:
+  - `400 Bad Request`: If the phone number is not registered. Detail: `"Phone number is not registered. Please sign up."`
+  - `429 Too Many Requests`: If rate-limiting cooldown (60 seconds) or window count (max 5 per hour) is exceeded.
+
+### 4. Resend OTP
+Resends an OTP for an active signup or login flow.
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/auth/otp/resend`
+* **Authentication Required**: No
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "phone_number": "9876543210",
+    "flow": "signup"
+  }
+  ```
+  > **Note**: `flow` must be either `"signup"` or `"login"`.
+* **Response Body** (`200 OK`):
+  ```json
+  {
+    "message": "OTP resent successfully."
+  }
+  ```
+* **Error Responses**:
+  - `429 Too Many Requests`: If rate-limiting cooldown (60 seconds) or window count (max 5 per hour) is exceeded. If blocked, returns the block penalty details.
+
+### 5. Verify OTP
+Verifies the received OTP code.
 * **HTTP Method**: `POST`
 * **Path**: `/api/v1/auth/otp/verify`
 * **Authentication Required**: No
@@ -126,13 +193,14 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
   ```json
   {
     "phone_number": "9876543210",
-    "code": "123456"
+    "code": "123456",
+    "flow": "signup"
   }
   ```
-  > **Note**: Follows the same phone number formatting rules as Send OTP.
+  > **Note**: `flow` is optional. If provided (either `"signup"` or `"login"`), verification will enforce the corresponding existence checks.
 
 * **Response Body** (`200 OK`):
-  * **Case A: User is already registered (Logs in directly)**:
+  * **Case A: User is registered (Logs in directly)**:
     ```json
     {
       "registered": true,
@@ -159,6 +227,8 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
       "user": null
     }
     ```
+* **Error Responses**:
+  - `400 Bad Request`: If verification fails or the code has expired. Or if the flow existence check fails.
 
 ### 3. Complete Mobile Registration
 * **HTTP Method**: `POST`
@@ -1589,6 +1659,52 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
     }
   ]
   ```
+
+---
+
+## WebSockets (`/ws`)
+
+The B-Map backend provides real-time WebSocket connection channels for GPS tracking, turn-by-turn updates, and multi-device location synchronization.
+
+### 1. Establish Connection
+* **Protocol**: `WS` / `WSS`
+* **Path**: `/ws`
+* **Query Parameters**:
+  - `token` (string, required): A valid JWT access token.
+* **Handshake Authentication**:
+  - The server extracts the token from the query string (e.g. `/ws?token=<JWT_TOKEN>`) and validates it.
+  - If the token is missing or invalid, the server rejects the handshake and closes the connection with code `1008 Policy Violation`.
+
+### 2. Client-to-Server Messages
+Clients can stream live GPS updates over the WebSocket channel.
+
+#### A. Location Update (`LOCATION_UPDATE`)
+* **Payload**:
+  ```json
+  {
+    "type": "LOCATION_UPDATE",
+    "lat": 39.9042,
+    "lng": 116.4074
+  }
+  ```
+* **Server Action**:
+  - Inserts a new georeferenced history point into the user's persistent `timeline` collection in MongoDB.
+  - Broadcasts a sync notification (`LOCATION_SYNC`) to all other active WebSocket sessions connected under the same user account.
+
+### 3. Server-to-Client Messages
+The server broadcasts events to connected client devices.
+
+#### A. Location Sync (`LOCATION_SYNC`)
+* **Payload**:
+  ```json
+  {
+    "type": "LOCATION_SYNC",
+    "lat": 39.9042,
+    "lng": 116.4074,
+    "timestamp": "2026-07-03T22:00:00Z"
+  }
+  ```
+  > **Use Case**: Automatically updates navigation maps or HUD displays running on companion devices (such as smartwatches or car sync screens) when the user's primary mobile device changes location.
 
 ---
 

@@ -8,7 +8,7 @@ import logging
 from collections import defaultdict
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, status, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, status, WebSocket, WebSocketDisconnect, Depends
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,7 +19,7 @@ from app.core.websocket import manager
 from app.core.logging_config import setup_logging
 from app.core.config import settings
 from app.api.v1.router import api_router
-from app.db.session import verify_db_connection
+from app.db.session import verify_db_connection, get_db
 
 # Simple in‑memory token bucket rate limiter
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -223,19 +223,58 @@ async def health_check():
     return {"status": "healthy", "db_connected": db_ok}
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
+async def websocket_endpoint(websocket: WebSocket, db = Depends(get_db)):
+    token = websocket.query_params.get("token")
+    if not token:
+        logger.warning("Rejected WebSocket connection: missing token.")
+        await websocket.accept()
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Missing authentication token.")
+        return
+
+    from app.api.v1.deps import get_user_from_token
+    
+    user = await get_user_from_token(token, db)
+    if not user:
+        logger.warning("Rejected WebSocket connection: invalid token.")
+        await websocket.accept()
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid authentication token.")
+        return
+
+    user_id_str = str(user.id)
+    await manager.connect(websocket, user_id_str)
+    
     try:
         while True:
             data = await websocket.receive_json()
-            logger.info(f"Received websocket message: {data}")
+            logger.info(f"Received websocket message from user {user_id_str}: {data}")
+            
             if isinstance(data, dict) and data.get("type") == "LOCATION_UPDATE":
-                logger.info(f"User location update: lat={data.get('lat')}, lng={data.get('lng')}")
+                lat = data.get("lat")
+                lng = data.get("lng")
+                if lat is not None and lng is not None:
+                    # Update/insert user location into timeline
+                    location_doc = {
+                        "type": "Point",
+                        "coordinates": [float(lng), float(lat)]
+                    }
+                    
+                    from app.db.models import Timeline
+                    timeline_entry = Timeline(user_id=user.id, location=location_doc)
+                    await db.timeline.insert_one(timeline_entry.to_dict())
+                    
+                    # Sync to other sessions of the same user
+                    sync_payload = {
+                        "type": "LOCATION_SYNC",
+                        "lat": lat,
+                        "lng": lng,
+                        "timestamp": timeline_entry.timestamp.isoformat()
+                    }
+                    await manager.send_to_user(user_id_str, sync_payload)
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        manager.disconnect(websocket, user_id_str)
     except Exception as e:
-        logger.error(f"WebSocket error: {e}")
-        manager.disconnect(websocket)
+        logger.error(f"WebSocket error for user {user_id_str}: {e}")
+        manager.disconnect(websocket, user_id_str)
 
 if __name__ == "__main__":
     import uvicorn

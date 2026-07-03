@@ -79,6 +79,7 @@ class MockMotorDatabase:
         self.panoramas = MockCollection()
         self.indoor_floor_plans = MockCollection()
         self.sync_sessions = MockCollection()
+        self.otp_attempts = MockCollection()
 
     async def command(self, cmd):
         if cmd == "ping":

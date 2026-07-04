@@ -13,8 +13,7 @@ from app.schemas.user import (
     SendOTPRequest,
     VerifyOTPRequest,
     VerifyOTPResponse,
-    OTPFlow,
-    ResendOTPRequest
+    OTPFlow
 )
 from app.services.auth_service import AuthService
 from app.services.twilio_service import TwilioService
@@ -40,28 +39,13 @@ async def login(user_in: UserLogin, db: AsyncIOMotorDatabase = Depends(get_db)):
 @router.post("/otp/send")
 async def send_otp(req: SendOTPRequest, db: AsyncIOMotorDatabase = Depends(get_db)):
     otp_service = OTPService(db)
-    await otp_service.check_rate_limit(req.phone_number, OTPFlow.LOGIN)
-    await otp_service.twilio_service.send_otp(req.phone_number)
-    await otp_service.record_attempt(req.phone_number, OTPFlow.LOGIN)
-    return {"message": "OTP sent successfully."}
-
-@router.post("/otp/send/signup")
-async def send_otp_signup(req: SendOTPRequest, db: AsyncIOMotorDatabase = Depends(get_db)):
-    otp_service = OTPService(db)
-    await otp_service.send_otp_for_flow(req.phone_number, OTPFlow.SIGNUP)
-    return {"message": "Signup OTP sent successfully."}
-
-@router.post("/otp/send/login")
-async def send_otp_login(req: SendOTPRequest, db: AsyncIOMotorDatabase = Depends(get_db)):
-    otp_service = OTPService(db)
-    await otp_service.send_otp_for_flow(req.phone_number, OTPFlow.LOGIN)
-    return {"message": "Login OTP sent successfully."}
-
-@router.post("/otp/resend")
-async def resend_otp(req: ResendOTPRequest, db: AsyncIOMotorDatabase = Depends(get_db)):
-    otp_service = OTPService(db)
-    await otp_service.send_otp_for_flow(req.phone_number, req.flow)
-    return {"message": "OTP resent successfully."}
+    await otp_service.send_otp_for_flow(
+        phone_number=req.phone_number,
+        flow=req.flow,
+        is_resend=req.is_resend
+    )
+    msg = f"{req.flow.capitalize()} OTP sent successfully." if not req.is_resend else "OTP resent successfully."
+    return {"message": msg}
 
 @router.post("/otp/verify", response_model=VerifyOTPResponse)
 async def verify_otp(req: VerifyOTPRequest, db: AsyncIOMotorDatabase = Depends(get_db)):

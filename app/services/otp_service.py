@@ -125,7 +125,7 @@ class OTPService:
                 }
             )
 
-    async def send_otp_for_flow(self, phone_number: str, flow: OTPFlow) -> dict:
+    async def send_otp_for_flow(self, phone_number: str, flow: OTPFlow, is_resend: bool = False) -> dict:
         # Check user existence depending on flow
         user_doc = await self.db.users.find_one({"phone_number": phone_number})
         

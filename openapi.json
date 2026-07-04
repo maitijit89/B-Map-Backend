@@ -93,18 +93,98 @@
         }
       }
     },
-    "/api/v1/auth/google": {
+    "/api/v1/auth/otp/send": {
       "post": {
         "tags": [
           "Authentication"
         ],
-        "summary": "Login Google",
-        "operationId": "login_google_api_v1_auth_google_post",
+        "summary": "Send Otp",
+        "operationId": "send_otp_api_v1_auth_otp_send_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/GoogleLogin"
+                "$ref": "#/components/schemas/SendOTPRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/otp/verify": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Verify Otp",
+        "operationId": "verify_otp_api_v1_auth_otp_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyOTPRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyOTPResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register-mobile": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Register Mobile",
+        "operationId": "register_mobile_api_v1_auth_register_mobile_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_register_mobile_api_v1_auth_register_mobile_post"
               }
             }
           },
@@ -134,45 +214,47 @@
         }
       }
     },
-    "/api/v1/auth/firebase": {
+    "/api/v1/auth/logout": {
       "post": {
         "tags": [
           "Authentication"
         ],
-        "summary": "Login Firebase",
-        "operationId": "login_firebase_api_v1_auth_firebase_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FirebaseLogin"
-              }
-            }
-          },
-          "required": true
-        },
+        "summary": "Logout",
+        "operationId": "logout_api_v1_auth_logout_post",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
+                "schema": {}
               }
             }
           }
         }
+      }
+    },
+    "/api/v1/auth/delete-account": {
+      "delete": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Delete Account",
+        "operationId": "delete_account_api_v1_auth_delete_account_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
       }
     },
     "/api/v1/auth/splash-ads": {
@@ -4175,18 +4257,98 @@
         }
       }
     },
-    "/auth/google": {
+    "/auth/otp/send": {
       "post": {
         "tags": [
           "Authentication"
         ],
-        "summary": "Login Google",
-        "operationId": "login_google_auth_google_post",
+        "summary": "Send Otp",
+        "operationId": "send_otp_auth_otp_send_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/GoogleLogin"
+                "$ref": "#/components/schemas/SendOTPRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/otp/verify": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Verify Otp",
+        "operationId": "verify_otp_auth_otp_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyOTPRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyOTPResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/register-mobile": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Register Mobile",
+        "operationId": "register_mobile_auth_register_mobile_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_register_mobile_auth_register_mobile_post"
               }
             }
           },
@@ -4216,45 +4378,47 @@
         }
       }
     },
-    "/auth/firebase": {
+    "/auth/logout": {
       "post": {
         "tags": [
           "Authentication"
         ],
-        "summary": "Login Firebase",
-        "operationId": "login_firebase_auth_firebase_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FirebaseLogin"
-              }
-            }
-          },
-          "required": true
-        },
+        "summary": "Logout",
+        "operationId": "logout_auth_logout_post",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
+                "schema": {}
               }
             }
           }
         }
+      }
+    },
+    "/auth/delete-account": {
+      "delete": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Delete Account",
+        "operationId": "delete_account_auth_delete_account_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
       }
     },
     "/auth/splash-ads": {
@@ -8300,6 +8464,110 @@
         ],
         "title": "AuthResponse"
       },
+      "Body_register_mobile_api_v1_auth_register_mobile_post": {
+        "properties": {
+          "temp_token": {
+            "type": "string",
+            "title": "Temp Token"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "gender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
+          },
+          "dob": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dob"
+          },
+          "profile_pic": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "binary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Pic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "temp_token",
+          "display_name"
+        ],
+        "title": "Body_register_mobile_api_v1_auth_register_mobile_post"
+      },
+      "Body_register_mobile_auth_register_mobile_post": {
+        "properties": {
+          "temp_token": {
+            "type": "string",
+            "title": "Temp Token"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "gender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
+          },
+          "dob": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dob"
+          },
+          "profile_pic": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "binary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Pic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "temp_token",
+          "display_name"
+        ],
+        "title": "Body_register_mobile_auth_register_mobile_post"
+      },
       "BookCabRequest": {
         "properties": {
           "quote_id": {
@@ -8422,19 +8690,6 @@
         ],
         "title": "CreateDatasetRequest"
       },
-      "FirebaseLogin": {
-        "properties": {
-          "id_token": {
-            "type": "string",
-            "title": "Id Token"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id_token"
-        ],
-        "title": "FirebaseLogin"
-      },
       "GamificationProgress": {
         "properties": {
           "level": {
@@ -8511,19 +8766,6 @@
         },
         "type": "object",
         "title": "GeolocateRequest"
-      },
-      "GoogleLogin": {
-        "properties": {
-          "id_token": {
-            "type": "string",
-            "title": "Id Token"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id_token"
-        ],
-        "title": "GoogleLogin"
       },
       "HTTPValidationError": {
         "properties": {
@@ -8710,6 +8952,14 @@
           "lng"
         ],
         "title": "LocationLog"
+      },
+      "OTPFlow": {
+        "type": "string",
+        "enum": [
+          "signup",
+          "login"
+        ],
+        "title": "OTPFlow"
       },
       "OptimizeRoutesRequest": {
         "properties": {
@@ -9126,6 +9376,28 @@
         ],
         "title": "SaveShortcutRequest"
       },
+      "SendOTPRequest": {
+        "properties": {
+          "phone_number": {
+            "type": "string",
+            "title": "Phone Number"
+          },
+          "flow": {
+            "$ref": "#/components/schemas/OTPFlow"
+          },
+          "is_resend": {
+            "type": "boolean",
+            "title": "Is Resend",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "phone_number",
+          "flow"
+        ],
+        "title": "SendOTPRequest"
+      },
       "SyncSessionRequest": {
         "properties": {
           "device_id": {
@@ -9476,6 +9748,39 @@
             ],
             "title": "Firebase Uid"
           },
+          "gender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
+          },
+          "dob": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dob"
+          },
+          "profile_pic_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Pic Url"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -9521,6 +9826,79 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VerifyOTPRequest": {
+        "properties": {
+          "phone_number": {
+            "type": "string",
+            "title": "Phone Number"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "flow": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OTPFlow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "phone_number",
+          "code"
+        ],
+        "title": "VerifyOTPRequest"
+      },
+      "VerifyOTPResponse": {
+        "properties": {
+          "registered": {
+            "type": "boolean",
+            "title": "Registered"
+          },
+          "token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token"
+          },
+          "temp_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temp Token"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "registered"
+        ],
+        "title": "VerifyOTPResponse"
       },
       "VoiceQueryRequest": {
         "properties": {

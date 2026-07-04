@@ -22,24 +22,8 @@ class OTPFlow(str, Enum):
 
 class SendOTPRequest(BaseModel):
     phone_number: str
-
-    @field_validator("phone_number", mode="before")
-    @classmethod
-    def clean_and_format_phone(cls, v: str) -> str:
-        if not isinstance(v, str):
-            return v
-        cleaned = "".join(v.split()).replace("-", "")
-        if cleaned.isdigit() and len(cleaned) == 10:
-            return f"+91{cleaned}"
-        if cleaned.isdigit() and len(cleaned) == 12 and cleaned.startswith("91"):
-            return f"+{cleaned}"
-        if not cleaned.startswith("+") and cleaned.isdigit():
-            return f"+{cleaned}"
-        return cleaned
-
-class ResendOTPRequest(BaseModel):
-    phone_number: str
     flow: OTPFlow
+    is_resend: bool = False
 
     @field_validator("phone_number", mode="before")
     @classmethod

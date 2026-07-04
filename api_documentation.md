@@ -101,36 +101,23 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 
 ## Authentication (`/api/v1/auth`)
 
-### 1. Send OTP (Legacy / Generic fallback)
+### 1. Send OTP
+Sends an OTP specifically for registration (signup) or login, and supports resending.
 * **HTTP Method**: `POST`
 * **Path**: `/api/v1/auth/otp/send`
 * **Authentication Required**: No
 * **Request Body** (`application/json`):
   ```json
   {
-    "phone_number": "9876543210"
+    "phone_number": "9876543210",
+    "flow": "signup",
+    "is_resend": false
   }
   ```
-  > **Note**: If a 10-digit phone number is passed, the API automatically prepends the Indian country code (`+91`). Otherwise, the number must be provided in full E.164 format with the `+` prefix.
-* **Response Body** (`200 OK`):
-  ```json
-  {
-    "message": "OTP sent successfully."
-  }
-  ```
-* **Rate Limiting**: Cooldown of 60 seconds.
-
-### 2. Send Signup OTP
-Sends an OTP specifically for new registrations. Pre-validates that the phone number is not already registered.
-* **HTTP Method**: `POST`
-* **Path**: `/api/v1/auth/otp/send/signup`
-* **Authentication Required**: No
-* **Request Body** (`application/json`):
-  ```json
-  {
-    "phone_number": "9876543210"
-  }
-  ```
+  > **Note**:
+  > - `phone_number` (string, required): Follows standard format (10-digit formats are prepended with `+91` automatically).
+  > - `flow` (string, required): Must be either `"signup"` (pre-validates phone doesn't exist) or `"login"` (pre-validates phone exists).
+  > - `is_resend` (boolean, optional, default: `false`): Set to `true` when user requests to resend the code.
 * **Response Body** (`200 OK`):
   ```json
   {
@@ -138,53 +125,10 @@ Sends an OTP specifically for new registrations. Pre-validates that the phone nu
   }
   ```
 * **Error Responses**:
-  - `400 Bad Request`: If the phone number is already registered. Detail: `"Phone number already registered. Please login."`
-  - `429 Too Many Requests`: If rate-limiting cooldown (60 seconds) or window count (max 5 per hour) is exceeded.
+  - `400 Bad Request`: If user exists but flow is `"signup"`, or if user doesn't exist but flow is `"login"`.
+  - `429 Too Many Requests`: If rate-limiting cooldown (60 seconds) or window count (max 5 per hour) is exceeded. If blocked, returns temporary block duration.
 
-### 3. Send Login OTP
-Sends an OTP specifically for logins. Pre-validates that the phone number is already registered in the system.
-* **HTTP Method**: `POST`
-* **Path**: `/api/v1/auth/otp/send/login`
-* **Authentication Required**: No
-* **Request Body** (`application/json`):
-  ```json
-  {
-    "phone_number": "9876543210"
-  }
-  ```
-* **Response Body** (`200 OK`):
-  ```json
-  {
-    "message": "Login OTP sent successfully."
-  }
-  ```
-* **Error Responses**:
-  - `400 Bad Request`: If the phone number is not registered. Detail: `"Phone number is not registered. Please sign up."`
-  - `429 Too Many Requests`: If rate-limiting cooldown (60 seconds) or window count (max 5 per hour) is exceeded.
-
-### 4. Resend OTP
-Resends an OTP for an active signup or login flow.
-* **HTTP Method**: `POST`
-* **Path**: `/api/v1/auth/otp/resend`
-* **Authentication Required**: No
-* **Request Body** (`application/json`):
-  ```json
-  {
-    "phone_number": "9876543210",
-    "flow": "signup"
-  }
-  ```
-  > **Note**: `flow` must be either `"signup"` or `"login"`.
-* **Response Body** (`200 OK`):
-  ```json
-  {
-    "message": "OTP resent successfully."
-  }
-  ```
-* **Error Responses**:
-  - `429 Too Many Requests`: If rate-limiting cooldown (60 seconds) or window count (max 5 per hour) is exceeded. If blocked, returns the block penalty details.
-
-### 5. Verify OTP
+### 2. Verify OTP
 Verifies the received OTP code.
 * **HTTP Method**: `POST`
 * **Path**: `/api/v1/auth/otp/verify`
@@ -317,6 +261,66 @@ Verifies the received OTP code.
     "show_ads": false,
     "policy_effective_date": "2026-06-01",
     "message": "Splash-screen ads have been permanently removed."
+  }
+  ```
+
+### 8. Email Register
+Registers a new user account using an email and password.
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/auth/register`
+* **Authentication Required**: No
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "email": "test@example.com",
+    "password": "securepassword123",
+    "display_name": "Test User"
+  }
+  ```
+  > **Note**: `password` must be at least 8 characters. `email` and `display_name` are optional in the Pydantic schema but required for full database profiles.
+* **Response Body** (`200 OK`):
+  ```json
+  {
+    "token": "eyJhbGciOi...",
+    "user": {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "email": "test@example.com",
+      "display_name": "Test User",
+      "phone_number": null,
+      "gender": null,
+      "dob": null,
+      "profile_pic_url": null,
+      "created_at": "2026-06-15T16:00:00Z"
+    }
+  }
+  ```
+
+### 9. Email Login
+Authenticates an existing user using their email and password, returning an access token.
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/auth/login`
+* **Authentication Required**: No
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "email": "test@example.com",
+    "password": "securepassword123"
+  }
+  ```
+* **Response Body** (`200 OK`):
+  ```json
+  {
+    "token": "eyJhbGciOi...",
+    "user": {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "email": "test@example.com",
+      "display_name": "Test User",
+      "phone_number": null,
+      "gender": null,
+      "dob": null,
+      "profile_pic_url": null,
+      "created_at": "2026-06-15T16:00:00Z"
+    }
   }
   ```
 

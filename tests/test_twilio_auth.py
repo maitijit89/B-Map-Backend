@@ -8,9 +8,9 @@ from datetime import datetime, timezone, timedelta
 def test_send_otp_success(mock_send, client):
     mock_send.return_value = {"status": "pending"}
     
-    response = client.post("/api/v1/auth/otp/send", json={"phone_number": "+15550100"})
+    response = client.post("/api/v1/auth/otp/send", json={"phone_number": "+15550100", "flow": "signup"})
     assert response.status_code == 200
-    assert response.json()["message"] == "OTP sent successfully."
+    assert response.json()["message"] == "Signup OTP sent successfully."
     mock_send.assert_called_once_with("+15550100")
 
 @patch("app.services.twilio_service.TwilioService.verify_otp")
@@ -103,17 +103,17 @@ def test_phone_number_formatting(mock_send, client):
     mock_send.return_value = {"status": "pending"}
     
     # 1. 10-digit number should prepend +91
-    response = client.post("/api/v1/auth/otp/send", json={"phone_number": "9155501000"})
+    response = client.post("/api/v1/auth/otp/send", json={"phone_number": "9155501000", "flow": "signup"})
     assert response.status_code == 200
     mock_send.assert_called_with("+919155501000")
     
     # 2. 12-digit number starting with 91 should add +
-    response = client.post("/api/v1/auth/otp/send", json={"phone_number": "919155501000"})
+    response = client.post("/api/v1/auth/otp/send", json={"phone_number": "919155501000", "flow": "signup"})
     assert response.status_code == 200
     mock_send.assert_called_with("+919155501000")
 
     # 3. Already containing + should be preserved
-    response = client.post("/api/v1/auth/otp/send", json={"phone_number": "+1555010000"})
+    response = client.post("/api/v1/auth/otp/send", json={"phone_number": "+1555010000", "flow": "signup"})
     assert response.status_code == 200
     mock_send.assert_called_with("+1555010000")
 
@@ -125,7 +125,7 @@ def test_send_otp_signup_success(mock_send, client, mock_db):
     mock_db.users.find_one.return_value = None
     mock_db.otp_attempts.find_one.return_value = None
     
-    response = client.post("/api/v1/auth/otp/send/signup", json={"phone_number": "+15550100"})
+    response = client.post("/api/v1/auth/otp/send", json={"phone_number": "+15550100", "flow": "signup"})
     assert response.status_code == 200
     assert "Signup OTP sent successfully" in response.json()["message"]
     mock_send.assert_called_once_with("+15550100")
@@ -135,7 +135,7 @@ def test_send_otp_signup_already_registered(mock_send, client, mock_db):
     mock_send.return_value = {"status": "pending"}
     mock_db.users.find_one.return_value = {"phone_number": "+15550100", "display_name": "Test User"}
     
-    response = client.post("/api/v1/auth/otp/send/signup", json={"phone_number": "+15550100"})
+    response = client.post("/api/v1/auth/otp/send", json={"phone_number": "+15550100", "flow": "signup"})
     assert response.status_code == 400
     assert "already registered" in response.json()["detail"]
     mock_send.assert_not_called()
@@ -146,7 +146,7 @@ def test_send_otp_login_success(mock_send, client, mock_db):
     mock_db.users.find_one.return_value = {"phone_number": "+15550100", "display_name": "Test User"}
     mock_db.otp_attempts.find_one.return_value = None
     
-    response = client.post("/api/v1/auth/otp/send/login", json={"phone_number": "+15550100"})
+    response = client.post("/api/v1/auth/otp/send", json={"phone_number": "+15550100", "flow": "login"})
     assert response.status_code == 200
     assert "Login OTP sent successfully" in response.json()["message"]
     mock_send.assert_called_once_with("+15550100")
@@ -156,7 +156,7 @@ def test_send_otp_login_not_registered(mock_send, client, mock_db):
     mock_send.return_value = {"status": "pending"}
     mock_db.users.find_one.return_value = None
     
-    response = client.post("/api/v1/auth/otp/send/login", json={"phone_number": "+15550100"})
+    response = client.post("/api/v1/auth/otp/send", json={"phone_number": "+15550100", "flow": "login"})
     assert response.status_code == 400
     assert "not registered" in response.json()["detail"]
     mock_send.assert_not_called()
@@ -167,7 +167,7 @@ def test_resend_otp_success(mock_send, client, mock_db):
     mock_db.users.find_one.return_value = None
     mock_db.otp_attempts.find_one.return_value = None
     
-    response = client.post("/api/v1/auth/otp/resend", json={"phone_number": "+15550100", "flow": "signup"})
+    response = client.post("/api/v1/auth/otp/send", json={"phone_number": "+15550100", "flow": "signup", "is_resend": True})
     assert response.status_code == 200
     assert "OTP resent successfully" in response.json()["message"]
     mock_send.assert_called_once_with("+15550100")
@@ -186,7 +186,7 @@ def test_otp_rate_limiting_cooldown(mock_send, client, mock_db):
         "blocked_until": None
     }
     
-    response = client.post("/api/v1/auth/otp/send/signup", json={"phone_number": "+15550100"})
+    response = client.post("/api/v1/auth/otp/send", json={"phone_number": "+15550100", "flow": "signup"})
     assert response.status_code == 429
     assert "seconds before requesting another OTP" in response.json()["detail"]
     mock_send.assert_not_called()
@@ -205,7 +205,7 @@ def test_otp_rate_limiting_block(mock_send, client, mock_db):
         "blocked_until": None
     }
     
-    response = client.post("/api/v1/auth/otp/send/signup", json={"phone_number": "+15550100"})
+    response = client.post("/api/v1/auth/otp/send", json={"phone_number": "+15550100", "flow": "signup"})
     assert response.status_code == 429
     assert "temporarily blocked" in response.json()["detail"]
     mock_send.assert_not_called()
@@ -221,7 +221,7 @@ def test_otp_rate_limiting_already_blocked(mock_send, client, mock_db):
         "blocked_until": datetime.now(timezone.utc) + timedelta(minutes=10)
     }
     
-    response = client.post("/api/v1/auth/otp/send/signup", json={"phone_number": "+15550100"})
+    response = client.post("/api/v1/auth/otp/send", json={"phone_number": "+15550100", "flow": "signup"})
     assert response.status_code == 429
     assert "Phone number is temporarily blocked" in response.json()["detail"]
     mock_send.assert_not_called()

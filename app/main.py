@@ -67,15 +67,19 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Firebase initialization failed during startup: {e}")
         
-    db_ok = await verify_db_connection(max_retries=3, retry_interval=1.0)
-    if not db_ok:
-        logger.error("Database connection check failed! Proceeding anyway, but database dependent operations may fail.")
+    # Skip block check & index init on Vercel to prevent cold-start timeouts
+    if os.environ.get("VERCEL") == "1" or os.environ.get("VERCEL_ENV") is not None:
+        logger.info("Running on Vercel serverless. Skipping blocking database verification and schema index creation on startup.")
     else:
-        from app.db.session import init_db
-        try:
-            await init_db()
-        except Exception as e:
-            logger.error(f"Database schema initialization failed: {e}")
+        db_ok = await verify_db_connection(max_retries=3, retry_interval=1.0)
+        if not db_ok:
+            logger.error("Database connection check failed! Proceeding anyway, but database dependent operations may fail.")
+        else:
+            from app.db.session import init_db
+            try:
+                await init_db()
+            except Exception as e:
+                logger.error(f"Database schema initialization failed: {e}")
     yield
     # Shutdown logic
     logger.info("Shutting down application services...")
@@ -170,8 +174,8 @@ async def add_security_headers(request: Request, call_next):
 
 @app.middleware("http")
 async def rate_limiting_middleware(request: Request, call_next):
-    # Bypass docs, static assets, and health checks
-    if request.url.path in ["/", "/health", "/docs", "/openapi.json", "/api/v1/openapi.json"]:
+    # Bypass docs, static assets, health checks, and during tests
+    if settings.ENV == "testing" or request.url.path in ["/", "/health", "/docs", "/openapi.json", "/api/v1/openapi.json"]:
         return await call_next(request)
         
     client_ip = request.client.host if request.client else "unknown"

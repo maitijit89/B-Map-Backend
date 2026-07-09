@@ -16,6 +16,11 @@ settings.GOOGLE_PLACES_API_KEY = "mock_key"
 settings.REDIS_HOST = None
 settings.REDIS_URL = None
 
+# Mock DB verification and initialization during tests to prevent slow attempts and timeouts
+import app.db.session as session_module
+session_module.verify_db_connection = AsyncMock(return_value=True)
+session_module.init_db = AsyncMock(return_value=None)
+
 from app.main import app
 from app.db.session import get_db
 from app.api.v1.deps import get_current_user, get_current_user_optional

@@ -25,7 +25,7 @@ class AIVoiceService:
         return not (val.startswith("your_") or "mock" in val or val == "")
 
     async def _call_gemini(self, prompt: str, json_mode: bool = False) -> str:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
         headers = {"Content-Type": "application/json"}
         payload = {
             "contents": [{

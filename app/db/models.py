@@ -56,19 +56,27 @@ class User:
         )
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        data = {
             "_id": self.id,
-            "email": self.email,
-            "password_hash": self.password_hash,
             "display_name": self.display_name,
-            "phone_number": self.phone_number,
-            "firebase_uid": self.firebase_uid,
-            "gender": self.gender,
-            "dob": self.dob,
-            "profile_pic_url": self.profile_pic_url,
             "created_at": self.created_at,
             "updated_at": self.updated_at
         }
+        if self.email is not None:
+            data["email"] = self.email
+        if self.password_hash is not None:
+            data["password_hash"] = self.password_hash
+        if self.phone_number is not None:
+            data["phone_number"] = self.phone_number
+        if self.firebase_uid is not None:
+            data["firebase_uid"] = self.firebase_uid
+        if self.gender is not None:
+            data["gender"] = self.gender
+        if self.dob is not None:
+            data["dob"] = self.dob
+        if self.profile_pic_url is not None:
+            data["profile_pic_url"] = self.profile_pic_url
+        return data
 
 
 class Incident:

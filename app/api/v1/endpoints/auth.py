@@ -38,6 +38,11 @@ async def login(user_in: UserLogin, db: AsyncIOMotorDatabase = Depends(get_db)):
 
 @router.post("/otp/send")
 async def send_otp(req: SendOTPRequest, db: AsyncIOMotorDatabase = Depends(get_db)):
+    if (not req.phone_number and not req.email) or (req.phone_number and req.email):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Exactly one of phone_number or email must be provided."
+        )
     otp_service = OTPService(db)
     await otp_service.send_otp_for_flow(
         phone_number=req.phone_number,
@@ -50,6 +55,11 @@ async def send_otp(req: SendOTPRequest, db: AsyncIOMotorDatabase = Depends(get_d
 
 @router.post("/otp/verify", response_model=VerifyOTPResponse)
 async def verify_otp(req: VerifyOTPRequest, db: AsyncIOMotorDatabase = Depends(get_db)):
+    if (not req.phone_number and not req.email) or (req.phone_number and req.email):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Exactly one of phone_number or email must be provided."
+        )
     from datetime import datetime, timezone
     
     if req.phone_number:
@@ -61,12 +71,14 @@ async def verify_otp(req: VerifyOTPRequest, db: AsyncIOMotorDatabase = Depends(g
     else:
         # Verify email OTP
         now = datetime.now(timezone.utc)
-        verification = await db.otp_verifications.find_one({
+        query = {
             "identifier": req.email,
             "code": req.code,
-            "flow": req.flow,
             "expires_at": {"$gt": now}
-        })
+        }
+        if req.flow:
+            query["flow"] = req.flow
+        verification = await db.otp_verifications.find_one(query)
         verified = (verification is not None)
         if verified:
             # Delete/consume the OTP record
@@ -180,7 +192,7 @@ async def register_email(
     )
 
 @router.post("/logout")
-async def logout():
+async def logout(current_user: User = Depends(get_current_user)):
     return {"message": "Logged out successfully."}
 
 @router.delete("/delete-account")

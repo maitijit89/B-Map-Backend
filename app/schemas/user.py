@@ -42,13 +42,6 @@ class SendOTPRequest(BaseModel):
             return f"+{cleaned}"
         return cleaned
 
-    @model_validator(mode="after")
-    def check_phone_or_email(self) -> 'SendOTPRequest':
-        if not self.phone_number and not self.email:
-            raise ValueError("Either phone_number or email must be provided.")
-        if self.phone_number and self.email:
-            raise ValueError("Only one of phone_number or email should be provided.")
-        return self
 
 class VerifyOTPRequest(BaseModel):
     phone_number: Optional[str] = None
@@ -72,13 +65,6 @@ class VerifyOTPRequest(BaseModel):
             return f"+{cleaned}"
         return cleaned
 
-    @model_validator(mode="after")
-    def check_phone_or_email(self) -> 'VerifyOTPRequest':
-        if not self.phone_number and not self.email:
-            raise ValueError("Either phone_number or email must be provided.")
-        if self.phone_number and self.email:
-            raise ValueError("Only one of phone_number or email should be provided.")
-        return self
 
 class VerifyOTPResponse(BaseModel):
     registered: bool
@@ -89,7 +75,6 @@ class VerifyOTPResponse(BaseModel):
 class UserResponse(UserBase):
     id: UUID
     phone_number: Optional[str] = None
-    firebase_uid: Optional[str] = None
     gender: Optional[str] = None
     dob: Optional[str] = None
     profile_pic_url: Optional[str] = None

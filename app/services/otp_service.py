@@ -34,6 +34,7 @@ class OTPService:
         """
         now = datetime.now(timezone.utc)
         record = await self.get_attempt_record(identifier, flow)
+        identifier_type = "Email" if "@" in identifier else "Phone number"
         
         if not record:
             return
@@ -45,7 +46,7 @@ class OTPService:
                 wait_min = int((blocked_until - now).total_seconds() / 60) + 1
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail=f"Too many OTP requests. Phone number is temporarily blocked. Try again in {wait_min} minute(s)."
+                    detail=f"Too many OTP requests. {identifier_type} is temporarily blocked. Try again in {wait_min} minute(s)."
                 )
             else:
                 # Block expired, reset block
@@ -80,7 +81,7 @@ class OTPService:
                     )
                     raise HTTPException(
                         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                        detail=f"Too many OTP requests. Phone number is temporarily blocked for {self.block_minutes} minutes."
+                        detail=f"Too many OTP requests. {identifier_type} is temporarily blocked for {self.block_minutes} minutes."
                     )
             else:
                 # Window expired, reset window tracker

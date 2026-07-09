@@ -127,3 +127,55 @@ def test_register_email_success(client, mock_db):
     assert res_data["user"]["gender"] == "female"
     assert res_data["user"]["dob"] == "1992-02-02"
     mock_db.users.insert_one.assert_called_once()
+
+def test_send_otp_both_identifiers_fail(client):
+    response = client.post("/api/v1/auth/otp/send", json={
+        "phone_number": "+15550100",
+        "email": "test@example.com",
+        "flow": "signup"
+    })
+    assert response.status_code == 400
+    assert "Exactly one of phone_number or email" in response.json()["detail"]
+
+def test_send_otp_neither_identifier_fail(client):
+    response = client.post("/api/v1/auth/otp/send", json={
+        "flow": "signup"
+    })
+    assert response.status_code == 400
+    assert "Exactly one of phone_number or email" in response.json()["detail"]
+
+def test_verify_otp_both_identifiers_fail(client):
+    response = client.post("/api/v1/auth/otp/verify", json={
+        "phone_number": "+15550100",
+        "email": "test@example.com",
+        "code": "123456"
+    })
+    assert response.status_code == 400
+    assert "Exactly one of phone_number or email" in response.json()["detail"]
+
+def test_verify_otp_neither_identifier_fail(client):
+    response = client.post("/api/v1/auth/otp/verify", json={
+        "code": "123456"
+    })
+    assert response.status_code == 400
+    assert "Exactly one of phone_number or email" in response.json()["detail"]
+
+def test_verify_otp_optional_flow_success(client, mock_db):
+    mock_db.otp_verifications.find_one.return_value = {
+        "_id": "verification_id",
+        "identifier": "newuser@example.com",
+        "code": "123456",
+        "flow": "signup",
+        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=5)
+    }
+    mock_db.users.find_one.return_value = None
+    
+    response = client.post("/api/v1/auth/otp/verify", json={
+        "email": "newuser@example.com",
+        "code": "123456"
+    })
+    assert response.status_code == 200
+    res_data = response.json()
+    assert res_data["registered"] is False
+    assert "temp_token" in res_data
+

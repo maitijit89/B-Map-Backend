@@ -110,13 +110,16 @@ Sends an OTP specifically for registration (signup) or login, and supports resen
   ```json
   {
     "phone_number": "9876543210",
+    "email": null,
     "flow": "signup",
     "is_resend": false
   }
   ```
   > **Note**:
-  > - `phone_number` (string, required): Follows standard format (10-digit formats are prepended with `+91` automatically).
-  > - `flow` (string, required): Must be either `"signup"` (pre-validates phone doesn't exist) or `"login"` (pre-validates phone exists).
+  > - **Exactly one of `phone_number` or `email` must be provided.**
+  > - `phone_number` (string, optional): Follows standard format (10-digit formats are prepended with `+91` automatically).
+  > - `email` (string, optional): A valid email address.
+  > - `flow` (string, required): Must be either `"signup"` (pre-validates phone/email doesn't exist) or `"login"` (pre-validates phone/email exists).
   > - `is_resend` (boolean, optional, default: `false`): Set to `true` when user requests to resend the code.
 * **Response Body** (`200 OK`):
   ```json
@@ -125,7 +128,7 @@ Sends an OTP specifically for registration (signup) or login, and supports resen
   }
   ```
 * **Error Responses**:
-  - `400 Bad Request`: If user exists but flow is `"signup"`, or if user doesn't exist but flow is `"login"`.
+  - `400 Bad Request`: If user exists but flow is `"signup"`, or if user doesn't exist but flow is `"login"`. Or if both or neither identifier is provided.
   - `429 Too Many Requests`: If rate-limiting cooldown (60 seconds) or window count (max 5 per hour) is exceeded. If blocked, returns temporary block duration.
 
 ### 2. Verify OTP
@@ -136,12 +139,15 @@ Verifies the received OTP code.
 * **Request Body** (`application/json`):
   ```json
   {
-    "phone_number": "9876543210",
+    "phone_number": null,
+    "email": "newuser@example.com",
     "code": "123456",
     "flow": "signup"
   }
   ```
-  > **Note**: `flow` is optional. If provided (either `"signup"` or `"login"`), verification will enforce the corresponding existence checks.
+  > **Note**:
+  > - **Exactly one of `phone_number` or `email` must be provided.**
+  > - `flow` is optional. If provided (either `"signup"` or `"login"`), verification will enforce the corresponding existence checks.
 
 * **Response Body** (`200 OK`):
   * **Case A: User is registered (Logs in directly)**:
@@ -152,9 +158,9 @@ Verifies the received OTP code.
       "temp_token": null,
       "user": {
         "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-        "email": null,
+        "email": "jane@example.com",
         "display_name": "Jane Doe",
-        "phone_number": "+15550100",
+        "phone_number": null,
         "gender": "female",
         "dob": "1995-05-15",
         "profile_pic_url": "/static/uploads/avatar.png",
@@ -172,9 +178,10 @@ Verifies the received OTP code.
     }
     ```
 * **Error Responses**:
-  - `400 Bad Request`: If verification fails or the code has expired. Or if the flow existence check fails.
+  - `400 Bad Request`: If verification fails or the code has expired. Or if the flow existence check fails. Or if both or neither identifier is provided.
 
 ### 3. Complete Mobile Registration
+Completes registration for a user who verified their phone number.
 * **HTTP Method**: `POST`
 * **Path**: `/api/v1/auth/register-mobile`
 * **Authentication Required**: No
@@ -201,7 +208,35 @@ Verifies the received OTP code.
   }
   ```
 
-### 4. Logout User
+### 4. Complete Email Registration
+Completes registration for a user who verified their email.
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/auth/register-email`
+* **Authentication Required**: No
+* **Request Body** (`multipart/form-data`):
+  * `temp_token` (string, required): Short-lived token received from `/otp/verify`.
+  * `display_name` (string, required): The user's name.
+  * `gender` (string, optional): One of `male`, `female`, `other`.
+  * `dob` (string, optional): Date of birth (e.g. `YYYY-MM-DD`).
+  * `profile_pic` (file, optional): Profile picture image file.
+* **Response Body** (`200 OK`):
+  ```json
+  {
+    "token": "eyJhbGciOi...",
+    "user": {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "email": "jane@example.com",
+      "display_name": "Jane Doe",
+      "phone_number": null,
+      "gender": "female",
+      "dob": "1995-05-15",
+      "profile_pic_url": "/static/uploads/avatar.png",
+      "created_at": "2026-06-15T16:00:00Z"
+    }
+  }
+  ```
+
+### 5. Logout User
 * **HTTP Method**: `POST`
 * **Path**: `/api/v1/auth/logout`
 * **Authentication Required**: Yes (Bearer Token)
@@ -212,7 +247,7 @@ Verifies the received OTP code.
   }
   ```
 
-### 5. Delete Account
+### 6. Delete Account
 * **HTTP Method**: `DELETE`
 * **Path**: `/api/v1/auth/delete-account`
 * **Authentication Required**: Yes (Bearer Token)
@@ -223,7 +258,7 @@ Verifies the received OTP code.
   }
   ```
 
-### 6. Get User Profile and Progress
+### 7. Get User Profile and Progress
 * **HTTP Method**: `GET`
 * **Path**: `/api/v1/auth/me`
 * **Authentication Required**: Yes
@@ -232,9 +267,9 @@ Verifies the received OTP code.
   {
     "user": {
       "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "email": null,
+      "email": "jane@example.com",
       "display_name": "Jane Doe",
-      "phone_number": "+15550100",
+      "phone_number": null,
       "gender": "female",
       "dob": "1995-05-15",
       "profile_pic_url": "/static/uploads/avatar.png",

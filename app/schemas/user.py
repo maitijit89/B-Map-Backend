@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator, model_validator
 from uuid import UUID
 from datetime import datetime
 from typing import Optional
@@ -21,13 +21,16 @@ class OTPFlow(str, Enum):
     LOGIN = "login"
 
 class SendOTPRequest(BaseModel):
-    phone_number: str
+    phone_number: Optional[str] = None
+    email: Optional[EmailStr] = None
     flow: OTPFlow
     is_resend: bool = False
 
     @field_validator("phone_number", mode="before")
     @classmethod
-    def clean_and_format_phone(cls, v: str) -> str:
+    def clean_and_format_phone(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
         if not isinstance(v, str):
             return v
         cleaned = "".join(v.split()).replace("-", "")
@@ -39,14 +42,25 @@ class SendOTPRequest(BaseModel):
             return f"+{cleaned}"
         return cleaned
 
+    @model_validator(mode="after")
+    def check_phone_or_email(self) -> 'SendOTPRequest':
+        if not self.phone_number and not self.email:
+            raise ValueError("Either phone_number or email must be provided.")
+        if self.phone_number and self.email:
+            raise ValueError("Only one of phone_number or email should be provided.")
+        return self
+
 class VerifyOTPRequest(BaseModel):
-    phone_number: str
+    phone_number: Optional[str] = None
+    email: Optional[EmailStr] = None
     code: str
     flow: Optional[OTPFlow] = None
 
     @field_validator("phone_number", mode="before")
     @classmethod
-    def clean_and_format_phone(cls, v: str) -> str:
+    def clean_and_format_phone(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
         if not isinstance(v, str):
             return v
         cleaned = "".join(v.split()).replace("-", "")
@@ -57,6 +71,14 @@ class VerifyOTPRequest(BaseModel):
         if not cleaned.startswith("+") and cleaned.isdigit():
             return f"+{cleaned}"
         return cleaned
+
+    @model_validator(mode="after")
+    def check_phone_or_email(self) -> 'VerifyOTPRequest':
+        if not self.phone_number and not self.email:
+            raise ValueError("Either phone_number or email must be provided.")
+        if self.phone_number and self.email:
+            raise ValueError("Only one of phone_number or email should be provided.")
+        return self
 
 class VerifyOTPResponse(BaseModel):
     registered: bool

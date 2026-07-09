@@ -276,3 +276,13 @@ def test_nearby_lifestyle_feed(client):
     assert "feed_items" in data
     assert data["total_items"] > 0
     assert data["feed_items"][0]["rating"] >= 4.0
+
+def test_realtime_traffic_endpoint(client):
+    response = client.get("/api/v1/maps/traffic?lat=39.9042&lng=116.4074&radius=5000")
+    assert response.status_code == 200
+    data = response.json()
+    assert "congestion_level" in data
+    assert "congestion_index" in data
+    assert "average_speed_kph" in data
+    assert "speed_limit_kph" in data
+    assert "incidents" in data

@@ -46,6 +46,7 @@ class ShortcutService:
             await db.shortcuts.insert_one(shortcut.to_dict())
 
         return {
+            "id": str(shortcut_id),
             "shortcut_id": str(shortcut_id),
             "user_id": user_id,
             "name": name,
@@ -101,19 +102,23 @@ class ShortcutService:
                         mode="driving"
                     )
                     route = directions["routes"][0]["legs"][0]
+                    duration_seconds = route["duration"]["value"]
                     s["commute_eta"] = {
                         "duration_text": route["duration"]["text"],
                         "duration_seconds": route["duration"]["value"],
                         "distance_text": route["distance"]["text"]
                     }
+                    s["live_eta_minutes"] = int(round(duration_seconds / 60))
                 except Exception:
                     s["commute_eta"] = {
                         "duration_text": "15 mins",
                         "duration_seconds": 900,
                         "distance_text": "5.0 km"
                     }
+                    s["live_eta_minutes"] = 15
         else:
             for s in shortcuts_list:
                 s["commute_eta"] = None
+                s["live_eta_minutes"] = None
 
         return shortcuts_list

@@ -308,3 +308,77 @@ class MapsService:
                 "sensors": ["Dual-frequency GPS", "Inertial navigation system (IMU)", "Wheel encoders"]
             }
         }
+
+    async def get_realtime_traffic(self, lat: float, lng: float, radius: float = 5000, db: Any = None) -> dict:
+        import datetime
+        
+        # Default mock traffic values
+        congestion_index = 0.15
+        nearby_incidents = []
+        
+        if db is not None:
+            try:
+                # Query active incidents within geographic sphere
+                radians = radius / 6378100.0
+                cursor = db.incidents.find({
+                    "location": {
+                        "$geoWithin": {
+                            "$centerSphere": [[lng, lat], radians]
+                        }
+                    },
+                    "is_active": True
+                })
+                
+                async for doc in cursor:
+                    # Map severe and traffic-related incidents
+                    severity_weight = 0.1
+                    severity = doc.get("severity", "medium").lower()
+                    if severity == "high":
+                        severity_weight = 0.3
+                    elif severity in ["critical", "severe"]:
+                        severity_weight = 0.5
+                    
+                    incident_type = doc.get("type", "traffic").lower()
+                    if incident_type in ["accident", "closure", "traffic", "waterlogging", "hazard"]:
+                        congestion_index += severity_weight
+                    
+                    nearby_incidents.append({
+                        "id": str(doc["_id"]),
+                        "type": doc["type"],
+                        "severity": doc["severity"],
+                        "description": doc.get("description", ""),
+                        "lat": doc["location"]["coordinates"][1],
+                        "lng": doc["location"]["coordinates"][0]
+                    })
+            except Exception as e:
+                pass
+                
+        # Bound congestion index
+        if congestion_index > 1.0:
+            congestion_index = 1.0
+            
+        # Determine level
+        if congestion_index < 0.3:
+            congestion_level = "low"
+        elif congestion_index < 0.6:
+            congestion_level = "medium"
+        else:
+            congestion_level = "heavy"
+            
+        base_speed = 60.0 # default 60 km/h speed limit
+        current_speed = max(10.0, base_speed * (1.0 - congestion_index * 0.75))
+        delay = congestion_index * 20.0
+        
+        return {
+            "lat": lat,
+            "lng": lng,
+            "radius_meters": radius,
+            "congestion_level": congestion_level,
+            "congestion_index": round(congestion_index, 2),
+            "average_speed_kph": round(current_speed, 1),
+            "speed_limit_kph": base_speed,
+            "estimated_delay_minutes": round(delay, 1),
+            "nearby_incidents_count": len(nearby_incidents),
+            "incidents": nearby_incidents,
+            "timestamp": datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
+        }

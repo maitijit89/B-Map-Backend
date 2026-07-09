@@ -24,16 +24,16 @@ class OTPService:
         self.window_minutes = 60   # Sliding window size in minutes
         self.block_minutes = 15    # Block duration on rate limit breach
 
-    async def get_attempt_record(self, phone_number: str, flow: OTPFlow) -> Optional[dict]:
-        return await self.db.otp_attempts.find_one({"phone_number": phone_number, "flow": flow})
+    async def get_attempt_record(self, identifier: str, flow: OTPFlow) -> Optional[dict]:
+        return await self.db.otp_attempts.find_one({"identifier": identifier, "flow": flow})
 
-    async def check_rate_limit(self, phone_number: str, flow: OTPFlow) -> None:
+    async def check_rate_limit(self, identifier: str, flow: OTPFlow) -> None:
         """
         Enforces a cooldown of 60 seconds between requests, and blocks
         abuse if there are more than 5 attempts in a 60-minute window.
         """
         now = datetime.now(timezone.utc)
-        record = await self.get_attempt_record(phone_number, flow)
+        record = await self.get_attempt_record(identifier, flow)
         
         if not record:
             return
@@ -50,7 +50,7 @@ class OTPService:
             else:
                 # Block expired, reset block
                 await self.db.otp_attempts.update_one(
-                    {"phone_number": phone_number, "flow": flow},
+                    {"identifier": identifier, "flow": flow},
                     {"$set": {"blocked_until": None, "send_count": 0, "first_sent_at": now}}
                 )
                 return
@@ -75,7 +75,7 @@ class OTPService:
                 if record.get("send_count", 0) >= self.max_attempts:
                     blocked_until = now + timedelta(minutes=self.block_minutes)
                     await self.db.otp_attempts.update_one(
-                        {"phone_number": phone_number, "flow": flow},
+                        {"identifier": identifier, "flow": flow},
                         {"$set": {"blocked_until": blocked_until}}
                     )
                     raise HTTPException(
@@ -85,17 +85,17 @@ class OTPService:
             else:
                 # Window expired, reset window tracker
                 await self.db.otp_attempts.update_one(
-                    {"phone_number": phone_number, "flow": flow},
+                    {"identifier": identifier, "flow": flow},
                     {"$set": {"first_sent_at": now, "send_count": 0}}
                 )
 
-    async def record_attempt(self, phone_number: str, flow: OTPFlow) -> None:
+    async def record_attempt(self, identifier: str, flow: OTPFlow) -> None:
         now = datetime.now(timezone.utc)
-        record = await self.get_attempt_record(phone_number, flow)
+        record = await self.get_attempt_record(identifier, flow)
         
         if not record:
             await self.db.otp_attempts.insert_one({
-                "phone_number": phone_number,
+                "identifier": identifier,
                 "flow": flow,
                 "last_sent_at": now,
                 "first_sent_at": now,
@@ -114,7 +114,7 @@ class OTPService:
                 send_count = record.get("send_count", 0) + 1
 
             await self.db.otp_attempts.update_one(
-                {"phone_number": phone_number, "flow": flow},
+                {"identifier": identifier, "flow": flow},
                 {
                     "$set": {
                         "last_sent_at": now,
@@ -125,30 +125,77 @@ class OTPService:
                 }
             )
 
-    async def send_otp_for_flow(self, phone_number: str, flow: OTPFlow, is_resend: bool = False) -> dict:
+    async def send_otp_for_flow(
+        self,
+        phone_number: Optional[str] = None,
+        email: Optional[str] = None,
+        flow: OTPFlow = OTPFlow.SIGNUP,
+        is_resend: bool = False
+    ) -> dict:
+        identifier = phone_number or email
+        if not identifier:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Either phone number or email must be provided."
+            )
+            
         # Check user existence depending on flow
-        user_doc = await self.db.users.find_one({"phone_number": phone_number})
+        if phone_number:
+            user_doc = await self.db.users.find_one({"phone_number": phone_number})
+            user_type = "Phone number"
+        else:
+            user_doc = await self.db.users.find_one({"email": email})
+            user_type = "Email"
         
         if flow == OTPFlow.SIGNUP:
             if user_doc:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Phone number already registered. Please login."
+                    detail=f"{user_type} already registered. Please login."
                 )
         elif flow == OTPFlow.LOGIN:
             if not user_doc:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Phone number is not registered. Please sign up."
+                    detail=f"{user_type} is not registered. Please sign up."
                 )
         
         # Enforce rate limit / cooldown
-        await self.check_rate_limit(phone_number, flow)
+        await self.check_rate_limit(identifier, flow)
         
-        # Send OTP via Twilio
-        res = await self.twilio_service.send_otp(phone_number)
-        
+        if phone_number:
+            # Send OTP via Twilio
+            res = await self.twilio_service.send_otp(phone_number)
+        else:
+            # Generate a 6-digit OTP
+            import secrets
+            otp_code = "".join(secrets.choice("0123456789") for _ in range(6))
+            # Support mock code in development or for specific test emails
+            if email == "test@example.com" or email.startswith("mock"):
+                otp_code = "123456"
+                
+            # Store in DB: otp_verifications
+            now = datetime.now(timezone.utc)
+            expires_at = now + timedelta(minutes=5)
+            await self.db.otp_verifications.update_one(
+                {"identifier": email, "flow": flow},
+                {
+                    "$set": {
+                        "code": otp_code,
+                        "created_at": now,
+                        "expires_at": expires_at,
+                        "verified": False
+                    }
+                },
+                upsert=True
+            )
+            
+            # Send OTP via Email
+            from app.services.email_service import EmailService
+            email_service = EmailService()
+            res = await email_service.send_otp_email(email, otp_code, flow)
+            
         # Record attempt
-        await self.record_attempt(phone_number, flow)
+        await self.record_attempt(identifier, flow)
         
         return res

@@ -1196,6 +1196,41 @@ Authenticates an existing user using their email and password, returning an acce
   ]
   ```
 
+### 13. Get Real-Time Traffic Conditions
+* **HTTP Method**: `GET`
+* **Path**: `/api/v1/maps/traffic`
+* **Authentication Required**: No
+* **Description**: Computes and returns the real-time traffic status, congestion indices, estimated travel delays, average speeds, speed limits, and a list of active traffic incidents (accidents, hazards, road closures) within the specified radius.
+* **Query Parameters**:
+  - `lat` (float, required)
+  - `lng` (float, required)
+  - `radius` (float, optional, default = `5000`): Search radius in meters
+* **Response Body** (`200 OK`):
+  ```json
+  {
+    "lat": 39.9042,
+    "lng": 116.4074,
+    "radius_meters": 5000,
+    "congestion_level": "medium",
+    "congestion_index": 0.45,
+    "average_speed_kph": 39.7,
+    "speed_limit_kph": 60.0,
+    "estimated_delay_minutes": 9.0,
+    "nearby_incidents_count": 2,
+    "incidents": [
+      {
+        "id": "abc-123-def",
+        "type": "accident",
+        "severity": "high",
+        "description": "Multi-car collision on ring road",
+        "lat": 39.906,
+        "lng": 116.409
+      }
+    ],
+    "timestamp": "2026-07-05T16:20:00Z"
+  }
+  ```
+
 ---
 
 ## Environment & Government Feeds (`/api/v1/environment`)
@@ -1369,6 +1404,7 @@ Authenticates an existing user using their email and password, returning an acce
 * **HTTP Method**: `POST`
 * **Path**: `/api/v1/voice/query`
 * **Authentication Required**: No
+* **Description**: Processes natural language user commands using the Gemini 1.5 Flash model. It automatically detects the user's intent, extracts relevant parameters (such as locations, coordinates, modes, or query terms), coordinates calls to backend services (like Google Maps elevation/static maps, weather, directions, or real-time traffic), and synthesizes a high-quality speech-friendly summary response.
 * **Request Body** (`application/json`):
   ```json
   {
@@ -1382,11 +1418,32 @@ Authenticates an existing user using their email and password, returning an acce
     "success": true,
     "wake_word_detected": true,
     "intent": "NAVIGATION",
-    "speech_response": "Calculating directions to Pune Junction. Total distance is 4.5 km.",
-    "data": {}
+    "speech_response": "I've calculated directions to Pune Junction. The total distance is 5.2 km and it will take approximately 12 minutes under current driving conditions.",
+    "data": {
+      "routes": [
+        {
+          "legs": [
+            {
+              "distance": {
+                "text": "5.2 km",
+                "value": 5200
+              },
+              "duration": {
+                "text": "12 mins",
+                "value": 720
+              },
+              "end_address": "Pune Junction",
+              "start_address": "Current Location"
+            }
+          ],
+          "summary": "Route via Main St"
+        }
+      ],
+      "status": "OK"
+    }
   }
   ```
-  > **Supported Intents**: `NAVIGATION`, `WEATHER`, `NEARBY_SEARCH`, `GENERAL_QUERY`.
+  > **Supported Intents**: `NAVIGATION`, `WEATHER`, `TRAFFIC`, `STREET_VIEW`, `3D_VIEW`, `NEARBY_SEARCH`, `GENERAL`.
 
 ---
 

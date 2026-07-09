@@ -109,6 +109,39 @@ class AuthService:
             user=UserResponse.model_validate(user)
         )
 
+    async def register_email(
+        self,
+        temp_token: str,
+        display_name: str,
+        gender: Optional[str] = None,
+        dob: Optional[str] = None,
+        profile_pic_url: Optional[str] = None
+    ) -> AuthResponse:
+        email = self.verify_temp_verification_token(temp_token)
+        
+        # Check if user already exists
+        user_doc = await self.db.users.find_one({"email": email})
+        if user_doc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User with this email already exists"
+            )
+            
+        user = User(
+            display_name=display_name,
+            email=email,
+            gender=gender,
+            dob=dob,
+            profile_pic_url=profile_pic_url
+        )
+        await self.db.users.insert_one(user.to_dict())
+        
+        token = create_access_token(user.id)
+        return AuthResponse(
+            token=token,
+            user=UserResponse.model_validate(user)
+        )
+
     async def delete_account(self, user: User) -> bool:
         # Delete user document
         await self.db.users.delete_one({"_id": user.id})

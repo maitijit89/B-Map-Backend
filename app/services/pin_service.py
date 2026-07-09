@@ -59,10 +59,12 @@ class PinService:
             update_fields["name"] = pin_in.name
         if pin_in.description is not None:
             update_fields["description"] = pin_in.description
-        if pin_in.lat is not None and pin_in.lng is not None:
+        if pin_in.lat is not None or pin_in.lng is not None:
+            new_lat = pin_in.lat if pin_in.lat is not None else pin_doc["location"]["coordinates"][1]
+            new_lng = pin_in.lng if pin_in.lng is not None else pin_doc["location"]["coordinates"][0]
             update_fields["location"] = {
                 "type": "Point",
-                "coordinates": [pin_in.lng, pin_in.lat]
+                "coordinates": [new_lng, new_lat]
             }
             
         if update_fields:
@@ -78,3 +80,4 @@ class PinService:
             lng=pin_doc["location"]["coordinates"][0],
             created_at=pin_doc["created_at"]
         )
+

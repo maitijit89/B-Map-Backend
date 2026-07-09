@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     JWT_EXPIRATION: str = "1h"
     
     # External APIs (Google)
+    GEMINI_API_KEY: Optional[str] = None
     GOOGLE_PLACES_API_KEY: Optional[str] = None
     GOOGLE_MAPS_API_SECRET: Optional[str] = None
     GOOGLE_CLIENT_ID: Optional[str] = None
@@ -58,6 +59,14 @@ class Settings(BaseSettings):
     TWILIO_VERIFY_SERVICE_SID: str = "your_twilio_verify_service_sid_placeholder"
     TWILIO_API_KEY_SID: Optional[str] = None
     TWILIO_API_SECRET: Optional[str] = None
+
+    # SMTP Configuration for Email Verification
+    SMTP_HOST: Optional[str] = None
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_FROM_EMAIL: str = "noreply@bmap.com"
+    SMTP_FROM_NAME: str = "B-Map Auth"
     
     model_config = {
         "env_file": ".env",

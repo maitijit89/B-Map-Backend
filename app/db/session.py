@@ -83,8 +83,15 @@ async def init_db() -> None:
         # 1. Timeline history fetching (compound index user_id & timestamp descending)
         await database.timeline.create_index([("user_id", 1), ("timestamp", -1)])
         # 2. OTP attempts tracking (compound unique index & TTL automatic expiration after 60 mins)
-        await database.otp_attempts.create_index([("phone_number", 1), ("flow", 1)], unique=True)
+        try:
+            await database.otp_attempts.drop_index("phone_number_1_flow_1")
+        except Exception:
+            pass
+        await database.otp_attempts.create_index([("identifier", 1), ("flow", 1)], unique=True)
         await database.otp_attempts.create_index("first_sent_at", expireAfterSeconds=3600)
+
+        # 5. Email OTP verification (TTL automatic expiration on expires_at field)
+        await database.otp_verifications.create_index("expires_at", expireAfterSeconds=0)
         # 3. Reviews list by place or user
         await database.reviews.create_index("place_id")
         await database.reviews.create_index("user_id")

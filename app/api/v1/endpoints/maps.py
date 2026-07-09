@@ -80,3 +80,12 @@ async def get_streetview_panoramas(
     db = Depends(get_db)
 ):
     return await service.get_streetview_panoramas(lat, lng, db)
+
+@router.get("/traffic")
+async def get_realtime_traffic(
+    lat: float = Query(...),
+    lng: float = Query(...),
+    radius: float = Query(5000, description="Search radius in meters"),
+    db = Depends(get_db)
+):
+    return await service.get_realtime_traffic(lat, lng, radius, db)

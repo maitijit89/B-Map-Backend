@@ -231,6 +231,39 @@ Completes registration for a user who verified their email.
       "gender": "female",
       "dob": "1995-05-15",
       "profile_pic_url": "/static/uploads/avatar.png",
+      "is_email_verified": true,
+      "created_at": "2026-06-15T16:00:00Z"
+    }
+  }
+  ```
+
+### 4b. Complete Email Registration (JSON)
+Alternative JSON-only endpoint to complete email registration.
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/auth/register-email-json`
+* **Authentication Required**: No
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "temp_token": "eyJhbGciOi...",
+    "display_name": "Jane Doe",
+    "gender": "female",
+    "dob": "1995-05-15"
+  }
+  ```
+* **Response Body** (`200 OK`):
+  ```json
+  {
+    "token": "eyJhbGciOi...",
+    "user": {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "email": "jane@example.com",
+      "display_name": "Jane Doe",
+      "phone_number": null,
+      "gender": "female",
+      "dob": "1995-05-15",
+      "profile_pic_url": null,
+      "is_email_verified": true,
       "created_at": "2026-06-15T16:00:00Z"
     }
   }

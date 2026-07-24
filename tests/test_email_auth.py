@@ -94,7 +94,8 @@ def test_verify_email_otp_flow_login_success(client, mock_db):
         display_name="Existing User",
         email="existing@example.com",
         gender="male",
-        dob="1990-01-01"
+        dob="1990-01-01",
+        is_email_verified=True
     )
     mock_db.users.find_one.return_value = existing_user.to_dict()
     
@@ -104,6 +105,7 @@ def test_verify_email_otp_flow_login_success(client, mock_db):
     assert res_data["registered"] is True
     assert "token" in res_data
     assert res_data["user"]["email"] == "existing@example.com"
+    assert res_data["user"]["is_email_verified"] is True
 
 def test_register_email_success(client, mock_db):
     mock_db.users.find_one.return_value = None
@@ -126,7 +128,29 @@ def test_register_email_success(client, mock_db):
     assert res_data["user"]["display_name"] == "New Email User"
     assert res_data["user"]["gender"] == "female"
     assert res_data["user"]["dob"] == "1992-02-02"
+    assert res_data["user"]["is_email_verified"] is True
     mock_db.users.insert_one.assert_called_once()
+
+def test_register_email_json_success(client, mock_db):
+    mock_db.users.find_one.return_value = None
+    
+    from app.services.auth_service import AuthService
+    auth_service = AuthService(mock_db)
+    temp_token = auth_service.create_temp_verification_token("jsonuser@example.com")
+    
+    response = client.post("/api/v1/auth/register-email-json", json={
+        "temp_token": temp_token,
+        "display_name": "JSON Email User",
+        "gender": "male",
+        "dob": "1995-05-05"
+    })
+    
+    assert response.status_code == 200
+    res_data = response.json()
+    assert "token" in res_data
+    assert res_data["user"]["email"] == "jsonuser@example.com"
+    assert res_data["user"]["display_name"] == "JSON Email User"
+    assert res_data["user"]["is_email_verified"] is True
 
 def test_send_otp_both_identifiers_fail(client):
     response = client.post("/api/v1/auth/otp/send", json={
@@ -178,4 +202,3 @@ def test_verify_otp_optional_flow_success(client, mock_db):
     res_data = response.json()
     assert res_data["registered"] is False
     assert "temp_token" in res_data
-

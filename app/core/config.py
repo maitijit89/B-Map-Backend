@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     
     # External APIs (Other)
     OSM_NOMINATIM_URL: str = "https://nominatim.openstreetmap.org"
+    WEATHER_API_KEY: Optional[str] = "c42052c864860b89570c74cc1b31fc0d"
+    TOMTOM_API_KEY: Optional[str] = "5ixaJbs32msmAYBA9SQCKzem39gbI5ok"
+    TOMTOM_APP_ID: Optional[str] = "6a646751-5ee1-4377-8734-58eb39b88959"
     RENDER_API_KEY: Optional[str] = None
     
     # Firebase Configuration

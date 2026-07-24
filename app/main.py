@@ -1,4 +1,3 @@
-# pyrefly: ignore [missing-import]
 import sys
 import os
 import asyncio
@@ -12,44 +11,20 @@ from fastapi import FastAPI, Request, status, WebSocket, WebSocketDisconnect, De
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.openapi.utils import get_openapi
 
 from app.core.websocket import manager
-
 from app.core.logging_config import setup_logging
 from app.core.config import settings
 from app.api.v1.router import api_router
-from app.db.session import verify_db_connection, get_db
+from app.db.session import verify_db_connection, get_db, close_mongodb_client
 
-# Simple in‑memory token bucket rate limiter
-class RateLimitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, max_requests: int = 60, window_seconds: int = 60):
-        super().__init__(app)
-        self.max_requests = max_requests
-        self.window = window_seconds
-        self.allowance = max_requests
-        self.last_check = time.time()
-
-    async def dispatch(self, request: Request, call_next):
-        current = time.time()
-        time_passed = current - self.last_check
-        self.last_check = current
-        self.allowance += time_passed * (self.max_requests / self.window)
-        if self.allowance > self.max_requests:
-            self.allowance = self.max_requests
-        if self.allowance < 1:
-            # Too many requests – return 429 with Retry‑After header
-            retry_after = int(self.window - (self.max_requests - self.allowance) * self.window / self.max_requests)
-            return Response(status_code=429, content="Too Many Requests", headers={"Retry-After": str(retry_after)})
-        self.allowance -= 1
-        response = await call_next(request)
-        return response
-
-# Resolve ProactorEventLoop issue on Windows with psycopg async
+# Resolve ProactorEventLoop issue on Windows
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-# Ensure the parent directory is in sys.path to support running directly as `python app/main.py`
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 setup_logging()
@@ -57,17 +32,14 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup logic
     logger.info("Initializing application startup services...")
     
-    # Initialize Firebase Admin SDK
-    from app.services.firebase_service import FirebaseService
+    from app.shared.integrations.firebase_service import FirebaseService
     try:
         FirebaseService.initialize()
     except Exception as e:
         logger.error(f"Firebase initialization failed during startup: {e}")
         
-    # Skip block check & index init on Vercel to prevent cold-start timeouts
     if os.environ.get("VERCEL") == "1" or os.environ.get("VERCEL_ENV") is not None:
         logger.info("Running on Vercel serverless. Skipping blocking database verification and schema index creation on startup.")
     else:
@@ -81,20 +53,23 @@ async def lifespan(app: FastAPI):
             except Exception as e:
                 logger.error(f"Database schema initialization failed: {e}")
     yield
-    # Shutdown logic
     logger.info("Shutting down application services...")
+    await close_mongodb_client()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
+    version="2.0.0",
+    description="Production-grade vertical slice backend for B-Map Smart Navigation & Location Services Platform.",
     openapi_url="/api/v1/openapi.json",
     docs_url="/docs",
+    redoc_url="/redoc",
     lifespan=lifespan,
     servers=[
-        {"url": "http://localhost:8080", "description": "Local development"}
+        {"url": "https://b-map-backend.vercel.app", "description": "Production Server"},
+        {"url": "http://localhost:8080", "description": "Local Development Server"}
     ]
 )
 
-# Custom In-Memory Rate Limiter
 class InMemoryRateLimiter:
     def __init__(self, requests_per_minute: int = 60):
         self.requests_per_minute = requests_per_minute
@@ -102,7 +77,6 @@ class InMemoryRateLimiter:
         
     def is_allowed(self, ip: str) -> bool:
         now = time.time()
-        # Keep only timestamps within the last 60 seconds
         self.requests[ip] = [t for t in self.requests[ip] if now - t < 60]
         if len(self.requests[ip]) >= self.requests_per_minute:
             return False
@@ -124,14 +98,11 @@ async def global_exception_handler(request: Request, exc: Exception):
         },
     )
 
-# Middlewares
 @app.middleware("http")
 async def add_request_id_and_timing(request: Request, call_next):
-    # Correlation ID
     request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
     request.state.request_id = request_id
     
-    # Set request ID in contextvar for automated tracing in all logs
     from app.core.logging_config import request_id_var
     token = request_id_var.set(request_id)
     
@@ -140,11 +111,9 @@ async def add_request_id_and_timing(request: Request, call_next):
         response = await call_next(request)
         process_time = (time.time() - start_time) * 1000
         
-        # Inject request tracing headers
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Process-Time-Ms"] = f"{process_time:.2f}"
         
-        # Log request metrics in structured/JSON format
         logger.info(
             f"Request: {request.method} {request.url.path} - Status: {response.status_code} - Time: {process_time:.2f}ms",
             extra={
@@ -157,7 +126,6 @@ async def add_request_id_and_timing(request: Request, call_next):
         )
         return response
     finally:
-        # Reset context variable state to prevent leaking tracing context to other threads/requests
         request_id_var.reset(token)
 
 @app.middleware("http")
@@ -174,8 +142,7 @@ async def add_security_headers(request: Request, call_next):
 
 @app.middleware("http")
 async def rate_limiting_middleware(request: Request, call_next):
-    # Bypass docs, static assets, health checks, and during tests
-    if settings.ENV == "testing" or request.url.path in ["/", "/health", "/docs", "/openapi.json", "/api/v1/openapi.json"]:
+    if settings.ENV == "testing" or request.url.path in ["/", "/health", "/docs", "/redoc", "/openapi.json", "/api/v1/openapi.json"]:
         return await call_next(request)
         
     client_ip = request.client.host if request.client else "unknown"
@@ -190,7 +157,8 @@ async def rate_limiting_middleware(request: Request, call_next):
         )
     return await call_next(request)
 
-# Set all CORS enabled origins dynamically from settings
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -198,14 +166,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# Include centralized api_router with V1 prefix
-app.include_router(api_router, prefix="/api/v1")
 
-# Root-level router aliases to match Flutter client relative pathing
+app.include_router(api_router, prefix="/api/v1")
 app.include_router(api_router)
 
 from fastapi.staticfiles import StaticFiles
-# Create static/uploads directory if not exists
 try:
     os.makedirs("app/static/uploads", exist_ok=True)
 except Exception as e:
@@ -218,13 +183,12 @@ async def root():
         with open("app/static/index.html", "r", encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
-        return HTMLResponse("Welcome to B-Map API. Developer console not found.", status_code=404)
+        return HTMLResponse("<h1>B-Map API v2.0</h1><p>Production API is running cleanly. See <a href='/docs'>Swagger Docs</a>.</p>", status_code=200)
 
-@app.get("/health")
 @app.get("/health")
 async def health_check():
     db_ok = await verify_db_connection(max_retries=1, retry_interval=0.5)
-    return {"status": "healthy", "db_connected": db_ok}
+    return {"status": "healthy", "db_connected": db_ok, "version": "2.0.0"}
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, db = Depends(get_db)):
@@ -235,7 +199,7 @@ async def websocket_endpoint(websocket: WebSocket, db = Depends(get_db)):
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Missing authentication token.")
         return
 
-    from app.api.v1.deps import get_user_from_token
+    from app.shared.dependencies import get_user_from_token
     
     user = await get_user_from_token(token, db)
     if not user:
@@ -256,17 +220,15 @@ async def websocket_endpoint(websocket: WebSocket, db = Depends(get_db)):
                 lat = data.get("lat")
                 lng = data.get("lng")
                 if lat is not None and lng is not None:
-                    # Update/insert user location into timeline
                     location_doc = {
                         "type": "Point",
                         "coordinates": [float(lng), float(lat)]
                     }
                     
-                    from app.db.models import Timeline
+                    from app.features.timeline.models import Timeline
                     timeline_entry = Timeline(user_id=user.id, location=location_doc)
                     await db.timeline.insert_one(timeline_entry.to_dict())
                     
-                    # Sync to other sessions of the same user
                     sync_payload = {
                         "type": "LOCATION_SYNC",
                         "lat": lat,
@@ -280,15 +242,34 @@ async def websocket_endpoint(websocket: WebSocket, db = Depends(get_db)):
         logger.error(f"WebSocket error for user {user_id_str}: {e}")
         manager.disconnect(websocket, user_id_str)
 
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+    openapi_schema["components"]["securitySchemes"] = {
+        "HTTPBearer": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT"
+        }
+    }
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8080))
     is_dev = settings.ENV == "development"
     
-    # Conditional run to enforce asyncio.WindowsSelectorEventLoopPolicy on Windows
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         uvicorn.run(app, host="0.0.0.0", port=port)
     else:
         uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=is_dev)
-

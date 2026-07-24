@@ -177,13 +177,14 @@ except Exception as e:
     logger.warning(f"Could not create static uploads directory: {e}")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 async def root():
-    try:
-        with open("app/static/index.html", "r", encoding="utf-8") as f:
-            return f.read()
-    except FileNotFoundError:
-        return HTMLResponse("<h1>B-Map API v2.0</h1><p>Production API is running cleanly. See <a href='/docs'>Swagger Docs</a>.</p>", status_code=200)
+    return {
+        "title": "B-Map Backend API",
+        "status": "online",
+        "version": "2.0.0",
+        "documentation": "/docs"
+    }
 
 @app.get("/health")
 async def health_check():

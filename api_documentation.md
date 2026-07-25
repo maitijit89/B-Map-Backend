@@ -23,8 +23,11 @@ Welcome to the API documentation for **B-Map Backend**, a high-performance Pytho
 18. [Cab Aggregator (`/api/v1/cabs`)](#cab-aggregator-apiv1cabs)
 19. [Car & Device Sync (`/api/v1/car-sync`)](#car--device-sync-apiv1car-sync)
 20. [Lifestyle & On-Demand (`/api/v1/lifestyle`)](#lifestyle--on-demand-apiv1lifestyle)
-21. [WebSockets (`/ws`)](#websockets-ws)
-22. [System/Utilities (`/`)](#systemutilities-)
+21. [Safety & SOS (`/api/v1/safety`)](#safety--sos-apiv1safety)
+22. [Carpooling (`/api/v1/carpool`)](#carpooling-apiv1carpool)
+23. [Traffic Enforcement (`/api/v1/enforcement`)](#traffic-enforcement-apiv1enforcement)
+24. [WebSockets (`/ws`)](#websockets-ws)
+25. [System/Utilities (`/`)](#systemutilities-)
 
 ### Health Check
 
@@ -392,6 +395,25 @@ Authenticates an existing user using their email and password, returning an acce
   }
   ```
 
+### 10. Admin System Dashboard
+Role-Based Access Control (RBAC): Restricted to authorized administrator roles for system telemetry and metrics.
+* **HTTP Method**: `GET`
+* **Path**: `/api/v1/auth/admin/dashboard`
+* **Authentication Required**: Yes (Admin Role required)
+* **Response Body** (`200 OK`):
+  ```json
+  {
+    "status": "AUTHORIZED",
+    "message": "Welcome to B-Map System Administration Dashboard",
+    "admin_user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "role": "admin",
+    "system_metrics": {
+      "active_services": 24,
+      "total_connected_nodes": 1250,
+      "security_status": "HARDENED_RBAC"
+    }
+  }
+  ```
 
 ---
 
@@ -599,9 +621,9 @@ Authenticates an existing user using their email and password, returning an acce
   ]
   ```
 
-### 12. Get Place Availability / Booking Slots
+### 12. Get Place Availability
 * **HTTP Method**: `GET`
-* **Path**: `/api/v1/places/{place_id}/slots` (or `/api/v1/places/{place_id}/availability`)
+* **Path**: `/api/v1/places/{place_id}/availability`
 * **Authentication Required**: No
 * **Path Parameters**:
   - `place_id` (string, required): Internally managed or Google Place ID.
@@ -613,6 +635,55 @@ Authenticates an existing user using their email and password, returning an acce
     "slots": ["18:00", "19:30", "21:00"]
   }
   ```
+
+### 12b. Get Place Slots
+* **HTTP Method**: `GET`
+* **Path**: `/api/v1/places/{place_id}/slots`
+* **Authentication Required**: No
+* **Path Parameters**:
+  - `place_id` (string, required): Internally managed or Google Place ID.
+* **Response Body** (`200 OK`):
+  ```json
+  {
+    "place_id": "8f185f64-5717-4562-b3fc-2c963f66afd3",
+    "available_dates": ["2026-07-02", "2026-07-03"],
+    "slots": ["18:00", "19:30", "21:00"]
+  }
+  ```
+
+### 13. Rich POI Details
+Retrieves detailed localized information for a restaurant, hotel, mall, or attraction.
+* **HTTP Method**: `GET`
+* **Path**: `/api/v1/places/rich-poi/{poi_id}`
+* **Authentication Required**: No
+* **Path Parameters**:
+  - `poi_id` (string, required): Unique POI identifier.
+* **Response Body** (`200 OK`):
+  ```json
+  {
+    "poi_id": "poi_12345",
+    "name": "Grand Heritage Hotel",
+    "category": "hotel",
+    "rating": 4.8,
+    "address": "Park Street, Kolkata",
+    "photos": ["/static/uploads/poi1.jpg"],
+    "rich_features": ["Infinity Pool", "Roof-top Dining", "Valet Parking"]
+  }
+  ```
+
+### 14. Rich POI Search & Filter
+Search and filter rich localized POIs by category, rating, location, and open status.
+* **HTTP Method**: `GET`
+* **Path**: `/api/v1/places/rich-search`
+* **Authentication Required**: No
+* **Query Parameters**:
+  - `category` (string, optional): One of `restaurant`, `hotel`, `shopping_mall`, `attraction`
+  - `lat` (float, optional, default = `22.5726`)
+  - `lng` (float, optional, default = `88.3639`)
+  - `radius` (integer, optional, default = `3000` meters)
+  - `min_rating` (float, optional, default = `4.0`)
+  - `open_now` (boolean, optional, default = `false`)
+* **Response Body** (`200 OK`): List of matching Rich POI records.
 
 ---
 
@@ -779,6 +850,128 @@ Authenticates an existing user using their email and password, returning an acce
     ]
   }
   ```
+
+### 11. Indian Road Intelligence
+Hyper-local road intelligence including Flyover vs Service Road recommendations, Gali width alerts, FastTag toll estimations, and Monsoon waterlogging alerts.
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/navigation/indian-intelligence`
+* **Authentication Required**: No
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "origin": "Kolkata Airport",
+    "destination": "Park Street",
+    "vehicle_type": "car"
+  }
+  ```
+* **Response Body** (`200 OK`): Hyper-local road advisories, lane/flyover suggestions, and toll pricing.
+
+### 12. Multi-Modal Journey Planning
+Generates smart travel itineraries combining driving, walking, cycling, public transit, trains, and airplanes.
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/navigation/multimodal-plan`
+* **Authentication Required**: No
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "origin": "Connaught Place, Delhi",
+    "destination": "Marine Drive, Mumbai",
+    "allowed_modes": ["driving", "walking", "cycling", "transit", "train", "airplane"],
+    "departure_time": "2026-07-26T08:00:00Z"
+  }
+  ```
+* **Response Body** (`200 OK`): Recommended and alternative itineraries with multi-segment cost, time, and eco carbon savings.
+
+### 13. High-Precision Lane Guidance (Sensor Fusion)
+Utilizes high-precision maps and IMU/GPS sensor fusion telemetry to provide exact lane guidance.
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/navigation/lane-guidance/sensor-fusion`
+* **Authentication Required**: No
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "origin": "22.5726,88.3639",
+    "destination": "22.5800,88.3700",
+    "current_lat": 22.5740,
+    "current_lng": 88.3650,
+    "heading": 90.0,
+    "current_lane_index": 1,
+    "speed_kph": 55.0
+  }
+  ```
+* **Response Body** (`200 OK`): Recommended active lane, next maneuver, maneuver distance, and sensor confidence score.
+
+### 14. Real-Time Dynamic Rerouting
+Monitors sudden congestion/incidents and dynamically calculates alternative faster routes.
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/navigation/dynamic-reroute`
+* **Authentication Required**: No
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "current_route_id": "route-12345",
+    "current_lat": 22.5726,
+    "current_lng": 88.3639,
+    "destination": "Howrah Station",
+    "current_speed_kph": 15.0,
+    "traffic_event_alert": "HEAVY_ACCIDENT_AHEAD"
+  }
+  ```
+* **Response Body** (`200 OK`): Reroute recommendation, estimated time saved in minutes, and new polyline coordinates.
+
+### 15. Weak-Signal Positioning (INS Dead Reckoning)
+INS dead-reckoning engine providing continuous positioning when GPS signals drop (in tunnels or underground parking).
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/navigation/weak-signal-positioning`
+* **Authentication Required**: No
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "last_known_lat": 22.5726,
+    "last_known_lng": 88.3639,
+    "last_known_heading": 180.0,
+    "elapsed_seconds": 12.5,
+    "imu_telemetry": {
+      "accel_x": 0.12,
+      "accel_y": 1.05,
+      "accel_z": 9.81,
+      "gyro_yaw": 0.5,
+      "wheel_speed_kph": 45.0,
+      "timestamp_ms": 1785000000000
+    },
+    "tunnel_or_underground_id": "tunnel-09"
+  }
+  ```
+* **Response Body** (`200 OK`): Estimated coordinates, heading, confidence radius, and estimated time to tunnel exit.
+
+### 16. Get User Routing Preferences
+Retrieves stored user route preferences (time priority, avoid tolls, avoid expressways, least walking).
+* **HTTP Method**: `GET`
+* **Path**: `/api/v1/navigation/preferences`
+* **Authentication Required**: No
+* **Query Parameters**:
+  - `user_id` (string, optional, default = `"default_user"`)
+* **Response Body** (`200 OK`): User routing preference object.
+
+### 17. Update User Routing Preferences
+Updates user routing preferences.
+* **HTTP Method**: `PUT`
+* **Path**: `/api/v1/navigation/preferences`
+* **Authentication Required**: No
+* **Query Parameters**:
+  - `user_id` (string, optional, default = `"default_user"`)
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "routing_priority": "time_priority",
+    "avoid_tolls": false,
+    "avoid_expressways": false,
+    "avoid_ferries": false,
+    "transit_preference": "least_walking",
+    "preferred_vehicle_type": "car"
+  }
+  ```
+* **Response Body** (`200 OK`): Updated user routing preferences.
 
 ---
 
@@ -1299,6 +1492,59 @@ Authenticates an existing user using their email and password, returning an acce
   }
   ```
 
+### 14. Augmented Reality (AR) Navigation Overlay
+Superimposes 3D directional arrows and landmark anchors onto live camera feeds.
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/maps/ar-navigation`
+* **Authentication Required**: No
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "current_lat": 22.5726,
+    "current_lng": 88.3639,
+    "heading": 45.0,
+    "camera_fov_horizontal": 65.0,
+    "destination": "Park Street"
+  }
+  ```
+* **Response Body** (`200 OK`): 3D AR anchors, directional arrows, and landmark projections.
+
+### 15. Panorama 360-Degree View
+Retrieves 360-degree ground-level views and historical imagery timelines.
+* **HTTP Method**: `GET`
+* **Path**: `/api/v1/maps/panoramas/view`
+* **Authentication Required**: No
+* **Query Parameters**:
+  - `lat` (float, required)
+  - `lng` (float, required)
+  - `pano_id` (string, optional)
+  - `heading` (float, optional, default = `0.0`)
+  - `pitch` (float, optional, default = `0.0`)
+* **Response Body** (`200 OK`): Panorama 360 viewer metadata, high-res tile links, and date captured.
+
+### 16. Indoor Panorama Venue Tour
+Retrieves detailed indoor 360-degree views of large buildings like shopping malls and airports.
+* **HTTP Method**: `GET`
+* **Path**: `/api/v1/maps/panoramas/indoor-tour`
+* **Authentication Required**: No
+* **Query Parameters**:
+  - `venue_name` (string, required): Venue name (e.g. "Quest Mall", "IGIA T3")
+  - `floor_level` (integer, optional, default = `1`)
+* **Response Body** (`200 OK`): Indoor floor view nodes, POI pins, and panorama links.
+
+### 17. 3D Cityscape Mesh Data
+Provides detailed three-dimensional building footprints, heights, roof geometries, and cityscapes.
+* **HTTP Method**: `GET`
+* **Path**: `/api/v1/maps/3d-cityscape`
+* **Authentication Required**: No
+* **Query Parameters**:
+  - `city` (string, optional, default = `"Kolkata"`)
+  - `lat` (float, optional, default = `22.5726`)
+  - `lng` (float, optional, default = `88.3639`)
+  - `radius_meters` (float, optional, default = `1500.0`)
+  - `detail_level` (string, optional, default = `"LOD2"`): Level of detail (`LOD1`, `LOD2`, `LOD3`)
+* **Response Body** (`200 OK`): 3D Mesh metadata, building node models, and LOD specs.
+
 ---
 
 ## Environment & Government Feeds (`/api/v1/environment`)
@@ -1413,6 +1659,29 @@ Authenticates an existing user using their email and password, returning an acce
         "delay_minutes": 0
       }
     ]
+  }
+  ```
+
+### 2. Indian Metro & Suburban Transit Intelligence
+Returns carriage recommendations for exit stairs, door alignment, ladies special coach location, and fast vs slow line indicators for Indian suburban & metro networks.
+* **HTTP Method**: `GET`
+* **Path**: `/api/v1/transit/indian-suburban`
+* **Authentication Required**: No
+* **Query Parameters**:
+  - `city` (string, optional, default = `"delhi"`): Supported: `delhi`, `mumbai`, `bengaluru`, `kolkata`, `chennai`
+  - `station` (string, optional, default = `"Rajiv Chowk"`)
+  - `destination` (string, optional, default = `"HUDA City Centre"`)
+* **Response Body** (`200 OK`):
+  ```json
+  {
+    "city": "delhi",
+    "station": "Rajiv Chowk",
+    "destination": "HUDA City Centre",
+    "recommended_carriage": "Carriage 2 (Front)",
+    "door_side_exit": "LEFT",
+    "ladies_coach_position": "Carriage 1 (Front)",
+    "line_type": "FAST_LINE",
+    "transfer_guidance": "Cross platform for Violet Line"
   }
   ```
 
@@ -1613,6 +1882,36 @@ Authenticates an existing user using their email and password, returning an acce
   }
   ```
 
+### 3. Indian Auto-Rickshaw & Multi-App Fare Comparison
+Returns live fare & ETA comparison across Auto-Rickshaws (Namma Yatri, Metered Auto, Shared Auto) and Cabs/Bikes (Uber, Ola, Rapido).
+* **HTTP Method**: `GET`
+* **Path**: `/api/v1/cabs/indian-compare`
+* **Authentication Required**: No
+* **Query Parameters**:
+  - `origin` (string, required): Lat,lng or address
+  - `destination` (string, required): Lat,lng or address
+* **Response Body** (`200 OK`):
+  ```json
+  [
+    {
+      "provider": "Namma Yatri",
+      "service_type": "Auto Rickshaw",
+      "price": 85.0,
+      "currency": "INR",
+      "eta_minutes": 2,
+      "booking_deep_link": "nammayatri://ride?..."
+    },
+    {
+      "provider": "Uber",
+      "service_type": "UberAuto",
+      "price": 92.0,
+      "currency": "INR",
+      "eta_minutes": 4,
+      "booking_deep_link": "uber://..."
+    }
+  ]
+  ```
+
 ---
 
 ## Car & Device Sync (`/api/v1/car-sync`)
@@ -1785,6 +2084,242 @@ Authenticates an existing user using their email and password, returning an acce
       "lat": 39.905,
       "lng": 116.408,
       "connectors_available": 6
+    }
+  ]
+  ```
+
+### 6. Book Movie Tickets
+Book movie tickets directly within the app with cinema hall & seat selection.
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/lifestyle/booking/movie`
+* **Authentication Required**: No
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "cinema_id": "PVR_FORUM_KOL",
+    "movie_title": "Inception 2",
+    "showtime": "2026-07-26T19:30:00Z",
+    "hall_name": "AUDI 2",
+    "seats": ["H12", "H13"],
+    "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  }
+  ```
+* **Response Body** (`201 Created`): Unified booking confirmation containing booking reference, status, and ticket details.
+
+### 7. Book Travel Tickets (Flights & Trains)
+Book airline and train tickets directly within the app with instant PNR confirmation.
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/lifestyle/booking/travel-tickets`
+* **Authentication Required**: No
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "ticket_type": "FLIGHT",
+    "carrier_or_line": "IndiGo 6E-204",
+    "origin": "CCU",
+    "destination": "DEL",
+    "departure_time": "2026-08-10T10:00:00Z",
+    "seat_class": "ECONOMY",
+    "passenger_name": "Jane Doe",
+    "passenger_id_passport": "A1234567"
+  }
+  ```
+* **Response Body** (`201 Created`): Booking confirmation with instant PNR/reference code and flight/train details.
+
+### 8. Get Personalized Recommendations
+Pushes high-quality travel plans, dining, and entertainment based on user preferences & time of day.
+* **HTTP Method**: `GET`
+* **Path**: `/api/v1/lifestyle/recommendations`
+* **Authentication Required**: No
+* **Query Parameters**:
+  - `user_id` (string, optional, default = `"default_user"`)
+  - `lat` (float, optional, default = `22.5726`)
+  - `lng` (float, optional, default = `88.3639`)
+  - `time_of_day` (string, optional, default = `"EVENING"`): `MORNING`, `AFTERNOON`, `EVENING`, `LATE_NIGHT`
+  - `user_interests` (list of strings, optional): E.g. `fine_dining`, `cinema`, `heritage_sites`
+* **Response Body** (`200 OK`): Tailored travel recommendations and activity suggestions.
+
+---
+
+## Safety & SOS (`/api/v1/safety`)
+
+### 1. Get Emergency Contacts
+Retrieves the user's saved emergency contacts.
+* **HTTP Method**: `GET`
+* **Path**: `/api/v1/safety/contacts`
+* **Authentication Required**: Yes (Bearer Token)
+* **Response Body** (`200 OK`):
+  ```json
+  [
+    {
+      "name": "John Doe",
+      "phone_number": "+919876543210",
+      "relation": "Spouse"
+    }
+  ]
+  ```
+
+### 2. Start Live Tracking Session
+Start a live tracking session and generate a shareable URL for trusted contacts.
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/safety/live/start`
+* **Authentication Required**: Yes (Bearer Token)
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "destination_lat": 22.5726,
+    "destination_lng": 88.3639,
+    "estimated_arrival_time": "2026-07-25T23:00:00Z"
+  }
+  ```
+* **Response Body** (`200 OK`):
+  ```json
+  {
+    "session_id": "session-uuid-123",
+    "shareable_url": "https://b-map-backend.vercel.app/track/session-uuid-123",
+    "status": "ACTIVE"
+  }
+  ```
+
+### 3. Trigger Emergency SOS Alert
+Triggers an emergency SOS alert to all saved contacts with current coordinates and message.
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/safety/sos`
+* **Authentication Required**: Yes (Bearer Token)
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "lat": 22.5726,
+    "lng": 88.3639,
+    "message": "I need urgent assistance! Here is my live location."
+  }
+  ```
+* **Response Body** (`200 OK`):
+  ```json
+  {
+    "success": true,
+    "contacts_notified": 2,
+    "message": "SOS alert broadcasted successfully."
+  }
+  ```
+
+---
+
+## Carpooling (`/api/v1/carpool`)
+
+### 1. Create Ride Offer
+Allows drivers to offer seats for a planned trip.
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/carpool/offer`
+* **Authentication Required**: Yes (Bearer Token)
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "origin": "Salt Lake Sector V",
+    "destination": "Park Street",
+    "route": {
+      "encoded_polyline": "a~l~F~jxmA..."
+    },
+    "departure_time": "2026-07-26T09:00:00Z",
+    "seats_available": 3,
+    "price_per_seat": 50.0
+  }
+  ```
+* **Response Body** (`200 OK`): Created `RideOffer` details including `offer_id`.
+
+### 2. Create Ride Request
+Allows commuters to request a carpool ride.
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/carpool/request`
+* **Authentication Required**: Yes (Bearer Token)
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "origin": "Karunamoyee",
+    "destination": "Esplanade",
+    "desired_departure_time": "2026-07-26T09:15:00Z",
+    "seats_needed": 1
+  }
+  ```
+* **Response Body** (`200 OK`): Created `RideRequest` details including `request_id`.
+
+### 3. Find Ride Matches
+Finds matching ride offers for a given ride request.
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/carpool/matches`
+* **Authentication Required**: Yes (Bearer Token)
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "origin": "Karunamoyee",
+    "destination": "Esplanade",
+    "desired_departure_time": "2026-07-26T09:15:00Z",
+    "seats_needed": 1
+  }
+  ```
+* **Response Body** (`200 OK`):
+  ```json
+  [
+    {
+      "offer_id": "offer-uuid-456",
+      "driver_name": "Rohan Gupta",
+      "pickup_point": "Karunamoyee Bus Stop",
+      "dropoff_point": "Esplanade Metro Gate 2",
+      "estimated_price": 45.0,
+      "departure_time": "2026-07-26T09:10:00Z"
+    }
+  ]
+  ```
+
+---
+
+## Traffic Enforcement (`/api/v1/enforcement`)
+
+### 1. Get Nearby Traffic Cameras
+Retrieves nearby speed, red-light, and bus-lane enforcement cameras.
+* **HTTP Method**: `GET`
+* **Path**: `/api/v1/enforcement/nearby`
+* **Authentication Required**: No
+* **Query Parameters**:
+  - `lat` (float, required): Latitude
+  - `lng` (float, required): Longitude
+  - `radius` (integer, optional, default = `5000` meters)
+* **Response Body** (`200 OK`):
+  ```json
+  [
+    {
+      "id": "cam-101",
+      "lat": 22.5730,
+      "lng": 88.3640,
+      "type": "SPEED",
+      "speed_limit": 60
+    }
+  ]
+  ```
+
+### 2. Check Route For Enforcement Cameras
+Checks a route and vehicle speed against upcoming speed and red light cameras.
+* **HTTP Method**: `POST`
+* **Path**: `/api/v1/enforcement/route-check`
+* **Authentication Required**: No
+* **Request Body** (`application/json`):
+  ```json
+  {
+    "route_polyline": "a~l~F~jxmA...",
+    "current_lat": 22.5726,
+    "current_lng": 88.3639,
+    "current_speed_kph": 72.5
+  }
+  ```
+* **Response Body** (`200 OK`):
+  ```json
+  [
+    {
+      "camera_id": "cam-101",
+      "camera_type": "SPEED",
+      "distance_meters": 450,
+      "speed_limit": 60,
+      "is_speeding": true
     }
   ]
   ```

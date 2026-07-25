@@ -2,14 +2,9 @@
   "openapi": "3.1.0",
   "info": {
     "title": "B-Map Backend",
-    "version": "0.1.0"
+    "description": "Production-grade vertical slice backend for B-Map Smart Navigation & Location Services Platform.",
+    "version": "2.0.0"
   },
-  "servers": [
-    {
-      "url": "http://localhost:8080",
-      "description": "Local development"
-    }
-  ],
   "paths": {
     "/api/v1/auth/register": {
       "post": {
@@ -214,6 +209,88 @@
         }
       }
     },
+    "/api/v1/auth/register-email": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Register Email",
+        "operationId": "register_email_api_v1_auth_register_email_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_register_email_api_v1_auth_register_email_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register-email-json": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Register Email Json",
+        "operationId": "register_email_json_api_v1_auth_register_email_json_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserEmailRegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/logout": {
       "post": {
         "tags": [
@@ -230,7 +307,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
       }
     },
     "/api/v1/auth/delete-account": {
@@ -291,6 +373,31 @@
                 "schema": {
                   "$ref": "#/components/schemas/UserMeResponse"
                 }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/admin/dashboard": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Get Admin Dashboard",
+        "description": "Role-Based Access Control (RBAC): Restricted to authorized administrator roles.",
+        "operationId": "get_admin_dashboard_api_v1_auth_admin_dashboard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }
@@ -1164,6 +1271,161 @@
         }
       }
     },
+    "/api/v1/places/rich-poi/{poi_id}": {
+      "get": {
+        "tags": [
+          "Places"
+        ],
+        "summary": "Get Rich Poi Details",
+        "description": "Rich POI Data: Retrieves incredibly detailed localized information for a restaurant, hotel, mall, or attraction.",
+        "operationId": "get_rich_poi_details_api_v1_places_rich_poi__poi_id__get",
+        "parameters": [
+          {
+            "name": "poi_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Poi Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RichPOIDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/places/rich-search": {
+      "get": {
+        "tags": [
+          "Places"
+        ],
+        "summary": "Search Rich Pois",
+        "description": "Rich POI Data: Search and filter rich localized POIs by category, rating, location, and open status.",
+        "operationId": "search_rich_pois_api_v1_places_rich_search_get",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Category: restaurant, hotel, shopping_mall, attraction",
+              "title": "Category"
+            },
+            "description": "Category: restaurant, hotel, shopping_mall, attraction"
+          },
+          {
+            "name": "lat",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "description": "Latitude",
+              "default": 22.5726,
+              "title": "Lat"
+            },
+            "description": "Latitude"
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "description": "Longitude",
+              "default": 88.3639,
+              "title": "Lng"
+            },
+            "description": "Longitude"
+          },
+          {
+            "name": "radius",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Search radius in meters",
+              "default": 3000,
+              "title": "Radius"
+            },
+            "description": "Search radius in meters"
+          },
+          {
+            "name": "min_rating",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "description": "Minimum rating filter",
+              "default": 4.0,
+              "title": "Min Rating"
+            },
+            "description": "Minimum rating filter"
+          },
+          {
+            "name": "open_now",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Filter places open right now",
+              "default": false,
+              "title": "Open Now"
+            },
+            "description": "Filter places open right now"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RichPOISearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/navigation/directions": {
       "get": {
         "tags": [
@@ -1247,6 +1509,42 @@
             "description": "Language: en or hi"
           },
           {
+            "name": "avoid_tolls",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Option to avoid toll roads",
+              "default": false,
+              "title": "Avoid Tolls"
+            },
+            "description": "Option to avoid toll roads"
+          },
+          {
+            "name": "avoid_expressways",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Option to avoid highways / expressways",
+              "default": false,
+              "title": "Avoid Expressways"
+            },
+            "description": "Option to avoid highways / expressways"
+          },
+          {
+            "name": "time_priority",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Prioritize fastest route",
+              "default": true,
+              "title": "Time Priority"
+            },
+            "description": "Prioritize fastest route"
+          },
+          {
             "name": "Accept-Language",
             "in": "header",
             "required": false,
@@ -1263,6 +1561,46 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/navigation/indian-intelligence": {
+      "post": {
+        "tags": [
+          "Navigation"
+        ],
+        "summary": "Get Indian Road Intelligence",
+        "description": "Returns hyper-local Indian road intelligence: Flyover vs Service Road recommendations, Gali width alerts, FastTag toll estimations, and Monsoon waterlogging alerts.",
+        "operationId": "get_indian_road_intelligence_api_v1_navigation_indian_intelligence_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndianIntelligenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1725,6 +2063,274 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/navigation/multimodal-plan": {
+      "post": {
+        "tags": [
+          "Navigation"
+        ],
+        "summary": "Get Multimodal Plan",
+        "description": "Multi-Modal Planning: Generates smart travel itineraries combining driving, walking, cycling, public transit (buses & subways), trains, and airplanes.",
+        "operationId": "get_multimodal_plan_api_v1_navigation_multimodal_plan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MultiModalPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiModalPlanResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/navigation/lane-guidance/sensor-fusion": {
+      "post": {
+        "tags": [
+          "Navigation"
+        ],
+        "summary": "Get Lane Guidance Sensor Fusion",
+        "description": "Lane-Level Navigation: Utilizes high-precision maps and IMU/GPS sensor fusion telemetry to provide exact lane guidance.",
+        "operationId": "get_lane_guidance_sensor_fusion_api_v1_navigation_lane_guidance_sensor_fusion_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LaneGuidanceSensorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LaneGuidanceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/navigation/dynamic-reroute": {
+      "post": {
+        "tags": [
+          "Navigation"
+        ],
+        "summary": "Get Dynamic Reroute",
+        "description": "Real-Time Traffic & Dynamic Routing: Monitors sudden congestion/incidents and dynamically calculates alternative faster routes.",
+        "operationId": "get_dynamic_reroute_api_v1_navigation_dynamic_reroute_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DynamicRerouteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DynamicRerouteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/navigation/preferences": {
+      "get": {
+        "tags": [
+          "Navigation"
+        ],
+        "summary": "Get User Routing Preferences",
+        "description": "Customizable Preferences: Retrieves stored user route preferences (time priority, avoid tolls, avoid expressways, least walking).",
+        "operationId": "get_user_routing_preferences_api_v1_navigation_preferences_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "User ID",
+              "default": "default_user",
+              "title": "User Id"
+            },
+            "description": "User ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferencesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Navigation"
+        ],
+        "summary": "Update User Routing Preferences",
+        "description": "Customizable Preferences: Updates user routing preferences.",
+        "operationId": "update_user_routing_preferences_api_v1_navigation_preferences_put",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "User ID",
+              "default": "default_user",
+              "title": "User Id"
+            },
+            "description": "User ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoutingPreferencesSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferencesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/navigation/weak-signal-positioning": {
+      "post": {
+        "tags": [
+          "Navigation"
+        ],
+        "summary": "Get Weak Signal Positioning",
+        "description": "Weak-Signal Navigation: INS dead-reckoning engine providing continuous positioning when GPS drops (in tunnels or underground parking).",
+        "operationId": "get_weak_signal_positioning_api_v1_navigation_weak_signal_positioning_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WeakSignalPositioningRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeadReckoningPosition"
+                }
               }
             }
           },
@@ -3190,6 +3796,372 @@
         }
       }
     },
+    "/api/v1/maps/traffic": {
+      "get": {
+        "tags": [
+          "Maps"
+        ],
+        "summary": "Get Realtime Traffic",
+        "operationId": "get_realtime_traffic_api_v1_maps_traffic_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "title": "Lat"
+            }
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "title": "Lng"
+            }
+          },
+          {
+            "name": "radius",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "description": "Search radius in meters",
+              "default": 5000,
+              "title": "Radius"
+            },
+            "description": "Search radius in meters"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/maps/ar-navigation": {
+      "post": {
+        "tags": [
+          "Maps"
+        ],
+        "summary": "Get Ar Navigation Overlay",
+        "description": "AR Real-Life Navigation: Superimposes 3D directional arrows and landmark anchors onto live camera feeds.",
+        "operationId": "get_ar_navigation_overlay_api_v1_maps_ar_navigation_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AROverlayRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AROverlayResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/maps/panoramas/view": {
+      "get": {
+        "tags": [
+          "Maps"
+        ],
+        "summary": "Get Panorama 360 View",
+        "description": "Panorama (Street View): Retrieves 360-degree ground-level views and historical imagery timelines.",
+        "operationId": "get_panorama_360_view_api_v1_maps_panoramas_view_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "description": "Latitude",
+              "title": "Lat"
+            },
+            "description": "Latitude"
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "description": "Longitude",
+              "title": "Lng"
+            },
+            "description": "Longitude"
+          },
+          {
+            "name": "pano_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Panorama ID",
+              "title": "Pano Id"
+            },
+            "description": "Panorama ID"
+          },
+          {
+            "name": "heading",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "description": "Compass heading",
+              "default": 0.0,
+              "title": "Heading"
+            },
+            "description": "Compass heading"
+          },
+          {
+            "name": "pitch",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "description": "Pitch angle",
+              "default": 0.0,
+              "title": "Pitch"
+            },
+            "description": "Pitch angle"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Panorama360View"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/maps/panoramas/indoor-tour": {
+      "get": {
+        "tags": [
+          "Maps"
+        ],
+        "summary": "Get Indoor Panorama Tour",
+        "description": "Panorama (Street View): Retrieves detailed indoor 360-degree views of large buildings like shopping malls and airports.",
+        "operationId": "get_indoor_panorama_tour_api_v1_maps_panoramas_indoor_tour_get",
+        "parameters": [
+          {
+            "name": "venue_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Name of the shopping mall, airport, or train station",
+              "title": "Venue Name"
+            },
+            "description": "Name of the shopping mall, airport, or train station"
+          },
+          {
+            "name": "floor_level",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Floor level number",
+              "default": 1,
+              "title": "Floor Level"
+            },
+            "description": "Floor level number"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndoorPanoramaTourResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/maps/3d-cityscape": {
+      "get": {
+        "tags": [
+          "Maps"
+        ],
+        "summary": "Get 3D Cityscape",
+        "description": "3D Maps: Provides detailed three-dimensional building footprints, heights, roof geometries, and cityscapes.",
+        "operationId": "get_3d_cityscape_api_v1_maps_3d_cityscape_get",
+        "parameters": [
+          {
+            "name": "city",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "City name",
+              "default": "Kolkata",
+              "title": "City"
+            },
+            "description": "City name"
+          },
+          {
+            "name": "lat",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Center latitude",
+              "default": 22.5726,
+              "title": "Lat"
+            },
+            "description": "Center latitude"
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Center longitude",
+              "default": 88.3639,
+              "title": "Lng"
+            },
+            "description": "Center longitude"
+          },
+          {
+            "name": "radius_meters",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "description": "Bounding radius in meters",
+              "default": 1500.0,
+              "title": "Radius Meters"
+            },
+            "description": "Bounding radius in meters"
+          },
+          {
+            "name": "detail_level",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Level of detail (LOD1, LOD2, LOD3)",
+              "default": "LOD2",
+              "title": "Detail Level"
+            },
+            "description": "Level of detail (LOD1, LOD2, LOD3)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cityscape3DResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/environment/air-quality": {
       "get": {
         "tags": [
@@ -3372,6 +4344,55 @@
         ],
         "summary": "Get Solar",
         "operationId": "get_solar_api_v1_environment_solar_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "title": "Lat"
+            }
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "title": "Lng"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/environment/gov-feeds": {
+      "get": {
+        "tags": [
+          "Environment"
+        ],
+        "summary": "Get Government Feeds",
+        "operationId": "get_government_feeds_api_v1_environment_gov_feeds_get",
         "parameters": [
           {
             "name": "lat",
@@ -3698,6 +4719,200 @@
         }
       }
     },
+    "/api/v1/lifestyle/booking/movie": {
+      "post": {
+        "tags": [
+          "Lifestyle & On-Demand"
+        ],
+        "summary": "Book Movie Tickets",
+        "description": "In-App Booking: Book movie tickets directly within the app with cinema hall & seat selection.",
+        "operationId": "book_movie_tickets_api_v1_lifestyle_booking_movie_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MovieBookingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnifiedBookingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lifestyle/booking/travel-tickets": {
+      "post": {
+        "tags": [
+          "Lifestyle & On-Demand"
+        ],
+        "summary": "Book Travel Tickets",
+        "description": "In-App Booking: Book airline and train tickets directly within the app with instant PNR confirmation.",
+        "operationId": "book_travel_tickets_api_v1_lifestyle_booking_travel_tickets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TravelTicketBookingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnifiedBookingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lifestyle/recommendations": {
+      "get": {
+        "tags": [
+          "Lifestyle & On-Demand"
+        ],
+        "summary": "Get Personalized Recommendations",
+        "description": "Personalized Recommendations: Pushes high-quality travel plans, dining, and entertainment based on user preferences & time of day.",
+        "operationId": "get_personalized_recommendations_api_v1_lifestyle_recommendations_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "User ID",
+              "default": "default_user",
+              "title": "User Id"
+            },
+            "description": "User ID"
+          },
+          {
+            "name": "lat",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "description": "Latitude",
+              "default": 22.5726,
+              "title": "Lat"
+            },
+            "description": "Latitude"
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "description": "Longitude",
+              "default": 88.3639,
+              "title": "Lng"
+            },
+            "description": "Longitude"
+          },
+          {
+            "name": "time_of_day",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Time of day: MORNING, AFTERNOON, EVENING, LATE_NIGHT",
+              "default": "EVENING",
+              "title": "Time Of Day"
+            },
+            "description": "Time of day: MORNING, AFTERNOON, EVENING, LATE_NIGHT"
+          },
+          {
+            "name": "user_interests",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "User interest tags e.g. fine_dining, cinema, heritage_sites",
+              "title": "User Interests"
+            },
+            "description": "User interest tags e.g. fine_dining, cinema, heritage_sites"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalizedRecommendationsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/car-sync/session": {
       "post": {
         "tags": [
@@ -3822,55 +5037,6 @@
         }
       }
     },
-    "/api/v1/environment/gov-feeds": {
-      "get": {
-        "tags": [
-          "Government Feeds"
-        ],
-        "summary": "Get Government Feeds",
-        "operationId": "get_government_feeds_api_v1_environment_gov_feeds_get",
-        "parameters": [
-          {
-            "name": "lat",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "number",
-              "title": "Lat"
-            }
-          },
-          {
-            "name": "lng",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "number",
-              "title": "Lng"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/accessibility/blind-navigation": {
       "get": {
         "tags": [
@@ -3937,6 +5103,56 @@
         ],
         "summary": "Get Quotes",
         "operationId": "get_quotes_api_v1_cabs_quote_get",
+        "parameters": [
+          {
+            "name": "origin",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Origin"
+            }
+          },
+          {
+            "name": "destination",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Destination"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cabs/indian-compare": {
+      "get": {
+        "tags": [
+          "Cab Aggregator"
+        ],
+        "summary": "Get Indian Cabs Comparison",
+        "description": "Returns live fare & ETA comparison across Auto-Rickshaws (Namma Yatri, Metered Auto, Shared Auto) and Cabs/Bikes (Uber, Ola, Rapido).",
+        "operationId": "get_indian_cabs_comparison_api_v1_cabs_indian_compare_get",
         "parameters": [
           {
             "name": "origin",
@@ -4079,6 +5295,74 @@
         }
       }
     },
+    "/api/v1/transit/indian-suburban": {
+      "get": {
+        "tags": [
+          "Live Transit Tracker"
+        ],
+        "summary": "Get Indian Suburban Transit",
+        "description": "Returns carriage recommendations for exit stairs, door alignment, ladies special coach location, and fast vs slow line indicators for Indian suburban & metro networks.",
+        "operationId": "get_indian_suburban_transit_api_v1_transit_indian_suburban_get",
+        "parameters": [
+          {
+            "name": "city",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "City: delhi, mumbai, bengaluru, kolkata, chennai",
+              "default": "delhi",
+              "title": "City"
+            },
+            "description": "City: delhi, mumbai, bengaluru, kolkata, chennai"
+          },
+          {
+            "name": "station",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Origin Metro/Suburban station",
+              "default": "Rajiv Chowk",
+              "title": "Station"
+            },
+            "description": "Origin Metro/Suburban station"
+          },
+          {
+            "name": "destination",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Destination Metro/Suburban station",
+              "default": "HUDA City Centre",
+              "title": "Destination"
+            },
+            "description": "Destination Metro/Suburban station"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/users/shortcuts/": {
       "get": {
         "tags": [
@@ -4159,6 +5443,386 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/contacts": {
+      "get": {
+        "tags": [
+          "Safety & SOS"
+        ],
+        "summary": "Get Emergency Contacts",
+        "description": "Get the user's emergency contacts",
+        "operationId": "get_emergency_contacts_api_v1_safety_contacts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EmergencyContact"
+                  },
+                  "type": "array",
+                  "title": "Response Get Emergency Contacts Api V1 Safety Contacts Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/safety/live/start": {
+      "post": {
+        "tags": [
+          "Safety & SOS"
+        ],
+        "summary": "Start Live Tracking",
+        "description": "Start a live tracking session and generate a shareable link",
+        "operationId": "start_live_tracking_api_v1_safety_live_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveSessionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/safety/sos": {
+      "post": {
+        "tags": [
+          "Safety & SOS"
+        ],
+        "summary": "Trigger Sos",
+        "description": "Trigger an emergency SOS alert to all saved contacts",
+        "operationId": "trigger_sos_api_v1_safety_sos_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SOSRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/carpool/offer": {
+      "post": {
+        "tags": [
+          "Carpooling"
+        ],
+        "summary": "Create Ride Offer",
+        "description": "Offer a ride to commuters",
+        "operationId": "create_ride_offer_api_v1_carpool_offer_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RideOffer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RideOffer"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/carpool/request": {
+      "post": {
+        "tags": [
+          "Carpooling"
+        ],
+        "summary": "Create Ride Request",
+        "description": "Request a ride from commuters",
+        "operationId": "create_ride_request_api_v1_carpool_request_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RideRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RideRequest"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/carpool/matches": {
+      "post": {
+        "tags": [
+          "Carpooling"
+        ],
+        "summary": "Find Ride Matches",
+        "description": "Find matching ride offers for a request",
+        "operationId": "find_ride_matches_api_v1_carpool_matches_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RideRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RideMatch"
+                  },
+                  "type": "array",
+                  "title": "Response Find Ride Matches Api V1 Carpool Matches Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/enforcement/nearby": {
+      "get": {
+        "tags": [
+          "Traffic Enforcement"
+        ],
+        "summary": "Get Nearby Cameras",
+        "description": "Get nearby traffic cameras",
+        "operationId": "get_nearby_cameras_api_v1_enforcement_nearby_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "title": "Lat"
+            }
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "title": "Lng"
+            }
+          },
+          {
+            "name": "radius",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5000,
+              "title": "Radius"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Camera"
+                  },
+                  "title": "Response Get Nearby Cameras Api V1 Enforcement Nearby Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/enforcement/route-check": {
+      "post": {
+        "tags": [
+          "Traffic Enforcement"
+        ],
+        "summary": "Check Route For Cameras",
+        "description": "Check a route and current speed against upcoming cameras",
+        "operationId": "check_route_for_cameras_api_v1_enforcement_route_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RouteCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EnforcementWarning"
+                  },
+                  "type": "array",
+                  "title": "Response Check Route For Cameras Api V1 Enforcement Route Check Post"
+                }
               }
             }
           },
@@ -4378,6 +6042,88 @@
         }
       }
     },
+    "/auth/register-email": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Register Email",
+        "operationId": "register_email_auth_register_email_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_register_email_auth_register_email_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/register-email-json": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Register Email Json",
+        "operationId": "register_email_json_auth_register_email_json_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserEmailRegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/logout": {
       "post": {
         "tags": [
@@ -4394,7 +6140,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
       }
     },
     "/auth/delete-account": {
@@ -4455,6 +6206,31 @@
                 "schema": {
                   "$ref": "#/components/schemas/UserMeResponse"
                 }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/auth/admin/dashboard": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Get Admin Dashboard",
+        "description": "Role-Based Access Control (RBAC): Restricted to authorized administrator roles.",
+        "operationId": "get_admin_dashboard_auth_admin_dashboard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }
@@ -5328,6 +7104,161 @@
         }
       }
     },
+    "/places/rich-poi/{poi_id}": {
+      "get": {
+        "tags": [
+          "Places"
+        ],
+        "summary": "Get Rich Poi Details",
+        "description": "Rich POI Data: Retrieves incredibly detailed localized information for a restaurant, hotel, mall, or attraction.",
+        "operationId": "get_rich_poi_details_places_rich_poi__poi_id__get",
+        "parameters": [
+          {
+            "name": "poi_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Poi Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RichPOIDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/places/rich-search": {
+      "get": {
+        "tags": [
+          "Places"
+        ],
+        "summary": "Search Rich Pois",
+        "description": "Rich POI Data: Search and filter rich localized POIs by category, rating, location, and open status.",
+        "operationId": "search_rich_pois_places_rich_search_get",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Category: restaurant, hotel, shopping_mall, attraction",
+              "title": "Category"
+            },
+            "description": "Category: restaurant, hotel, shopping_mall, attraction"
+          },
+          {
+            "name": "lat",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "description": "Latitude",
+              "default": 22.5726,
+              "title": "Lat"
+            },
+            "description": "Latitude"
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "description": "Longitude",
+              "default": 88.3639,
+              "title": "Lng"
+            },
+            "description": "Longitude"
+          },
+          {
+            "name": "radius",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Search radius in meters",
+              "default": 3000,
+              "title": "Radius"
+            },
+            "description": "Search radius in meters"
+          },
+          {
+            "name": "min_rating",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "description": "Minimum rating filter",
+              "default": 4.0,
+              "title": "Min Rating"
+            },
+            "description": "Minimum rating filter"
+          },
+          {
+            "name": "open_now",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Filter places open right now",
+              "default": false,
+              "title": "Open Now"
+            },
+            "description": "Filter places open right now"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RichPOISearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/navigation/directions": {
       "get": {
         "tags": [
@@ -5411,6 +7342,42 @@
             "description": "Language: en or hi"
           },
           {
+            "name": "avoid_tolls",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Option to avoid toll roads",
+              "default": false,
+              "title": "Avoid Tolls"
+            },
+            "description": "Option to avoid toll roads"
+          },
+          {
+            "name": "avoid_expressways",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Option to avoid highways / expressways",
+              "default": false,
+              "title": "Avoid Expressways"
+            },
+            "description": "Option to avoid highways / expressways"
+          },
+          {
+            "name": "time_priority",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Prioritize fastest route",
+              "default": true,
+              "title": "Time Priority"
+            },
+            "description": "Prioritize fastest route"
+          },
+          {
             "name": "Accept-Language",
             "in": "header",
             "required": false,
@@ -5427,6 +7394,46 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/navigation/indian-intelligence": {
+      "post": {
+        "tags": [
+          "Navigation"
+        ],
+        "summary": "Get Indian Road Intelligence",
+        "description": "Returns hyper-local Indian road intelligence: Flyover vs Service Road recommendations, Gali width alerts, FastTag toll estimations, and Monsoon waterlogging alerts.",
+        "operationId": "get_indian_road_intelligence_navigation_indian_intelligence_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndianIntelligenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -5889,6 +7896,274 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/navigation/multimodal-plan": {
+      "post": {
+        "tags": [
+          "Navigation"
+        ],
+        "summary": "Get Multimodal Plan",
+        "description": "Multi-Modal Planning: Generates smart travel itineraries combining driving, walking, cycling, public transit (buses & subways), trains, and airplanes.",
+        "operationId": "get_multimodal_plan_navigation_multimodal_plan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MultiModalPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiModalPlanResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/navigation/lane-guidance/sensor-fusion": {
+      "post": {
+        "tags": [
+          "Navigation"
+        ],
+        "summary": "Get Lane Guidance Sensor Fusion",
+        "description": "Lane-Level Navigation: Utilizes high-precision maps and IMU/GPS sensor fusion telemetry to provide exact lane guidance.",
+        "operationId": "get_lane_guidance_sensor_fusion_navigation_lane_guidance_sensor_fusion_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LaneGuidanceSensorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LaneGuidanceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/navigation/dynamic-reroute": {
+      "post": {
+        "tags": [
+          "Navigation"
+        ],
+        "summary": "Get Dynamic Reroute",
+        "description": "Real-Time Traffic & Dynamic Routing: Monitors sudden congestion/incidents and dynamically calculates alternative faster routes.",
+        "operationId": "get_dynamic_reroute_navigation_dynamic_reroute_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DynamicRerouteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DynamicRerouteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/navigation/preferences": {
+      "get": {
+        "tags": [
+          "Navigation"
+        ],
+        "summary": "Get User Routing Preferences",
+        "description": "Customizable Preferences: Retrieves stored user route preferences (time priority, avoid tolls, avoid expressways, least walking).",
+        "operationId": "get_user_routing_preferences_navigation_preferences_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "User ID",
+              "default": "default_user",
+              "title": "User Id"
+            },
+            "description": "User ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferencesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Navigation"
+        ],
+        "summary": "Update User Routing Preferences",
+        "description": "Customizable Preferences: Updates user routing preferences.",
+        "operationId": "update_user_routing_preferences_navigation_preferences_put",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "User ID",
+              "default": "default_user",
+              "title": "User Id"
+            },
+            "description": "User ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoutingPreferencesSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferencesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/navigation/weak-signal-positioning": {
+      "post": {
+        "tags": [
+          "Navigation"
+        ],
+        "summary": "Get Weak Signal Positioning",
+        "description": "Weak-Signal Navigation: INS dead-reckoning engine providing continuous positioning when GPS drops (in tunnels or underground parking).",
+        "operationId": "get_weak_signal_positioning_navigation_weak_signal_positioning_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WeakSignalPositioningRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeadReckoningPosition"
+                }
               }
             }
           },
@@ -7354,6 +9629,372 @@
         }
       }
     },
+    "/maps/traffic": {
+      "get": {
+        "tags": [
+          "Maps"
+        ],
+        "summary": "Get Realtime Traffic",
+        "operationId": "get_realtime_traffic_maps_traffic_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "title": "Lat"
+            }
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "title": "Lng"
+            }
+          },
+          {
+            "name": "radius",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "description": "Search radius in meters",
+              "default": 5000,
+              "title": "Radius"
+            },
+            "description": "Search radius in meters"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/maps/ar-navigation": {
+      "post": {
+        "tags": [
+          "Maps"
+        ],
+        "summary": "Get Ar Navigation Overlay",
+        "description": "AR Real-Life Navigation: Superimposes 3D directional arrows and landmark anchors onto live camera feeds.",
+        "operationId": "get_ar_navigation_overlay_maps_ar_navigation_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AROverlayRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AROverlayResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/maps/panoramas/view": {
+      "get": {
+        "tags": [
+          "Maps"
+        ],
+        "summary": "Get Panorama 360 View",
+        "description": "Panorama (Street View): Retrieves 360-degree ground-level views and historical imagery timelines.",
+        "operationId": "get_panorama_360_view_maps_panoramas_view_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "description": "Latitude",
+              "title": "Lat"
+            },
+            "description": "Latitude"
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "description": "Longitude",
+              "title": "Lng"
+            },
+            "description": "Longitude"
+          },
+          {
+            "name": "pano_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Panorama ID",
+              "title": "Pano Id"
+            },
+            "description": "Panorama ID"
+          },
+          {
+            "name": "heading",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "description": "Compass heading",
+              "default": 0.0,
+              "title": "Heading"
+            },
+            "description": "Compass heading"
+          },
+          {
+            "name": "pitch",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "description": "Pitch angle",
+              "default": 0.0,
+              "title": "Pitch"
+            },
+            "description": "Pitch angle"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Panorama360View"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/maps/panoramas/indoor-tour": {
+      "get": {
+        "tags": [
+          "Maps"
+        ],
+        "summary": "Get Indoor Panorama Tour",
+        "description": "Panorama (Street View): Retrieves detailed indoor 360-degree views of large buildings like shopping malls and airports.",
+        "operationId": "get_indoor_panorama_tour_maps_panoramas_indoor_tour_get",
+        "parameters": [
+          {
+            "name": "venue_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Name of the shopping mall, airport, or train station",
+              "title": "Venue Name"
+            },
+            "description": "Name of the shopping mall, airport, or train station"
+          },
+          {
+            "name": "floor_level",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Floor level number",
+              "default": 1,
+              "title": "Floor Level"
+            },
+            "description": "Floor level number"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndoorPanoramaTourResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/maps/3d-cityscape": {
+      "get": {
+        "tags": [
+          "Maps"
+        ],
+        "summary": "Get 3D Cityscape",
+        "description": "3D Maps: Provides detailed three-dimensional building footprints, heights, roof geometries, and cityscapes.",
+        "operationId": "get_3d_cityscape_maps_3d_cityscape_get",
+        "parameters": [
+          {
+            "name": "city",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "City name",
+              "default": "Kolkata",
+              "title": "City"
+            },
+            "description": "City name"
+          },
+          {
+            "name": "lat",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Center latitude",
+              "default": 22.5726,
+              "title": "Lat"
+            },
+            "description": "Center latitude"
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Center longitude",
+              "default": 88.3639,
+              "title": "Lng"
+            },
+            "description": "Center longitude"
+          },
+          {
+            "name": "radius_meters",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "description": "Bounding radius in meters",
+              "default": 1500.0,
+              "title": "Radius Meters"
+            },
+            "description": "Bounding radius in meters"
+          },
+          {
+            "name": "detail_level",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Level of detail (LOD1, LOD2, LOD3)",
+              "default": "LOD2",
+              "title": "Detail Level"
+            },
+            "description": "Level of detail (LOD1, LOD2, LOD3)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cityscape3DResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/environment/air-quality": {
       "get": {
         "tags": [
@@ -7536,6 +10177,55 @@
         ],
         "summary": "Get Solar",
         "operationId": "get_solar_environment_solar_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "title": "Lat"
+            }
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "title": "Lng"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/environment/gov-feeds": {
+      "get": {
+        "tags": [
+          "Environment"
+        ],
+        "summary": "Get Government Feeds",
+        "operationId": "get_government_feeds_environment_gov_feeds_get",
         "parameters": [
           {
             "name": "lat",
@@ -7862,6 +10552,200 @@
         }
       }
     },
+    "/lifestyle/booking/movie": {
+      "post": {
+        "tags": [
+          "Lifestyle & On-Demand"
+        ],
+        "summary": "Book Movie Tickets",
+        "description": "In-App Booking: Book movie tickets directly within the app with cinema hall & seat selection.",
+        "operationId": "book_movie_tickets_lifestyle_booking_movie_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MovieBookingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnifiedBookingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lifestyle/booking/travel-tickets": {
+      "post": {
+        "tags": [
+          "Lifestyle & On-Demand"
+        ],
+        "summary": "Book Travel Tickets",
+        "description": "In-App Booking: Book airline and train tickets directly within the app with instant PNR confirmation.",
+        "operationId": "book_travel_tickets_lifestyle_booking_travel_tickets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TravelTicketBookingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnifiedBookingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lifestyle/recommendations": {
+      "get": {
+        "tags": [
+          "Lifestyle & On-Demand"
+        ],
+        "summary": "Get Personalized Recommendations",
+        "description": "Personalized Recommendations: Pushes high-quality travel plans, dining, and entertainment based on user preferences & time of day.",
+        "operationId": "get_personalized_recommendations_lifestyle_recommendations_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "User ID",
+              "default": "default_user",
+              "title": "User Id"
+            },
+            "description": "User ID"
+          },
+          {
+            "name": "lat",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "description": "Latitude",
+              "default": 22.5726,
+              "title": "Lat"
+            },
+            "description": "Latitude"
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "description": "Longitude",
+              "default": 88.3639,
+              "title": "Lng"
+            },
+            "description": "Longitude"
+          },
+          {
+            "name": "time_of_day",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Time of day: MORNING, AFTERNOON, EVENING, LATE_NIGHT",
+              "default": "EVENING",
+              "title": "Time Of Day"
+            },
+            "description": "Time of day: MORNING, AFTERNOON, EVENING, LATE_NIGHT"
+          },
+          {
+            "name": "user_interests",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "User interest tags e.g. fine_dining, cinema, heritage_sites",
+              "title": "User Interests"
+            },
+            "description": "User interest tags e.g. fine_dining, cinema, heritage_sites"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalizedRecommendationsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/car-sync/session": {
       "post": {
         "tags": [
@@ -7986,55 +10870,6 @@
         }
       }
     },
-    "/environment/gov-feeds": {
-      "get": {
-        "tags": [
-          "Government Feeds"
-        ],
-        "summary": "Get Government Feeds",
-        "operationId": "get_government_feeds_environment_gov_feeds_get",
-        "parameters": [
-          {
-            "name": "lat",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "number",
-              "title": "Lat"
-            }
-          },
-          {
-            "name": "lng",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "number",
-              "title": "Lng"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/accessibility/blind-navigation": {
       "get": {
         "tags": [
@@ -8101,6 +10936,56 @@
         ],
         "summary": "Get Quotes",
         "operationId": "get_quotes_cabs_quote_get",
+        "parameters": [
+          {
+            "name": "origin",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Origin"
+            }
+          },
+          {
+            "name": "destination",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Destination"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cabs/indian-compare": {
+      "get": {
+        "tags": [
+          "Cab Aggregator"
+        ],
+        "summary": "Get Indian Cabs Comparison",
+        "description": "Returns live fare & ETA comparison across Auto-Rickshaws (Namma Yatri, Metered Auto, Shared Auto) and Cabs/Bikes (Uber, Ola, Rapido).",
+        "operationId": "get_indian_cabs_comparison_cabs_indian_compare_get",
         "parameters": [
           {
             "name": "origin",
@@ -8243,6 +11128,74 @@
         }
       }
     },
+    "/transit/indian-suburban": {
+      "get": {
+        "tags": [
+          "Live Transit Tracker"
+        ],
+        "summary": "Get Indian Suburban Transit",
+        "description": "Returns carriage recommendations for exit stairs, door alignment, ladies special coach location, and fast vs slow line indicators for Indian suburban & metro networks.",
+        "operationId": "get_indian_suburban_transit_transit_indian_suburban_get",
+        "parameters": [
+          {
+            "name": "city",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "City: delhi, mumbai, bengaluru, kolkata, chennai",
+              "default": "delhi",
+              "title": "City"
+            },
+            "description": "City: delhi, mumbai, bengaluru, kolkata, chennai"
+          },
+          {
+            "name": "station",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Origin Metro/Suburban station",
+              "default": "Rajiv Chowk",
+              "title": "Station"
+            },
+            "description": "Origin Metro/Suburban station"
+          },
+          {
+            "name": "destination",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Destination Metro/Suburban station",
+              "default": "HUDA City Centre",
+              "title": "Destination"
+            },
+            "description": "Destination Metro/Suburban station"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/users/shortcuts/": {
       "get": {
         "tags": [
@@ -8339,6 +11292,386 @@
         }
       }
     },
+    "/safety/contacts": {
+      "get": {
+        "tags": [
+          "Safety & SOS"
+        ],
+        "summary": "Get Emergency Contacts",
+        "description": "Get the user's emergency contacts",
+        "operationId": "get_emergency_contacts_safety_contacts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EmergencyContact"
+                  },
+                  "type": "array",
+                  "title": "Response Get Emergency Contacts Safety Contacts Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/safety/live/start": {
+      "post": {
+        "tags": [
+          "Safety & SOS"
+        ],
+        "summary": "Start Live Tracking",
+        "description": "Start a live tracking session and generate a shareable link",
+        "operationId": "start_live_tracking_safety_live_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveSessionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/safety/sos": {
+      "post": {
+        "tags": [
+          "Safety & SOS"
+        ],
+        "summary": "Trigger Sos",
+        "description": "Trigger an emergency SOS alert to all saved contacts",
+        "operationId": "trigger_sos_safety_sos_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SOSRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/carpool/offer": {
+      "post": {
+        "tags": [
+          "Carpooling"
+        ],
+        "summary": "Create Ride Offer",
+        "description": "Offer a ride to commuters",
+        "operationId": "create_ride_offer_carpool_offer_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RideOffer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RideOffer"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/carpool/request": {
+      "post": {
+        "tags": [
+          "Carpooling"
+        ],
+        "summary": "Create Ride Request",
+        "description": "Request a ride from commuters",
+        "operationId": "create_ride_request_carpool_request_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RideRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RideRequest"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/carpool/matches": {
+      "post": {
+        "tags": [
+          "Carpooling"
+        ],
+        "summary": "Find Ride Matches",
+        "description": "Find matching ride offers for a request",
+        "operationId": "find_ride_matches_carpool_matches_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RideRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RideMatch"
+                  },
+                  "type": "array",
+                  "title": "Response Find Ride Matches Carpool Matches Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/enforcement/nearby": {
+      "get": {
+        "tags": [
+          "Traffic Enforcement"
+        ],
+        "summary": "Get Nearby Cameras",
+        "description": "Get nearby traffic cameras",
+        "operationId": "get_nearby_cameras_enforcement_nearby_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "title": "Lat"
+            }
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "title": "Lng"
+            }
+          },
+          {
+            "name": "radius",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5000,
+              "title": "Radius"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Camera"
+                  },
+                  "title": "Response Get Nearby Cameras Enforcement Nearby Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/enforcement/route-check": {
+      "post": {
+        "tags": [
+          "Traffic Enforcement"
+        ],
+        "summary": "Check Route For Cameras",
+        "description": "Check a route and current speed against upcoming cameras",
+        "operationId": "check_route_for_cameras_enforcement_route_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RouteCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EnforcementWarning"
+                  },
+                  "type": "array",
+                  "title": "Response Check Route For Cameras Enforcement Route Check Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "summary": "Root",
@@ -8347,10 +11680,8 @@
           "200": {
             "description": "Successful Response",
             "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
+              "application/json": {
+                "schema": {}
               }
             }
           }
@@ -8376,6 +11707,176 @@
   },
   "components": {
     "schemas": {
+      "ARMarker3D": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Id"
+          },
+          "marker_type": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Marker Type"
+          },
+          "screen_coordinate_x": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Screen Coordinate X"
+          },
+          "screen_coordinate_y": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Screen Coordinate Y"
+          },
+          "depth_z_meters": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Depth Z Meters"
+          },
+          "yaw_rotation_deg": {
+            "type": "number",
+            "maximum": 360.0,
+            "minimum": -360.0,
+            "title": "Yaw Rotation Deg"
+          },
+          "pitch_rotation_deg": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Pitch Rotation Deg"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 150,
+            "title": "Title"
+          },
+          "instruction": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Instruction"
+          },
+          "icon_color_hex": {
+            "type": "string",
+            "maxLength": 10,
+            "title": "Icon Color Hex",
+            "default": "#00E5FF"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "marker_type",
+          "screen_coordinate_x",
+          "screen_coordinate_y",
+          "depth_z_meters",
+          "yaw_rotation_deg",
+          "pitch_rotation_deg",
+          "title",
+          "instruction"
+        ],
+        "title": "ARMarker3D"
+      },
+      "AROverlayRequest": {
+        "properties": {
+          "current_lat": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Current Lat",
+            "description": "Current user latitude"
+          },
+          "current_lng": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Current Lng",
+            "description": "Current user longitude"
+          },
+          "heading": {
+            "type": "number",
+            "maximum": 360.0,
+            "minimum": 0.0,
+            "title": "Heading",
+            "description": "Compass heading in degrees (0-360)"
+          },
+          "camera_fov_horizontal": {
+            "type": "number",
+            "maximum": 160.0,
+            "minimum": 10.0,
+            "title": "Camera Fov Horizontal",
+            "description": "Camera horizontal field-of-view in degrees",
+            "default": 68.0
+          },
+          "destination": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Destination",
+            "description": "Target destination coordinate or name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "current_lat",
+          "current_lng",
+          "heading",
+          "destination"
+        ],
+        "title": "AROverlayRequest"
+      },
+      "AROverlayResponse": {
+        "properties": {
+          "ar_supported": {
+            "type": "boolean",
+            "title": "Ar Supported",
+            "default": true
+          },
+          "active_mode": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Active Mode",
+            "default": "OUTDOOR_WALKING_AR"
+          },
+          "camera_calibration": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Camera Calibration"
+          },
+          "markers": {
+            "items": {
+              "$ref": "#/components/schemas/ARMarker3D"
+            },
+            "type": "array",
+            "title": "Markers"
+          },
+          "next_step_instruction": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Next Step Instruction"
+          },
+          "distance_to_destination_meters": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Distance To Destination Meters"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "camera_calibration",
+          "markers",
+          "next_step_instruction",
+          "distance_to_destination_meters"
+        ],
+        "title": "AROverlayResponse"
+      },
       "AddPlaceRequest": {
         "properties": {
           "google_place_id": {
@@ -8463,6 +11964,110 @@
           "user"
         ],
         "title": "AuthResponse"
+      },
+      "Body_register_email_api_v1_auth_register_email_post": {
+        "properties": {
+          "temp_token": {
+            "type": "string",
+            "title": "Temp Token"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "gender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
+          },
+          "dob": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dob"
+          },
+          "profile_pic": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "binary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Pic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "temp_token",
+          "display_name"
+        ],
+        "title": "Body_register_email_api_v1_auth_register_email_post"
+      },
+      "Body_register_email_auth_register_email_post": {
+        "properties": {
+          "temp_token": {
+            "type": "string",
+            "title": "Temp Token"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "gender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
+          },
+          "dob": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dob"
+          },
+          "profile_pic": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "binary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Pic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "temp_token",
+          "display_name"
+        ],
+        "title": "Body_register_email_auth_register_email_post"
       },
       "Body_register_mobile_api_v1_auth_register_mobile_post": {
         "properties": {
@@ -8647,6 +12252,179 @@
         ],
         "title": "BookRideRequest"
       },
+      "BuildingFootprint3D": {
+        "properties": {
+          "building_id": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Building Id"
+          },
+          "building_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 150
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Building Name"
+          },
+          "height_meters": {
+            "type": "number",
+            "maximum": 1200.0,
+            "minimum": 0.0,
+            "title": "Height Meters"
+          },
+          "floors_count": {
+            "type": "integer",
+            "maximum": 300.0,
+            "minimum": 1.0,
+            "title": "Floors Count"
+          },
+          "roof_type": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Roof Type"
+          },
+          "category": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Category"
+          },
+          "color_hex": {
+            "type": "string",
+            "maxLength": 10,
+            "title": "Color Hex"
+          },
+          "coordinates_polygon": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Coordinates Polygon"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "building_id",
+          "height_meters",
+          "floors_count",
+          "roof_type",
+          "category",
+          "color_hex",
+          "coordinates_polygon"
+        ],
+        "title": "BuildingFootprint3D"
+      },
+      "Camera": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "lng": {
+            "type": "number",
+            "title": "Lng"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "SPEED, RED_LIGHT, BUS_LANE"
+          },
+          "speed_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speed Limit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "lat",
+          "lng",
+          "type"
+        ],
+        "title": "Camera"
+      },
+      "Cityscape3DResponse": {
+        "properties": {
+          "city_name": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "City Name"
+          },
+          "perspective": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Perspective",
+            "default": "KolkataCity_3D_Isometric"
+          },
+          "center_lat": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Center Lat"
+          },
+          "center_lng": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Center Lng"
+          },
+          "bounding_radius_meters": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Bounding Radius Meters"
+          },
+          "buildings_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Buildings Count"
+          },
+          "buildings": {
+            "items": {
+              "$ref": "#/components/schemas/BuildingFootprint3D"
+            },
+            "type": "array",
+            "title": "Buildings"
+          },
+          "camera_preset": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Camera Preset"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "city_name",
+          "center_lat",
+          "center_lng",
+          "bounding_radius_meters",
+          "buildings_count",
+          "buildings",
+          "camera_preset"
+        ],
+        "title": "Cityscape3DResponse"
+      },
       "ComputeRoutesRequest": {
         "properties": {
           "origin": {
@@ -8689,6 +12467,236 @@
           "display_name"
         ],
         "title": "CreateDatasetRequest"
+      },
+      "DeadReckoningPosition": {
+        "properties": {
+          "estimated_lat": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Estimated Lat"
+          },
+          "estimated_lng": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Estimated Lng"
+          },
+          "estimated_heading": {
+            "type": "number",
+            "maximum": 360.0,
+            "minimum": 0.0,
+            "title": "Estimated Heading"
+          },
+          "confidence_radius_meters": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Confidence Radius Meters"
+          },
+          "dead_reckoning_active": {
+            "type": "boolean",
+            "title": "Dead Reckoning Active",
+            "default": true
+          },
+          "positioning_source": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Positioning Source",
+            "default": "INS_DEAD_RECKONING_MAP_MATCH"
+          },
+          "estimated_tunnel_exit_seconds": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Estimated Tunnel Exit Seconds"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "estimated_lat",
+          "estimated_lng",
+          "estimated_heading",
+          "confidence_radius_meters",
+          "estimated_tunnel_exit_seconds"
+        ],
+        "title": "DeadReckoningPosition"
+      },
+      "DynamicRerouteRequest": {
+        "properties": {
+          "current_route_id": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Current Route Id"
+          },
+          "current_lat": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Current Lat"
+          },
+          "current_lng": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Current Lng"
+          },
+          "destination": {
+            "type": "string",
+            "maxLength": 256,
+            "title": "Destination"
+          },
+          "current_speed_kph": {
+            "type": "number",
+            "maximum": 350.0,
+            "minimum": 0.0,
+            "title": "Current Speed Kph"
+          },
+          "traffic_event_alert": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Traffic Event Alert"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "current_route_id",
+          "current_lat",
+          "current_lng",
+          "destination",
+          "current_speed_kph"
+        ],
+        "title": "DynamicRerouteRequest"
+      },
+      "DynamicRerouteResponse": {
+        "properties": {
+          "reroute_recommended": {
+            "type": "boolean",
+            "title": "Reroute Recommended"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Reason"
+          },
+          "original_route_eta_mins": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Original Route Eta Mins"
+          },
+          "new_route_eta_mins": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "New Route Eta Mins"
+          },
+          "time_saved_mins": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Time Saved Mins"
+          },
+          "new_route_summary": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "New Route Summary"
+          },
+          "polyline_points": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Polyline Points",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reroute_recommended",
+          "reason",
+          "original_route_eta_mins",
+          "new_route_eta_mins",
+          "time_saved_mins",
+          "new_route_summary"
+        ],
+        "title": "DynamicRerouteResponse"
+      },
+      "EmergencyContact": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "phone_number": {
+            "type": "string",
+            "title": "Phone Number"
+          },
+          "relation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "phone_number"
+        ],
+        "title": "EmergencyContact"
+      },
+      "EnforcementWarning": {
+        "properties": {
+          "camera_id": {
+            "type": "string",
+            "title": "Camera Id"
+          },
+          "camera_type": {
+            "type": "string",
+            "title": "Camera Type"
+          },
+          "distance_meters": {
+            "type": "integer",
+            "title": "Distance Meters"
+          },
+          "speed_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speed Limit"
+          },
+          "is_speeding": {
+            "type": "boolean",
+            "title": "Is Speeding"
+          }
+        },
+        "type": "object",
+        "required": [
+          "camera_id",
+          "camera_type",
+          "distance_meters",
+          "is_speeding"
+        ],
+        "title": "EnforcementWarning"
       },
       "GamificationProgress": {
         "properties": {
@@ -8779,6 +12787,56 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "ImuTelemetry": {
+        "properties": {
+          "accel_x": {
+            "type": "number",
+            "maximum": 50.0,
+            "minimum": -50.0,
+            "title": "Accel X",
+            "default": 0.0
+          },
+          "accel_y": {
+            "type": "number",
+            "maximum": 50.0,
+            "minimum": -50.0,
+            "title": "Accel Y",
+            "default": 0.0
+          },
+          "accel_z": {
+            "type": "number",
+            "maximum": 50.0,
+            "minimum": -50.0,
+            "title": "Accel Z",
+            "default": 0.0
+          },
+          "gyro_yaw": {
+            "type": "number",
+            "maximum": 360.0,
+            "minimum": -360.0,
+            "title": "Gyro Yaw",
+            "default": 0.0
+          },
+          "wheel_speed_kph": {
+            "type": "number",
+            "maximum": 350.0,
+            "minimum": 0.0,
+            "title": "Wheel Speed Kph",
+            "default": 0.0
+          },
+          "timestamp_ms": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Timestamp Ms"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "timestamp_ms"
+        ],
+        "title": "ImuTelemetry"
       },
       "IncidentCreate": {
         "properties": {
@@ -8927,9 +12985,394 @@
           "event",
           "speed_camera",
           "construction",
-          "road_damage"
+          "road_damage",
+          "fastag_congestion",
+          "unpaved_road",
+          "protest_blockade"
         ],
         "title": "IncidentType"
+      },
+      "IndianIntelligenceRequest": {
+        "properties": {
+          "origin": {
+            "type": "string",
+            "title": "Origin"
+          },
+          "destination": {
+            "type": "string",
+            "title": "Destination"
+          },
+          "vehicle_type": {
+            "type": "string",
+            "title": "Vehicle Type",
+            "default": "car"
+          }
+        },
+        "type": "object",
+        "required": [
+          "origin",
+          "destination"
+        ],
+        "title": "IndianIntelligenceRequest"
+      },
+      "IndoorPanoramaTourResponse": {
+        "properties": {
+          "venue_name": {
+            "type": "string",
+            "maxLength": 150,
+            "title": "Venue Name"
+          },
+          "venue_type": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Venue Type"
+          },
+          "total_floors": {
+            "type": "integer",
+            "maximum": 150.0,
+            "minimum": 1.0,
+            "title": "Total Floors"
+          },
+          "current_floor": {
+            "type": "integer",
+            "maximum": 150.0,
+            "minimum": -10.0,
+            "title": "Current Floor"
+          },
+          "floor_name": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Floor Name"
+          },
+          "panoramas": {
+            "items": {
+              "$ref": "#/components/schemas/Panorama360View"
+            },
+            "type": "array",
+            "title": "Panoramas"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "venue_name",
+          "venue_type",
+          "total_floors",
+          "current_floor",
+          "floor_name",
+          "panoramas"
+        ],
+        "title": "IndoorPanoramaTourResponse"
+      },
+      "LaneDetail": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Index"
+          },
+          "type": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Type"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 256,
+            "title": "Description"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "index",
+          "type",
+          "active",
+          "description"
+        ],
+        "title": "LaneDetail"
+      },
+      "LaneGuidanceResponse": {
+        "properties": {
+          "supported": {
+            "type": "boolean",
+            "title": "Supported",
+            "default": true
+          },
+          "active_lane_recommendation": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Active Lane Recommendation"
+          },
+          "lanes": {
+            "items": {
+              "$ref": "#/components/schemas/LaneDetail"
+            },
+            "type": "array",
+            "title": "Lanes"
+          },
+          "next_maneuver": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Next Maneuver"
+          },
+          "distance_to_maneuver_meters": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Distance To Maneuver Meters"
+          },
+          "sensor_confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Sensor Confidence"
+          },
+          "high_precision_map_active": {
+            "type": "boolean",
+            "title": "High Precision Map Active",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "active_lane_recommendation",
+          "lanes",
+          "next_maneuver",
+          "distance_to_maneuver_meters",
+          "sensor_confidence"
+        ],
+        "title": "LaneGuidanceResponse"
+      },
+      "LaneGuidanceSensorRequest": {
+        "properties": {
+          "origin": {
+            "type": "string",
+            "maxLength": 256,
+            "title": "Origin"
+          },
+          "destination": {
+            "type": "string",
+            "maxLength": 256,
+            "title": "Destination"
+          },
+          "current_lat": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Current Lat"
+          },
+          "current_lng": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Current Lng"
+          },
+          "heading": {
+            "type": "number",
+            "maximum": 360.0,
+            "minimum": 0.0,
+            "title": "Heading"
+          },
+          "current_lane_index": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 20.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Lane Index"
+          },
+          "speed_kph": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 350.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speed Kph",
+            "default": 0.0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "origin",
+          "destination",
+          "current_lat",
+          "current_lng",
+          "heading"
+        ],
+        "title": "LaneGuidanceSensorRequest"
+      },
+      "LegSegment": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Mode"
+          },
+          "start_location": {
+            "type": "string",
+            "maxLength": 256,
+            "title": "Start Location"
+          },
+          "end_location": {
+            "type": "string",
+            "maxLength": 256,
+            "title": "End Location"
+          },
+          "distance_meters": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Distance Meters"
+          },
+          "duration_seconds": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Duration Seconds"
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Instructions"
+          },
+          "line_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Name"
+          },
+          "departure_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Departure Time"
+          },
+          "arrival_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Arrival Time"
+          },
+          "cost_inr": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Inr"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mode",
+          "start_location",
+          "end_location",
+          "distance_meters",
+          "duration_seconds",
+          "instructions"
+        ],
+        "title": "LegSegment"
+      },
+      "LiveSessionCreate": {
+        "properties": {
+          "destination_lat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Destination Lat"
+          },
+          "destination_lng": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Destination Lng"
+          },
+          "estimated_arrival_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Arrival Time"
+          }
+        },
+        "type": "object",
+        "title": "LiveSessionCreate"
+      },
+      "LiveSessionResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "shareable_url": {
+            "type": "string",
+            "title": "Shareable Url"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "shareable_url",
+          "status"
+        ],
+        "title": "LiveSessionResponse"
       },
       "LocationLog": {
         "properties": {
@@ -8953,6 +13396,232 @@
         ],
         "title": "LocationLog"
       },
+      "MovieBookingRequest": {
+        "properties": {
+          "cinema_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Cinema Id"
+          },
+          "movie_title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Movie Title"
+          },
+          "showtime": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Showtime"
+          },
+          "hall_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Hall Name"
+          },
+          "seats": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Seats"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id",
+            "default": "default_user"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "cinema_id",
+          "movie_title",
+          "showtime",
+          "hall_name",
+          "seats"
+        ],
+        "title": "MovieBookingRequest"
+      },
+      "MultiModalItinerary": {
+        "properties": {
+          "itinerary_id": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Itinerary Id"
+          },
+          "total_duration_seconds": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Total Duration Seconds"
+          },
+          "total_distance_meters": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Total Distance Meters"
+          },
+          "total_cost_inr": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Total Cost Inr"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/LegSegment"
+            },
+            "type": "array",
+            "title": "Segments"
+          },
+          "transfer_points_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Transfer Points Count"
+          },
+          "eco_carbon_saved_kg": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Eco Carbon Saved Kg"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "itinerary_id",
+          "total_duration_seconds",
+          "total_distance_meters",
+          "total_cost_inr",
+          "segments",
+          "transfer_points_count",
+          "eco_carbon_saved_kg"
+        ],
+        "title": "MultiModalItinerary"
+      },
+      "MultiModalPlanRequest": {
+        "properties": {
+          "origin": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Origin",
+            "description": "Origin location (lat,lng or place name)"
+          },
+          "destination": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Destination",
+            "description": "Destination location (lat,lng or place name)"
+          },
+          "allowed_modes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowed Modes",
+            "description": "Allowed modes of transportation",
+            "default": [
+              "driving",
+              "walking",
+              "cycling",
+              "transit",
+              "train",
+              "airplane"
+            ]
+          },
+          "departure_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Departure Time",
+            "description": "ISO timestamp for departure"
+          },
+          "preferences": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferences",
+            "description": "Custom routing preferences like avoid_tolls, time_priority, etc."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "origin",
+          "destination"
+        ],
+        "title": "MultiModalPlanRequest"
+      },
+      "MultiModalPlanResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "maxLength": 20,
+            "title": "Status",
+            "default": "OK"
+          },
+          "origin": {
+            "type": "string",
+            "maxLength": 256,
+            "title": "Origin"
+          },
+          "destination": {
+            "type": "string",
+            "maxLength": 256,
+            "title": "Destination"
+          },
+          "recommended_itinerary": {
+            "$ref": "#/components/schemas/MultiModalItinerary"
+          },
+          "alternative_itineraries": {
+            "items": {
+              "$ref": "#/components/schemas/MultiModalItinerary"
+            },
+            "type": "array",
+            "title": "Alternative Itineraries"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "origin",
+          "destination",
+          "recommended_itinerary",
+          "alternative_itineraries"
+        ],
+        "title": "MultiModalPlanResponse"
+      },
       "OTPFlow": {
         "type": "string",
         "enum": [
@@ -8974,6 +13643,184 @@
           "model"
         ],
         "title": "OptimizeRoutesRequest"
+      },
+      "Panorama360View": {
+        "properties": {
+          "pano_id": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Pano Id"
+          },
+          "lat": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Lat"
+          },
+          "lng": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Lng"
+          },
+          "heading": {
+            "type": "number",
+            "maximum": 360.0,
+            "minimum": 0.0,
+            "title": "Heading"
+          },
+          "pitch": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Pitch"
+          },
+          "fov": {
+            "type": "number",
+            "maximum": 160.0,
+            "minimum": 10.0,
+            "title": "Fov",
+            "default": 90.0
+          },
+          "tile_url_template": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Tile Url Template"
+          },
+          "capture_date": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Capture Date"
+          },
+          "location_name": {
+            "type": "string",
+            "maxLength": 256,
+            "title": "Location Name"
+          },
+          "historical_captures": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Historical Captures",
+            "default": []
+          },
+          "connected_hotspots": {
+            "items": {
+              "$ref": "#/components/schemas/PanoramaHotspot"
+            },
+            "type": "array",
+            "title": "Connected Hotspots",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "pano_id",
+          "lat",
+          "lng",
+          "heading",
+          "pitch",
+          "tile_url_template",
+          "capture_date",
+          "location_name"
+        ],
+        "title": "Panorama360View"
+      },
+      "PanoramaHotspot": {
+        "properties": {
+          "hotspot_id": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Hotspot Id"
+          },
+          "target_pano_id": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Target Pano Id"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 150,
+            "title": "Title"
+          },
+          "heading": {
+            "type": "number",
+            "maximum": 360.0,
+            "minimum": 0.0,
+            "title": "Heading"
+          },
+          "pitch": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Pitch"
+          },
+          "distance_meters": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Distance Meters"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "hotspot_id",
+          "target_pano_id",
+          "title",
+          "heading",
+          "pitch",
+          "distance_meters"
+        ],
+        "title": "PanoramaHotspot"
+      },
+      "PersonalizedRecommendationsResponse": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "User Id"
+          },
+          "time_of_day": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Time Of Day"
+          },
+          "user_profile_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "User Profile Tags",
+            "default": []
+          },
+          "recommended_bundles": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Recommended Bundles",
+            "default": []
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RecommendationItem"
+            },
+            "type": "array",
+            "title": "Items",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "user_id",
+          "time_of_day"
+        ],
+        "title": "PersonalizedRecommendationsResponse"
       },
       "PinCreate": {
         "properties": {
@@ -9221,6 +14068,85 @@
         ],
         "title": "PlaceResponse"
       },
+      "RecommendationItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Title"
+          },
+          "category": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Category"
+          },
+          "match_score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Match Score"
+          },
+          "time_of_day_fit": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Time Of Day Fit"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Reason"
+          },
+          "photo_url": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Photo Url"
+          },
+          "rating": {
+            "type": "number",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Rating"
+          },
+          "estimated_cost_inr": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Estimated Cost Inr"
+          },
+          "latitude": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Longitude"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "category",
+          "match_score",
+          "time_of_day_fit",
+          "reason",
+          "photo_url",
+          "rating",
+          "estimated_cost_inr",
+          "latitude",
+          "longitude"
+        ],
+        "title": "RecommendationItem"
+      },
       "ReviewCreate": {
         "properties": {
           "rating": {
@@ -9348,6 +14274,427 @@
         ],
         "title": "ReviewResponse"
       },
+      "RichPOIDetail": {
+        "properties": {
+          "poi_id": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Poi Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Name"
+          },
+          "category": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Category"
+          },
+          "rating": {
+            "type": "number",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Rating"
+          },
+          "reviews_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Reviews Count"
+          },
+          "price_level": {
+            "type": "string",
+            "maxLength": 10,
+            "title": "Price Level"
+          },
+          "address": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Address"
+          },
+          "phone_number": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Phone Number"
+          },
+          "opening_hours": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Opening Hours",
+            "default": []
+          },
+          "is_open_now": {
+            "type": "boolean",
+            "title": "Is Open Now",
+            "default": true
+          },
+          "photos": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Photos",
+            "default": []
+          },
+          "amenities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Amenities",
+            "default": []
+          },
+          "floor_level": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Floor Level"
+          },
+          "wheelchair_accessible": {
+            "type": "boolean",
+            "title": "Wheelchair Accessible",
+            "default": true
+          },
+          "parking_available": {
+            "type": "boolean",
+            "title": "Parking Available",
+            "default": true
+          },
+          "popular_dishes_or_highlights": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Popular Dishes Or Highlights",
+            "default": []
+          },
+          "latitude": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Longitude"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "poi_id",
+          "name",
+          "category",
+          "rating",
+          "reviews_count",
+          "price_level",
+          "address",
+          "phone_number",
+          "latitude",
+          "longitude"
+        ],
+        "title": "RichPOIDetail"
+      },
+      "RichPOISearchResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "maxLength": 20,
+            "title": "Status",
+            "default": "OK"
+          },
+          "total_found": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Found"
+          },
+          "pois": {
+            "items": {
+              "$ref": "#/components/schemas/RichPOIDetail"
+            },
+            "type": "array",
+            "title": "Pois"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "total_found",
+          "pois"
+        ],
+        "title": "RichPOISearchResponse"
+      },
+      "RideMatch": {
+        "properties": {
+          "offer_id": {
+            "type": "string",
+            "title": "Offer Id"
+          },
+          "driver_name": {
+            "type": "string",
+            "title": "Driver Name"
+          },
+          "pickup_point": {
+            "type": "string",
+            "title": "Pickup Point"
+          },
+          "dropoff_point": {
+            "type": "string",
+            "title": "Dropoff Point"
+          },
+          "estimated_price": {
+            "type": "number",
+            "title": "Estimated Price"
+          },
+          "departure_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Departure Time"
+          }
+        },
+        "type": "object",
+        "required": [
+          "offer_id",
+          "driver_name",
+          "pickup_point",
+          "dropoff_point",
+          "estimated_price",
+          "departure_time"
+        ],
+        "title": "RideMatch"
+      },
+      "RideOffer": {
+        "properties": {
+          "offer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offer Id"
+          },
+          "driver_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Driver Id"
+          },
+          "origin": {
+            "type": "string",
+            "title": "Origin"
+          },
+          "destination": {
+            "type": "string",
+            "title": "Destination"
+          },
+          "route": {
+            "$ref": "#/components/schemas/RoutePolyline"
+          },
+          "departure_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Departure Time"
+          },
+          "seats_available": {
+            "type": "integer",
+            "title": "Seats Available"
+          },
+          "price_per_seat": {
+            "type": "number",
+            "title": "Price Per Seat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "origin",
+          "destination",
+          "route",
+          "departure_time",
+          "seats_available",
+          "price_per_seat"
+        ],
+        "title": "RideOffer"
+      },
+      "RideRequest": {
+        "properties": {
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "passenger_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Passenger Id"
+          },
+          "origin": {
+            "type": "string",
+            "title": "Origin"
+          },
+          "destination": {
+            "type": "string",
+            "title": "Destination"
+          },
+          "desired_departure_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Desired Departure Time"
+          },
+          "seats_needed": {
+            "type": "integer",
+            "title": "Seats Needed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "origin",
+          "destination",
+          "desired_departure_time",
+          "seats_needed"
+        ],
+        "title": "RideRequest"
+      },
+      "RouteCheckRequest": {
+        "properties": {
+          "route_polyline": {
+            "type": "string",
+            "title": "Route Polyline"
+          },
+          "current_lat": {
+            "type": "number",
+            "title": "Current Lat"
+          },
+          "current_lng": {
+            "type": "number",
+            "title": "Current Lng"
+          },
+          "current_speed_kph": {
+            "type": "number",
+            "title": "Current Speed Kph"
+          }
+        },
+        "type": "object",
+        "required": [
+          "route_polyline",
+          "current_lat",
+          "current_lng",
+          "current_speed_kph"
+        ],
+        "title": "RouteCheckRequest"
+      },
+      "RoutePolyline": {
+        "properties": {
+          "encoded_polyline": {
+            "type": "string",
+            "title": "Encoded Polyline"
+          }
+        },
+        "type": "object",
+        "required": [
+          "encoded_polyline"
+        ],
+        "title": "RoutePolyline"
+      },
+      "RoutingPreferencesSchema": {
+        "properties": {
+          "routing_priority": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Routing Priority",
+            "default": "time_priority"
+          },
+          "avoid_tolls": {
+            "type": "boolean",
+            "title": "Avoid Tolls",
+            "default": false
+          },
+          "avoid_expressways": {
+            "type": "boolean",
+            "title": "Avoid Expressways",
+            "default": false
+          },
+          "avoid_ferries": {
+            "type": "boolean",
+            "title": "Avoid Ferries",
+            "default": false
+          },
+          "transit_preference": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Transit Preference",
+            "default": "least_walking"
+          },
+          "preferred_vehicle_type": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Preferred Vehicle Type",
+            "default": "car"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RoutingPreferencesSchema"
+      },
+      "SOSRequest": {
+        "properties": {
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "lng": {
+            "type": "number",
+            "title": "Lng"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message",
+            "default": "I need help. Here is my last known location."
+          }
+        },
+        "type": "object",
+        "required": [
+          "lat",
+          "lng"
+        ],
+        "title": "SOSRequest"
+      },
       "SaveShortcutRequest": {
         "properties": {
           "name": {
@@ -9379,8 +14726,28 @@
       "SendOTPRequest": {
         "properties": {
           "phone_number": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Phone Number"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
           },
           "flow": {
             "$ref": "#/components/schemas/OTPFlow"
@@ -9391,9 +14758,9 @@
             "default": false
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
-          "phone_number",
           "flow"
         ],
         "title": "SendOTPRequest"
@@ -9515,6 +14882,133 @@
         ],
         "title": "TimelineStatsResponse"
       },
+      "TravelTicketBookingRequest": {
+        "properties": {
+          "ticket_type": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Ticket Type"
+          },
+          "carrier_or_line": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Carrier Or Line"
+          },
+          "origin": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Origin"
+          },
+          "destination": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Destination"
+          },
+          "departure_time": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Departure Time"
+          },
+          "seat_class": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Seat Class"
+          },
+          "passenger_name": {
+            "type": "string",
+            "maxLength": 150,
+            "minLength": 1,
+            "title": "Passenger Name"
+          },
+          "passenger_id_passport": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Passenger Id Passport"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ticket_type",
+          "carrier_or_line",
+          "origin",
+          "destination",
+          "departure_time",
+          "seat_class",
+          "passenger_name",
+          "passenger_id_passport"
+        ],
+        "title": "TravelTicketBookingRequest"
+      },
+      "UnifiedBookingResponse": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Booking Id"
+          },
+          "pnr_or_confirmation": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Pnr Or Confirmation"
+          },
+          "booking_type": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Booking Type"
+          },
+          "status": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Status",
+            "default": "CONFIRMED"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 256,
+            "title": "Title"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          },
+          "total_amount_paid": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Total Amount Paid"
+          },
+          "currency": {
+            "type": "string",
+            "maxLength": 10,
+            "title": "Currency",
+            "default": "INR"
+          },
+          "e_ticket_qr_code_url": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "E Ticket Qr Code Url"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "booking_id",
+          "pnr_or_confirmation",
+          "booking_type",
+          "title",
+          "details",
+          "total_amount_paid",
+          "e_ticket_qr_code_url"
+        ],
+        "title": "UnifiedBookingResponse"
+      },
       "UserCreate": {
         "properties": {
           "email": {
@@ -9532,7 +15026,8 @@
           "display_name": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 100
               },
               {
                 "type": "null"
@@ -9542,15 +15037,63 @@
           },
           "password": {
             "type": "string",
+            "maxLength": 128,
             "minLength": 8,
             "title": "Password"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "password"
         ],
         "title": "UserCreate"
+      },
+      "UserEmailRegisterRequest": {
+        "properties": {
+          "temp_token": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Temp Token"
+          },
+          "display_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Display Name"
+          },
+          "gender": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
+          },
+          "dob": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dob"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "temp_token",
+          "display_name"
+        ],
+        "title": "UserEmailRegisterRequest"
       },
       "UserListCreate": {
         "properties": {
@@ -9670,9 +15213,12 @@
           },
           "password": {
             "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
             "title": "Password"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "email",
@@ -9696,6 +15242,25 @@
         ],
         "title": "UserMeResponse"
       },
+      "UserPreferencesResponse": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "User Id"
+          },
+          "preferences": {
+            "$ref": "#/components/schemas/RoutingPreferencesSchema"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "user_id",
+          "preferences"
+        ],
+        "title": "UserPreferencesResponse"
+      },
       "UserResponse": {
         "properties": {
           "email": {
@@ -9713,7 +15278,8 @@
           "display_name": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 100
               },
               {
                 "type": "null"
@@ -9736,17 +15302,6 @@
               }
             ],
             "title": "Phone Number"
-          },
-          "firebase_uid": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Firebase Uid"
           },
           "gender": {
             "anyOf": [
@@ -9780,6 +15335,23 @@
               }
             ],
             "title": "Profile Pic Url"
+          },
+          "is_email_verified": {
+            "type": "boolean",
+            "title": "Is Email Verified",
+            "default": false
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role",
+            "default": "user"
           },
           "created_at": {
             "type": "string",
@@ -9830,11 +15402,33 @@
       "VerifyOTPRequest": {
         "properties": {
           "phone_number": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Phone Number"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
           },
           "code": {
             "type": "string",
+            "maxLength": 10,
+            "minLength": 4,
             "title": "Code"
           },
           "flow": {
@@ -9848,9 +15442,9 @@
             ]
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
-          "phone_number",
           "code"
         ],
         "title": "VerifyOTPRequest"
@@ -9912,17 +15506,66 @@
           "query"
         ],
         "title": "VoiceQueryRequest"
+      },
+      "WeakSignalPositioningRequest": {
+        "properties": {
+          "last_known_lat": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Last Known Lat"
+          },
+          "last_known_lng": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Last Known Lng"
+          },
+          "last_known_heading": {
+            "type": "number",
+            "maximum": 360.0,
+            "minimum": 0.0,
+            "title": "Last Known Heading"
+          },
+          "elapsed_seconds": {
+            "type": "number",
+            "maximum": 86400.0,
+            "minimum": 0.0,
+            "title": "Elapsed Seconds"
+          },
+          "imu_telemetry": {
+            "$ref": "#/components/schemas/ImuTelemetry"
+          },
+          "tunnel_or_underground_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tunnel Or Underground Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "last_known_lat",
+          "last_known_lng",
+          "last_known_heading",
+          "elapsed_seconds",
+          "imu_telemetry"
+        ],
+        "title": "WeakSignalPositioningRequest"
       }
     },
     "securitySchemes": {
-      "OAuth2PasswordBearer": {
-        "type": "oauth2",
-        "flows": {
-          "password": {
-            "scopes": {},
-            "tokenUrl": "/api/v1/auth/google"
-          }
-        }
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     }
   }

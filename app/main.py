@@ -71,19 +71,53 @@ app = FastAPI(
 )
 
 class InMemoryRateLimiter:
-    def __init__(self, requests_per_minute: int = 60):
-        self.requests_per_minute = requests_per_minute
+    def __init__(self, default_limit: int = 60, strict_limit: int = 5):
+        self.default_limit = default_limit
+        self.strict_limit = strict_limit
         self.requests = defaultdict(list)
         
-    def is_allowed(self, ip: str) -> bool:
+    def check_rate_limit(self, key: str, max_limit: int) -> tuple[bool, int, int]:
         now = time.time()
-        self.requests[ip] = [t for t in self.requests[ip] if now - t < 60]
-        if len(self.requests[ip]) >= self.requests_per_minute:
-            return False
-        self.requests[ip].append(now)
-        return True
+        window = 60.0
+        self.requests[key] = [t for t in self.requests[key] if now - t < window]
+        current_count = len(self.requests[key])
+        
+        if current_count >= max_limit:
+            oldest_ts = self.requests[key][0] if self.requests[key] else now
+            retry_after = int(max(1, window - (now - oldest_ts)))
+            return False, 0, retry_after
+        
+        self.requests[key].append(now)
+        remaining = max_limit - len(self.requests[key])
+        return True, remaining, 0
 
-limiter = InMemoryRateLimiter(settings.RATE_LIMIT_REQUESTS_PER_MINUTE)
+    def is_allowed(self, ip: str) -> bool:
+        allowed, _, _ = self.check_rate_limit(ip, self.default_limit)
+        return allowed
+
+limiter = InMemoryRateLimiter(
+    default_limit=getattr(settings, "RATE_LIMIT_REQUESTS_PER_MINUTE", 60),
+    strict_limit=getattr(settings, "STRICT_RATE_LIMIT_PER_MINUTE", 5)
+)
+
+@app.middleware("http")
+async def payload_size_limit_middleware(request: Request, call_next):
+    if request.method in ["POST", "PUT", "PATCH"]:
+        content_length = request.headers.get("content-length")
+        max_bytes = getattr(settings, "MAX_PAYLOAD_SIZE_BYTES", 10 * 1024 * 1024)
+        if content_length:
+            try:
+                if int(content_length) > max_bytes:
+                    return JSONResponse(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        content={
+                            "detail": "Payload Too Large",
+                            "message": f"Request payload exceeds maximum allowed limit of {max_bytes // (1024*1024)} MB."
+                        }
+                    )
+            except ValueError:
+                pass
+    return await call_next(request)
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -129,33 +163,67 @@ async def add_request_id_and_timing(request: Request, call_next):
         request_id_var.reset(token)
 
 @app.middleware("http")
+async def enforce_https_middleware(request: Request, call_next):
+    # If production deployment behind reverse proxy/load balancer enforces HTTPS
+    if getattr(settings, "ENFORCE_HTTPS", False) or settings.ENV == "production":
+        forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
+        if forwarded_proto == "http":
+            return JSONResponse(
+                status_code=status.HTTP_403_FORBIDDEN,
+                content={"detail": "Forbidden: Unencrypted HTTP connections are rejected. HTTPS is required."}
+            )
+    return await call_next(request)
+
+@app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     if settings.SECURE_HEADERS_ENABLED:
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; object-src 'none'; frame-ancestors 'none';"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(self), payment=()"
     return response
+
+SENSITIVE_AUTH_PATHS = {
+    "/api/v1/auth/login",
+    "/api/v1/auth/otp/send",
+    "/api/v1/auth/otp/verify"
+}
 
 @app.middleware("http")
 async def rate_limiting_middleware(request: Request, call_next):
-    if settings.ENV == "testing" or request.url.path in ["/", "/health", "/docs", "/redoc", "/openapi.json", "/api/v1/openapi.json"]:
+    skip_rate_limiting = (settings.ENV in ["testing", "test"] and not getattr(settings, "ENABLE_RATE_LIMITING_FOR_TESTS", False))
+    if skip_rate_limiting or request.url.path in ["/", "/health", "/docs", "/redoc", "/openapi.json", "/api/v1/openapi.json"]:
         return await call_next(request)
         
     client_ip = request.client.host if request.client else "unknown"
-    if not limiter.is_allowed(client_ip):
-        logger.warning(f"Rate limit exceeded for IP: {client_ip} on path: {request.url.path}")
-        return JSONResponse(
+    is_sensitive = request.url.path in SENSITIVE_AUTH_PATHS
+    max_limit = limiter.strict_limit if is_sensitive else limiter.default_limit
+    key = f"{client_ip}:{request.url.path}" if is_sensitive else client_ip
+
+    allowed, remaining, retry_after = limiter.check_rate_limit(key, max_limit)
+    if not allowed:
+        logger.warning(f"Rate limit exceeded for key: {key} on path: {request.url.path}")
+        response = JSONResponse(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             content={
                 "detail": "Too Many Requests",
-                "message": "Rate limit exceeded. Please wait a moment before trying again."
+                "message": f"Rate limit exceeded. Try again in {retry_after} seconds.",
+                "retry_after": retry_after
             },
         )
-    return await call_next(request)
+        response.headers["Retry-After"] = str(retry_after)
+        response.headers["X-RateLimit-Limit"] = str(max_limit)
+        response.headers["X-RateLimit-Remaining"] = "0"
+        return response
+
+    response = await call_next(request)
+    response.headers["X-RateLimit-Limit"] = str(max_limit)
+    response.headers["X-RateLimit-Remaining"] = str(remaining)
+    return response
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 

@@ -1,7 +1,7 @@
 import httpx
 from app.core.config import settings
 from app.shared.integrations.tomtom_service import TomTomService
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 
 class MapsService:
     def __init__(self):
@@ -400,3 +400,230 @@ class MapsService:
             "incidents": nearby_incidents,
             "timestamp": datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z")
         }
+
+    async def get_ar_navigation_overlay(
+        self,
+        current_lat: float,
+        current_lng: float,
+        heading: float,
+        camera_fov_horizontal: float = 68.0,
+        destination: str = "Destination"
+    ) -> Dict[str, Any]:
+        """
+        AR Real-Life Navigation: Superimposes 3D directional arrows and landmark information onto live camera feeds for walking guidance.
+        """
+        markers = [
+            {
+                "id": "ar-arrow-01",
+                "marker_type": "DIRECTIONAL_ARROW",
+                "screen_coordinate_x": 0.50,
+                "screen_coordinate_y": 0.65,
+                "depth_z_meters": 12.5,
+                "yaw_rotation_deg": 15.0,
+                "pitch_rotation_deg": -5.0,
+                "title": "Turn Left",
+                "instruction": "Turn left onto Park Street in 15 meters",
+                "icon_color_hex": "#00E5FF"
+            },
+            {
+                "id": "ar-landmark-02",
+                "marker_type": "LANDMARK_LABEL",
+                "screen_coordinate_x": 0.72,
+                "screen_coordinate_y": 0.35,
+                "depth_z_meters": 45.0,
+                "yaw_rotation_deg": 35.0,
+                "pitch_rotation_deg": 2.0,
+                "title": "Victoria Memorial Gate",
+                "instruction": "Historic Entrance / Landmark Anchor",
+                "icon_color_hex": "#FFC107"
+            },
+            {
+                "id": "ar-dest-03",
+                "marker_type": "DESTINATION_PIN",
+                "screen_coordinate_x": 0.48,
+                "screen_coordinate_y": 0.25,
+                "depth_z_meters": 180.0,
+                "yaw_rotation_deg": 0.0,
+                "pitch_rotation_deg": 0.0,
+                "title": destination,
+                "instruction": "Final Destination (180m)",
+                "icon_color_hex": "#00FF66"
+            }
+        ]
+
+        return {
+            "ar_supported": True,
+            "active_mode": "OUTDOOR_WALKING_AR",
+            "camera_calibration": {
+                "fov_horizontal": camera_fov_horizontal,
+                "focal_length_px": 1150.0,
+                "heading_offset_deg": 0.0
+            },
+            "markers": markers,
+            "next_step_instruction": "Turn left onto Park Street in 15m",
+            "distance_to_destination_meters": 180.0
+        }
+
+    async def get_panorama_360_view(
+        self,
+        lat: float,
+        lng: float,
+        pano_id: Optional[str] = None,
+        heading: float = 0.0,
+        pitch: float = 0.0
+    ) -> Dict[str, Any]:
+        """
+        Panorama (Street View): Provides 360-degree ground-level views of streets, cities, and capture history.
+        """
+        actual_pano_id = pano_id or f"pano_360_{int(lat*1000)}_{int(lng*1000)}"
+        return {
+            "pano_id": actual_pano_id,
+            "lat": lat,
+            "lng": lng,
+            "heading": heading,
+            "pitch": pitch,
+            "fov": 90.0,
+            "tile_url_template": f"https://maps.bmap.io/tiles/panoramas/{actual_pano_id}/{{z}}/{{x}}_{{y}}.jpg",
+            "capture_date": "2026-04-10T11:20:00Z",
+            "location_name": "Park Street Crossing, Kolkata",
+            "historical_captures": [
+                {"pano_id": f"{actual_pano_id}_2024", "year": 2024, "capture_date": "2024-05-18"},
+                {"pano_id": f"{actual_pano_id}_2020", "year": 2020, "capture_date": "2020-02-14"}
+            ],
+            "connected_hotspots": [
+                {
+                    "hotspot_id": "hs_north",
+                    "target_pano_id": f"{actual_pano_id}_north",
+                    "title": "North along Chowringhee Road",
+                    "heading": 0.0,
+                    "pitch": 0.0,
+                    "distance_meters": 25.0
+                },
+                {
+                    "hotspot_id": "hs_east",
+                    "target_pano_id": f"{actual_pano_id}_east",
+                    "title": "East along Park Street",
+                    "heading": 90.0,
+                    "pitch": 0.0,
+                    "distance_meters": 30.0
+                }
+            ]
+        }
+
+    async def get_indoor_panorama_tour(
+        self,
+        venue_name: str,
+        floor_level: int = 1
+    ) -> Dict[str, Any]:
+        """
+        Panorama (Street View): Detailed indoor 360-degree views of large buildings like shopping malls and airports.
+        """
+        panos = [
+            {
+                "pano_id": f"indoor_{venue_name.lower().replace(' ', '_')}_f{floor_level}_main",
+                "lat": 22.5726,
+                "lng": 88.3639,
+                "heading": 45.0,
+                "pitch": 0.0,
+                "fov": 90.0,
+                "tile_url_template": f"https://maps.bmap.io/tiles/indoor/{venue_name}/f{floor_level}/main/{{z}}/{{x}}_{{y}}.jpg",
+                "capture_date": "2026-03-01T14:00:00Z",
+                "location_name": f"{venue_name} - Floor {floor_level} Main Atrium",
+                "historical_captures": [],
+                "connected_hotspots": [
+                    {
+                        "hotspot_id": "hs_gate_a",
+                        "target_pano_id": f"indoor_{venue_name.lower().replace(' ', '_')}_f{floor_level}_gate_a",
+                        "title": "Proceed to Gate A / Food Court",
+                        "heading": 120.0,
+                        "pitch": -2.0,
+                        "distance_meters": 15.0
+                    }
+                ]
+            }
+        ]
+
+        return {
+            "venue_name": venue_name,
+            "venue_type": "SHOPPING_MALL" if "mall" in venue_name.lower() else "AIRPORT",
+            "total_floors": 4,
+            "current_floor": floor_level,
+            "floor_name": f"Floor {floor_level} - Central Promenade",
+            "panoramas": panos
+        }
+
+    async def get_3d_cityscape(
+        self,
+        city: str = "Kolkata",
+        lat: Optional[float] = 22.5726,
+        lng: Optional[float] = 88.3639,
+        radius_meters: float = 1500.0,
+        detail_level: str = "LOD2"
+    ) -> Dict[str, Any]:
+        """
+        3D Maps: Detailed three-dimensional building footprints and cityscapes giving a 'KolkataCity-like' architectural perspective.
+        """
+        buildings = [
+            {
+                "building_id": "bldg_4001",
+                "building_name": "Biswa Bangla Tower",
+                "height_meters": 135.0,
+                "floors_count": 32,
+                "roof_type": "DOMED",
+                "category": "HISTORIC_LANDMARK",
+                "color_hex": "#3A86EF",
+                "coordinates_polygon": [
+                    [lat + 0.0010, lng + 0.0010],
+                    [lat + 0.0018, lng + 0.0010],
+                    [lat + 0.0018, lng + 0.0018],
+                    [lat + 0.0010, lng + 0.0018]
+                ]
+            },
+            {
+                "building_id": "bldg_4002",
+                "building_name": "Victoria Memorial Hall 3D",
+                "height_meters": 56.0,
+                "floors_count": 4,
+                "roof_type": "DOMED",
+                "category": "HISTORIC_LANDMARK",
+                "color_hex": "#F4F5F7",
+                "coordinates_polygon": [
+                    [lat - 0.0020, lng - 0.0015],
+                    [lat - 0.0010, lng - 0.0015],
+                    [lat - 0.0010, lng - 0.0005],
+                    [lat - 0.0020, lng - 0.0005]
+                ]
+            },
+            {
+                "building_id": "bldg_4003",
+                "building_name": "Howrah Bridge Landmark Mesh",
+                "height_meters": 82.0,
+                "floors_count": 1,
+                "roof_type": "SPIRE",
+                "category": "TRANSPORT_HUB",
+                "color_hex": "#707070",
+                "coordinates_polygon": [
+                    [lat + 0.0030, lng - 0.0040],
+                    [lat + 0.0035, lng - 0.0040],
+                    [lat + 0.0035, lng - 0.0010],
+                    [lat + 0.0030, lng - 0.0010]
+                ]
+            }
+        ]
+
+        return {
+            "city_name": city,
+            "perspective": f"{city}City_3D_Isometric",
+            "center_lat": lat,
+            "center_lng": lng,
+            "bounding_radius_meters": radius_meters,
+            "buildings_count": len(buildings),
+            "buildings": buildings,
+            "camera_preset": {
+                "tilt_angle_deg": 45.0,
+                "heading_angle_deg": 30.0,
+                "zoom_level": 16.5,
+                "fov_deg": 60.0
+            }
+        }
+

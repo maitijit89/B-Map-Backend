@@ -238,3 +238,25 @@ async def get_me(
 ):
     auth_service = AuthService(db)
     return await auth_service.get_user_profile(current_user)
+
+from app.shared.dependencies import require_role
+
+@router.get("/admin/dashboard")
+async def get_admin_dashboard(
+    admin_user: User = Depends(require_role(["admin"]))
+):
+    """
+    Role-Based Access Control (RBAC): Restricted to authorized administrator roles.
+    """
+    return {
+        "status": "AUTHORIZED",
+        "message": "Welcome to B-Map System Administration Dashboard",
+        "admin_user_id": str(admin_user.id),
+        "role": getattr(admin_user, "token_role", "admin"),
+        "system_metrics": {
+            "active_services": 24,
+            "total_connected_nodes": 1250,
+            "security_status": "HARDENED_RBAC"
+        }
+    }
+

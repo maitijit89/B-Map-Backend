@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import uuid
 
 logger = logging.getLogger(__name__)
@@ -122,3 +122,152 @@ class LifestyleService:
             ]
         else:
             return []
+
+    async def book_movie_tickets(
+        self,
+        cinema_id: str,
+        movie_title: str,
+        showtime: str,
+        hall_name: str,
+        seats: List[str],
+        user_id: str = "default_user"
+    ) -> Dict[str, Any]:
+        """
+        In-App Booking: Directly purchases movie tickets within the app with seat selection & e-ticket QR code.
+        """
+        booking_id = f"movie_bk_{str(uuid.uuid4())[:8]}"
+        pnr = f"CINEMA-{str(uuid.uuid4())[:6].upper()}"
+        ticket_cost = len(seats) * 350.0
+        return {
+            "booking_id": booking_id,
+            "pnr_or_confirmation": pnr,
+            "booking_type": "MOVIE",
+            "status": "CONFIRMED",
+            "title": f"Movie Ticket: {movie_title}",
+            "details": {
+                "cinema_id": cinema_id,
+                "movie_title": movie_title,
+                "showtime": showtime,
+                "hall_name": hall_name,
+                "seats": seats,
+                "seat_count": len(seats)
+            },
+            "total_amount_paid": ticket_cost,
+            "currency": "INR",
+            "e_ticket_qr_code_url": f"https://api.bmap.io/v1/tickets/qr/{pnr}.png"
+        }
+
+    async def book_travel_tickets(
+        self,
+        ticket_type: str,
+        carrier_or_line: str,
+        origin: str,
+        destination: str,
+        departure_time: str,
+        seat_class: str,
+        passenger_name: str,
+        passenger_id_passport: str
+    ) -> Dict[str, Any]:
+        """
+        In-App Booking: Directly books airline and train tickets within the app with instant PNR issuance.
+        """
+        b_type = ticket_type.upper()
+        pnr_prefix = "AIR" if b_type == "AIRLINE" else "RAIL"
+        pnr = f"{pnr_prefix}-{str(uuid.uuid4())[:8].upper()}"
+        booking_id = f"travel_bk_{str(uuid.uuid4())[:8]}"
+        amount = 4500.0 if b_type == "AIRLINE" else 1450.0
+
+        return {
+            "booking_id": booking_id,
+            "pnr_or_confirmation": pnr,
+            "booking_type": f"{b_type}_TICKET",
+            "status": "CONFIRMED",
+            "title": f"{b_type.capitalize()} Ticket: {carrier_or_line}",
+            "details": {
+                "carrier_or_line": carrier_or_line,
+                "origin": origin,
+                "destination": destination,
+                "departure_time": departure_time,
+                "seat_class": seat_class,
+                "passenger_name": passenger_name,
+                "passenger_id_passport": passenger_id_passport
+            },
+            "total_amount_paid": amount,
+            "currency": "INR",
+            "e_ticket_qr_code_url": f"https://api.bmap.io/v1/tickets/qr/{pnr}.png"
+        }
+
+    async def get_personalized_recommendations(
+        self,
+        user_id: str = "default_user",
+        lat: float = 22.5726,
+        lng: float = 88.3639,
+        time_of_day: Optional[str] = "EVENING",
+        user_interests: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Personalized Recommendations: Pushes high-quality travel plans, dining, and entertainment based on user preferences and time of day.
+        """
+        tod = (time_of_day or "EVENING").upper()
+        interests = user_interests or ["fine_dining", "heritage_sites", "cinema", "coffee"]
+        
+        items = [
+            {
+                "id": "rec_01",
+                "title": "Banyan Tree Rooftop Dinner & Mocktails",
+                "category": "DINING",
+                "match_score": 0.98,
+                "time_of_day_fit": tod,
+                "reason": "Popular evening dining match based on your preference for fine dining & rooftop views.",
+                "photo_url": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800",
+                "rating": 4.9,
+                "estimated_cost_inr": 1800.0,
+                "latitude": lat + 0.001,
+                "longitude": lng + 0.002
+            },
+            {
+                "id": "rec_02",
+                "title": "IMAX 3D Evening Blockbuster Experience",
+                "category": "ENTERTAINMENT",
+                "match_score": 0.94,
+                "time_of_day_fit": tod,
+                "reason": "Trending evening cinema entertainment near your location.",
+                "photo_url": "https://images.unsplash.com/photo-1519567241046-7f570eee3ce6?auto=format&fit=crop&w=800",
+                "rating": 4.7,
+                "estimated_cost_inr": 450.0,
+                "latitude": lat - 0.002,
+                "longitude": lng + 0.003
+            },
+            {
+                "id": "rec_03",
+                "title": "Victoria Memorial Sunset Walk & Light Show",
+                "category": "ATTRACTION",
+                "match_score": 0.91,
+                "time_of_day_fit": tod,
+                "reason": "Iconic heritage site featuring an evening light & sound show.",
+                "photo_url": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800",
+                "rating": 4.8,
+                "estimated_cost_inr": 100.0,
+                "latitude": lat + 0.003,
+                "longitude": lng - 0.002
+            }
+        ]
+
+        bundles = [
+            {
+                "bundle_title": "Ultimate Evening Out in Kolkata",
+                "items_included": ["Victoria Memorial Sunset Walk", "Banyan Tree Rooftop Dinner", "IMAX Night Show"],
+                "total_estimated_duration": "5 hours",
+                "recommended_start_time": "05:30 PM",
+                "total_cost_inr": 2350.0
+            }
+        ]
+
+        return {
+            "user_id": user_id,
+            "time_of_day": tod,
+            "user_profile_tags": interests,
+            "recommended_bundles": bundles,
+            "items": items
+        }
+

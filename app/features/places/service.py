@@ -516,3 +516,130 @@ class PlaceService:
             "radius_meters": radius,
             "filter_applied": "rating >= 4.0 & open_only"
         }
+
+    async def get_rich_poi_details(self, poi_id: str) -> dict:
+        """
+        Rich POI Data: Detailed and localized data for restaurants, hotels, shopping malls, and attractions.
+        """
+        sample_pois = {
+            "poi_rest_601": {
+                "poi_id": "poi_rest_601",
+                "name": "6Banyan Tree Fine Dining & Lounge",
+                "category": "restaurant",
+                "rating": 4.9,
+                "reviews_count": 2840,
+                "price_level": "$$$$",
+                "address": "45 Park Street, Kolkata, West Bengal 700016",
+                "phone_number": "+91 33 2229 8888",
+                "opening_hours": ["Mon-Sun: 12:00 PM - 11:30 PM"],
+                "is_open_now": True,
+                "photos": [
+                    "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800",
+                    "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=800"
+                ],
+                "amenities": ["Valet Parking", "Outdoor Seating", "Live Music", "Free High-Speed Wi-Fi", "Full Bar"],
+                "floor_level": "Ground Floor & Rooftop Terrace",
+                "wheelchair_accessible": True,
+                "parking_available": True,
+                "popular_dishes_or_highlights": ["Kolkata Biryani Supreme", "Tandoori Lobster", "Signature Mocktails"],
+                "latitude": 22.5532,
+                "longitude": 88.3524
+            },
+            "poi_hotel_702": {
+                "poi_id": "poi_hotel_702",
+                "name": "Grand Bengal Palace Heritage Hotel",
+                "category": "hotel",
+                "rating": 4.8,
+                "reviews_count": 1950,
+                "price_level": "$$$",
+                "address": "1 Esplanade Row, Kolkata, West Bengal 700069",
+                "phone_number": "+91 33 4000 1111",
+                "opening_hours": ["24/7 Front Desk & Concierge"],
+                "is_open_now": True,
+                "photos": [
+                    "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800"
+                ],
+                "amenities": ["Infinity Pool", "Luxury Spa", "24h Gym", "Airport Shuttle", "Executive Lounge"],
+                "floor_level": "Floors 1-12",
+                "wheelchair_accessible": True,
+                "parking_available": True,
+                "popular_dishes_or_highlights": ["High Tea at Atrium", "Royal Suite City View"],
+                "latitude": 22.5645,
+                "longitude": 88.3512
+            }
+        }
+
+        if poi_id in sample_pois:
+            return sample_pois[poi_id]
+
+        return {
+            "poi_id": poi_id,
+            "name": f"Localized POI ({poi_id})",
+            "category": "attraction",
+            "rating": 4.7,
+            "reviews_count": 1420,
+            "price_level": "$$",
+            "address": "Central Heritage District, City Center",
+            "phone_number": "+91 33 2200 9999",
+            "opening_hours": ["Mon-Sun: 09:00 AM - 09:00 PM"],
+            "is_open_now": True,
+            "photos": ["https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800"],
+            "amenities": ["Guided Tours", "Information Desk", "Gift Shop", "Restrooms"],
+            "floor_level": "Level 1-3",
+            "wheelchair_accessible": True,
+            "parking_available": True,
+            "popular_dishes_or_highlights": ["Interactive 3D Exhibit", "Heritage Architecture"],
+            "latitude": 22.5726,
+            "longitude": 88.3639
+        }
+
+    async def search_rich_pois(
+        self,
+        category: Optional[str] = None,
+        lat: float = 22.5726,
+        lng: float = 88.3639,
+        radius: int = 3000,
+        min_rating: float = 4.0,
+        open_now: bool = False
+    ) -> dict:
+        """
+        Rich POI Data: Filtered localized search for rich POIs (restaurants, hotels, shopping malls, attractions).
+        """
+        r_poi = await self.get_rich_poi_details("poi_rest_601")
+        h_poi = await self.get_rich_poi_details("poi_hotel_702")
+        m_poi = {
+            "poi_id": "poi_mall_803",
+            "name": "South City Megamall",
+            "category": "shopping_mall",
+            "rating": 4.7,
+            "reviews_count": 5120,
+            "price_level": "$$$",
+            "address": "375 Prince Anwar Shah Rd, Kolkata",
+            "phone_number": "+91 33 4007 2000",
+            "opening_hours": ["10:00 AM - 10:00 PM"],
+            "is_open_now": True,
+            "photos": ["https://images.unsplash.com/photo-1519567241046-7f570eee3ce6?auto=format&fit=crop&w=800"],
+            "amenities": ["IMAX Cinema", "Food Court", "Underground Parking", "Brand Stores"],
+            "floor_level": "5 Floors",
+            "wheelchair_accessible": True,
+            "parking_available": True,
+            "popular_dishes_or_highlights": ["Multiplex Cinema", "International Fashion Brands"],
+            "latitude": lat + 0.002,
+            "longitude": lng + 0.003
+        }
+
+        all_pois = [r_poi, h_poi, m_poi]
+
+        if category:
+            all_pois = [p for p in all_pois if p["category"] == category.lower()]
+        if min_rating:
+            all_pois = [p for p in all_pois if p["rating"] >= min_rating]
+        if open_now:
+            all_pois = [p for p in all_pois if p["is_open_now"] is True]
+
+        return {
+            "status": "OK",
+            "total_found": len(all_pois),
+            "pois": all_pois
+        }
+

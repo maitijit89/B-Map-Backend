@@ -15,6 +15,7 @@ class User:
         dob=None,
         profile_pic_url=None,
         is_email_verified=False,
+        role="user",
         created_at=None,
         updated_at=None
     ):
@@ -28,6 +29,7 @@ class User:
         self.dob = dob
         self.profile_pic_url = profile_pic_url
         self.is_email_verified = is_email_verified
+        self.role = role or "user"
         self.created_at = created_at or datetime.now(timezone.utc)
         self.updated_at = updated_at or datetime.now(timezone.utc)
 
@@ -46,6 +48,7 @@ class User:
             dob=data.get("dob"),
             profile_pic_url=data.get("profile_pic_url"),
             is_email_verified=data.get("is_email_verified", False),
+            role=data.get("role", "user"),
             created_at=data.get("created_at"),
             updated_at=data.get("updated_at")
         )
@@ -55,6 +58,7 @@ class User:
             "_id": self.id,
             "display_name": self.display_name,
             "is_email_verified": self.is_email_verified,
+            "role": self.role,
             "created_at": self.created_at,
             "updated_at": self.updated_at
         }

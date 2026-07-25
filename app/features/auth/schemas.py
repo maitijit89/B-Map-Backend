@@ -4,23 +4,29 @@ from datetime import datetime
 from typing import Optional
 from enum import Enum
 
-class UserBase(BaseModel):
+class SecureAuthBaseModel(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=True
+    )
+
+class UserBase(SecureAuthBaseModel):
     email: Optional[EmailStr] = None
-    display_name: Optional[str] = None
+    display_name: Optional[str] = Field(None, max_length=100)
 
 class UserCreate(UserBase):
-    password: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=8, max_length=128)
 
-class UserLogin(BaseModel):
+class UserLogin(SecureAuthBaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., min_length=1, max_length=128)
 
 class OTPFlow(str, Enum):
     SIGNUP = "signup"
     LOGIN = "login"
 
-class SendOTPRequest(BaseModel):
-    phone_number: Optional[str] = None
+class SendOTPRequest(SecureAuthBaseModel):
+    phone_number: Optional[str] = Field(None, max_length=30)
     email: Optional[EmailStr] = None
     flow: OTPFlow
     is_resend: bool = False
@@ -41,10 +47,10 @@ class SendOTPRequest(BaseModel):
             return f"+{cleaned}"
         return cleaned
 
-class VerifyOTPRequest(BaseModel):
-    phone_number: Optional[str] = None
+class VerifyOTPRequest(SecureAuthBaseModel):
+    phone_number: Optional[str] = Field(None, max_length=30)
     email: Optional[EmailStr] = None
-    code: str
+    code: str = Field(..., min_length=4, max_length=10)
     flow: Optional[OTPFlow] = None
 
     @field_validator("phone_number", mode="before")
@@ -69,11 +75,11 @@ class VerifyOTPResponse(BaseModel):
     temp_token: Optional[str] = None
     user: Optional["UserResponse"] = None
 
-class UserEmailRegisterRequest(BaseModel):
-    temp_token: str
-    display_name: str
-    gender: Optional[str] = None
-    dob: Optional[str] = None
+class UserEmailRegisterRequest(SecureAuthBaseModel):
+    temp_token: str = Field(..., max_length=500)
+    display_name: str = Field(..., min_length=1, max_length=100)
+    gender: Optional[str] = Field(None, max_length=20)
+    dob: Optional[str] = Field(None, max_length=30)
 
 class UserResponse(UserBase):
     id: UUID
@@ -82,9 +88,10 @@ class UserResponse(UserBase):
     dob: Optional[str] = None
     profile_pic_url: Optional[str] = None
     is_email_verified: bool = False
+    role: Optional[str] = "user"
     created_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, extra="ignore")
 
 class Token(BaseModel):
     access_token: str

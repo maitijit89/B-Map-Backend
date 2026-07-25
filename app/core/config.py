@@ -7,21 +7,46 @@ class Settings(BaseSettings):
     ENV: str = "development"
     
     # Security & CORS
-    CORS_ORIGINS: list[str] = ["*"]
+    CORS_ORIGINS: list[str] = [
+        "https://b-map-backend.vercel.app",
+        "https://bmap.io",
+        "https://app.bmap.io",
+        "http://localhost:3000",
+        "http://localhost:8080"
+    ]
     SECURE_HEADERS_ENABLED: bool = True
+    ENFORCE_HTTPS: bool = False
     RATE_LIMIT_REQUESTS_PER_MINUTE: int = 60
+    STRICT_RATE_LIMIT_PER_MINUTE: int = 5
+    MAX_PAYLOAD_SIZE_BYTES: int = 10 * 1024 * 1024  # 10 MB limit
+    ENABLE_RATE_LIMITING_FOR_TESTS: bool = False
     
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, list[str]]) -> list[str]:
+        default_trusted = [
+            "https://b-map-backend.vercel.app",
+            "https://bmap.io",
+            "https://app.bmap.io",
+            "http://localhost:3000",
+            "http://localhost:8080"
+        ]
+        origins = []
         if isinstance(v, str):
             if v.startswith("[") and v.endswith("]"):
                 import json
-                return json.loads(v)
-            return [i.strip() for i in v.split(",") if i.strip()]
+                origins = json.loads(v)
+            else:
+                origins = [i.strip() for i in v.split(",") if i.strip()]
         elif isinstance(v, list):
-            return v
-        return ["*"]
+            origins = v
+        else:
+            origins = default_trusted
+
+        # Clean wildcard in production to enforce strict cross-origin isolation
+        if "*" in origins and len(origins) > 1:
+            origins = [o for o in origins if o != "*"]
+        return origins if origins else default_trusted
     
     # Database
     MONGODB_URL: str = "mongodb://localhost:27017"

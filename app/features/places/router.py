@@ -113,3 +113,27 @@ async def get_place_slots(place_id: str):
 @router.get("/{place_id}/availability")
 async def get_place_availability(place_id: str):
     return await service.get_place_slots(place_id)
+
+from app.schemas.lifestyle import RichPOIDetail, RichPOISearchResponse
+
+@router.get("/rich-poi/{poi_id}", response_model=RichPOIDetail)
+async def get_rich_poi_details(poi_id: str):
+    """
+    Rich POI Data: Retrieves incredibly detailed localized information for a restaurant, hotel, mall, or attraction.
+    """
+    return await service.get_rich_poi_details(poi_id)
+
+@router.get("/rich-search", response_model=RichPOISearchResponse)
+async def search_rich_pois(
+    category: Optional[str] = Query(None, description="Category: restaurant, hotel, shopping_mall, attraction"),
+    lat: float = Query(22.5726, description="Latitude"),
+    lng: float = Query(88.3639, description="Longitude"),
+    radius: int = Query(3000, description="Search radius in meters"),
+    min_rating: float = Query(4.0, description="Minimum rating filter"),
+    open_now: bool = Query(False, description="Filter places open right now")
+):
+    """
+    Rich POI Data: Search and filter rich localized POIs by category, rating, location, and open status.
+    """
+    return await service.search_rich_pois(category, lat, lng, radius, min_rating, open_now)
+

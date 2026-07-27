@@ -20,6 +20,7 @@ from app.features.shortcuts.router import router as shortcuts_router
 from app.features.safety.router import router as safety_router
 from app.features.carpool.router import router as carpool_router
 from app.features.enforcement.router import router as enforcement_router
+from app.features.engine.router import router as engine_router
 
 api_router = APIRouter()
 
@@ -44,3 +45,5 @@ api_router.include_router(shortcuts_router, prefix="/users/shortcuts", tags=["Co
 api_router.include_router(safety_router, prefix="/safety", tags=["Safety & SOS"])
 api_router.include_router(carpool_router, prefix="/carpool", tags=["Carpooling"])
 api_router.include_router(enforcement_router, prefix="/enforcement", tags=["Traffic Enforcement"])
+api_router.include_router(engine_router, prefix="/engine", tags=["Core Engines"])
+

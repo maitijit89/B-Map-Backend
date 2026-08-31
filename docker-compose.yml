@@ -1,39 +1,99 @@
 version: '3.8'
 
 services:
-  backend:
+  # -------------------------------------------------------------
+  # 1. B-Map Go (Fiber) Backend API
+  # -------------------------------------------------------------
+  app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: b-map-backend
+    container_name: b_map_api
+    restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${APP_PORT:-8080}:8080"
     environment:
-      - ENV=production
-      - MONGODB_URL=mongodb://mongodb:27017
-      - MONGODB_DB_NAME=b_map
-      - REDIS_URL=redis://redis:6379
-      - PORT=8080
+      - APP_ENV=${APP_ENV:-development}
+      - APP_PORT=8080
+      - APP_NAME=B-Map-Backend
+      - JWT_SECRET=${JWT_SECRET:-super_secret_jwt_key_b_map_2026}
+      - JWT_EXPIRY_HOURS=${JWT_EXPIRY_HOURS:-72}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${DB_NAME:-b_map_db}
+      - DB_SSLMODE=disable
+      - DB_TIMEZONE=UTC
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_DB=${REDIS_DB:-0}
+      - OTP_EXPIRY_MINUTES=${OTP_EXPIRY_MINUTES:-5}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - CLOUDINARY_FOLDER=${CLOUDINARY_FOLDER:-b_map_uploads}
     depends_on:
-      - mongodb
-      - redis
-    restart: always
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - bmap_network
 
-  mongodb:
-    image: mongo:7.0
-    container_name: b-map-mongodb
+  # -------------------------------------------------------------
+  # 2. PostgreSQL with PostGIS Geospatial Extension
+  # -------------------------------------------------------------
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: b_map_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-b_map_db}
     ports:
-      - "27017:27017"
+      - "${DB_PORT:-5432}:5432"
     volumes:
-      - mongo_data:/data/db
-    restart: always
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-b_map_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bmap_network
 
+  # -------------------------------------------------------------
+  # 3. Redis Cache & OTP Store
+  # -------------------------------------------------------------
   redis:
     image: redis:7-alpine
-    container_name: b-map-redis
+    container_name: b_map_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
     ports:
-      - "6379:6379"
-    restart: always
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bmap_network
 
+# ---------------------------------------------------------------
+# Persistent Volumes & Network Definitions
+# ---------------------------------------------------------------
 volumes:
-  mongo_data:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  bmap_network:
+    driver: bridge

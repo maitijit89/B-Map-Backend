@@ -1,17 +1,29 @@
-.env
-*.exe
-*.test
-vendor/
-.DS_Store
+# Binaries
 bin/
-__pycache__/
-*.pyc
-.pytest_cache/
-*.db
-*.sqlite
-/dist
-/build
-venv/
-b-map-c78bf-firebase-adminsdk-fbsvc-fbc36c7cbb.json
-b-map-de115-firebase-adminsdk-fbsvc-44dcfad446.json
-*-firebase-adminsdk-fbsvc-*.json
+main
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Environment variables
+.env
+.env.local
+
+# IDE and OS
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage.out
+coverage.html
+*.coverprofile
+
+# Vendor
+vendor/

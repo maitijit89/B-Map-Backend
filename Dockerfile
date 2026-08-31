@@ -1,38 +1,50 @@
-# Production Dockerfile for B-Map Backend
-FROM python:3.11-slim as builder
+# ==========================================
+# Stage 1: Build binary using Golang Alpine
+# ==========================================
+FROM golang:1.23-alpine AS builder
+
+# Install build dependencies (git, ca-certificates, tzdata)
+RUN apk add --no-cache git ca-certificates tzdata
+
+WORKDIR /build
+
+# Cache Go modules layers
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
+
+# Copy full application source
+COPY . .
+
+# Build statically linked binary with optimizations (-w -s strips debug symbols)
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-w -s" \
+    -o /build/bin/b-map-server \
+    ./cmd/server
+
+# ==========================================
+# Stage 2: Minimal Production Runtime
+# ==========================================
+FROM alpine:3.20
+
+# Install runtime SSL certs, timezone data, and curl for healthchecks
+RUN apk --no-cache add ca-certificates tzdata curl \
+    && addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+# Copy compiled binary and certificates from builder
+COPY --from=builder /build/bin/b-map-server /app/b-map-server
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
-
-# Final Production Image
-FROM python:3.11-slim
-
-WORKDIR /app
-
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PORT=8080
-
-COPY --from=builder /install /usr/local
-COPY . /app
-
-# Create unprivileged user for execution
-RUN useradd -m -u 1000 appuser && \
-    mkdir -p /app/app/static/uploads && \
-    chown -R appuser:appuser /app
-
+# Use non-root user for container security
 USER appuser
 
+# Expose server port
 EXPOSE 8080
 
-CMD ["gunicorn", "-c", "gunicorn.conf.py", "app.main:app"]
+# Container healthcheck
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8080/health || exit 1
+
+# Execute the application
+ENTRYPOINT ["/app/b-map-server"]

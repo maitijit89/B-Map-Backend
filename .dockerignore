@@ -1,0 +1,10 @@
+.git
+.github
+.env
+.env.local
+.vscode
+.idea
+*.md
+coverage.out
+Dockerfile
+docker-compose.yml

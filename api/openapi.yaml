@@ -1,0 +1,79 @@
+openapi: 3.0.3
+info:
+  title: B-Map Navigation & Mapping API
+  version: 1.0.0
+  description: High-performance, production-grade navigation, geospatial querying, and autonomous driving map platform backend.
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local Development Server
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: Service is healthy
+  /metrics:
+    get:
+      summary: Prometheus operational metrics
+      parameters:
+        - in: query
+          name: format
+          schema:
+            type: string
+            example: prometheus
+      responses:
+        '200':
+          description: Operational health and throughput statistics
+  /auth/login:
+    post:
+      summary: Request 6-digit OTP for email authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+      responses:
+        '200':
+          description: OTP dispatched
+  /routes/directions:
+    get:
+      summary: Directions and pathfinding API
+      parameters:
+        - in: query
+          name: origin
+          required: true
+          schema:
+            type: string
+            example: "37.7749,-122.4194"
+        - in: query
+          name: destination
+          required: true
+          schema:
+            type: string
+            example: "37.7955,-122.3937"
+        - in: query
+          name: mode
+          schema:
+            type: string
+            enum: [driving, walking, bicycling, transit]
+      responses:
+        '200':
+          description: Computed route with steps, duration, and overview polyline
+  /traffic/telemetry:
+    post:
+      summary: Ingest real-time vehicle GPS telemetry pings
+      responses:
+        '202':
+          description: Pings accepted
+  /offline/bundles:
+    post:
+      summary: Generate offline bounding box package
+      responses:
+        '201':
+          description: Bundle created

@@ -63,7 +63,7 @@ func (s *authService) Register(ctx context.Context, req *domain.RegisterRequest)
 	return nil
 }
 
-// Login verifies user exists in PostgreSQL, generates OTP, caches it in Redis, and simulates email.
+// Login verifies user exists in MongoDB, generates OTP, caches it in Redis, and simulates email.
 func (s *authService) Login(ctx context.Context, req *domain.LoginRequest) error {
 	normalizedEmail := strings.ToLower(strings.TrimSpace(req.Email))
 
@@ -104,7 +104,7 @@ func (s *authService) VerifyOTP(ctx context.Context, req *domain.VerifyOTPReques
 				return nil, domain.ErrInvalidOTP
 			}
 
-			// Create new user in PostgreSQL
+			// Create new user in MongoDB
 			newUser := &domain.User{
 				Name:  pending.Name,
 				Age:   pending.Age,

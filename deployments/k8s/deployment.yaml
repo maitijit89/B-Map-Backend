@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bmap-backend
+  labels:
+    app: bmap-backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: bmap-backend
+  template:
+    metadata:
+      labels:
+        app: bmap-backend
+    spec:
+      containers:
+      - name: bmap-backend
+        image: bmap-backend:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - configMapRef:
+            name: bmap-config
+        - secretRef:
+            name: bmap-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bmap-backend-service
+spec:
+  type: ClusterIP
+  selector:
+    app: bmap-backend
+  ports:
+  - port: 80
+    targetPort: 8080
+    name: http

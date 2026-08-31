@@ -6,90 +6,136 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 )
 
 const (
-	// OTPTTL defines how long the OTP is valid
+	// OTPTTL defines how long the OTP is valid (5 minutes)
 	OTPTTL = 5 * time.Minute
-	// RedisKeyPrefix ensures OTP keys don't collide with other Redis data
-	RedisKeyPrefix = "user:otp:"
+	// CooldownTTL prevents rapid resend spam (90 seconds / 1 min 30 sec)
+	CooldownTTL = 90 * time.Second
+	// MaxFailedAttempts before locking verification
+	MaxFailedAttempts = 5
+	// LockoutTTL duration after max failed attempts (15 minutes)
+	LockoutTTL = 15 * time.Minute
+
+	// Redis Key Prefixes
+	PrefixOTP      = "user:otp:"
+	PrefixCooldown = "user:otp:cooldown:"
+	PrefixAttempts = "user:otp:attempts:"
+	PrefixLockout  = "user:otp:lockout:"
 )
 
-// OTPService handles the logic for OTP generation and validation
+// OTPService handles secure generation, rate-limited delivery, and brute-force protection for OTPs
 type OTPService struct {
 	redisClient *redis.Client
 }
 
-// NewOTPService creates a new instance of the OTPService
+// NewOTPService creates a new instance of OTPService
 func NewOTPService(rdb *redis.Client) *OTPService {
 	return &OTPService{
 		redisClient: rdb,
 	}
 }
 
-// GenerateAndStoreOTP generates a 6-digit OTP and stores it in Redis
+// GenerateAndStoreOTP creates a cryptographically secure 6-digit OTP with anti-spam cooldown protection
 func (s *OTPService) GenerateAndStoreOTP(ctx context.Context, email string) (string, error) {
-	// 1. Generate a cryptographically secure 6-digit OTP
+	// 1. Check if email is currently locked out due to excessive failed attempts
+	lockoutKey := fmt.Sprintf("%s%s", PrefixLockout, email)
+	isLocked, _ := s.redisClient.Exists(ctx, lockoutKey).Result()
+	if isLocked > 0 {
+		return "", errors.New("too many failed verification attempts. Please wait 15 minutes before requesting a new code")
+	}
+
+	// 2. Check cooldown to prevent email flooding
+	cooldownKey := fmt.Sprintf("%s%s", PrefixCooldown, email)
+	inCooldown, _ := s.redisClient.Exists(ctx, cooldownKey).Result()
+	if inCooldown > 0 {
+		ttl, _ := s.redisClient.TTL(ctx, cooldownKey).Result()
+		return "", fmt.Errorf("please wait %d seconds before requesting another code", int(ttl.Seconds()))
+	}
+
+	// 3. Generate a cryptographically secure 6-digit OTP
 	otp, err := generateSecureOTP()
 	if err != nil {
-		return "", fmt.Errorf("failed to generate OTP: %w", err)
+		return "", fmt.Errorf("failed to generate secure OTP: %w", err)
 	}
 
-	// 2. Create the Redis key (e.g., "user:otp:test@example.com")
-	key := fmt.Sprintf("%s%s", RedisKeyPrefix, email)
+	// 4. Store in Redis
+	otpKey := fmt.Sprintf("%s%s", PrefixOTP, email)
+	pipe := s.redisClient.Pipeline()
+	pipe.Set(ctx, otpKey, otp, OTPTTL)
+	pipe.Set(ctx, cooldownKey, "1", CooldownTTL)
+	pipe.Del(ctx, fmt.Sprintf("%s%s", PrefixAttempts, email)) // reset failed attempt counter
 
-	// 3. Store in Redis with TTL
-	err = s.redisClient.Set(ctx, key, otp, OTPTTL).Err()
+	_, err = pipe.Exec(ctx)
 	if err != nil {
-		return "", fmt.Errorf("failed to store OTP in Redis: %w", err)
+		return "", fmt.Errorf("failed to save OTP in cache: %w", err)
 	}
-
-	// In a real application, you would trigger your email service here to send the OTP.
-	// e.g., emailClient.Send(email, "Your B Map Login Code is: "+otp)
 
 	return otp, nil
 }
 
-// VerifyOTP checks if the provided OTP matches the one in Redis
+// VerifyOTP checks the entered OTP with brute-force attempt tracking and atomic single-use invalidation
 func (s *OTPService) VerifyOTP(ctx context.Context, email, enteredOTP string) (bool, error) {
-	key := fmt.Sprintf("%s%s", RedisKeyPrefix, email)
+	lockoutKey := fmt.Sprintf("%s%s", PrefixLockout, email)
+	isLocked, _ := s.redisClient.Exists(ctx, lockoutKey).Result()
+	if isLocked > 0 {
+		return false, errors.New("account verification temporarily locked due to too many failed attempts. Try again later")
+	}
 
-	// 1. Retrieve the stored OTP from Redis
-	storedOTP, err := s.redisClient.Get(ctx, key).Result()
+	otpKey := fmt.Sprintf("%s%s", PrefixOTP, email)
+	attemptsKey := fmt.Sprintf("%s%s", PrefixAttempts, email)
+
+	// 1. Retrieve the stored OTP
+	storedOTP, err := s.redisClient.Get(ctx, otpKey).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
-			// Key does not exist or has expired
-			return false, errors.New("OTP expired or invalid")
+			return false, errors.New("verification code expired or invalid. Please request a new one")
 		}
-		return false, fmt.Errorf("redis error: %w", err)
+		return false, fmt.Errorf("cache error: %w", err)
 	}
 
-	// 2. Compare the entered OTP with the stored OTP
+	// 2. Validate OTP
 	if storedOTP != enteredOTP {
-		return false, errors.New("incorrect OTP")
+		// Increment failed attempts counter
+		attempts, _ := s.redisClient.Incr(ctx, attemptsKey).Result()
+		s.redisClient.Expire(ctx, attemptsKey, OTPTTL)
+
+		if attempts >= MaxFailedAttempts {
+			s.redisClient.Set(ctx, lockoutKey, "1", LockoutTTL)
+			s.redisClient.Del(ctx, otpKey)
+			return false, errors.New("maximum verification attempts exceeded. Locked for 15 minutes")
+		}
+
+		remaining := MaxFailedAttempts - int(attempts)
+		return false, fmt.Errorf("incorrect verification code. %d attempts remaining", remaining)
 	}
 
-	// 3. If successful, delete the OTP so it cannot be reused (Security Best Practice)
-	err = s.redisClient.Del(ctx, key).Err()
-	if err != nil {
-		// Log this error, though the OTP is already verified.
-		fmt.Printf("Warning: failed to delete OTP key for %s: %v\n", email, err)
-	}
+	// 3. Success: Atomic deletion so OTP cannot be replayed
+	pipe := s.redisClient.Pipeline()
+	pipe.Del(ctx, otpKey)
+	pipe.Del(ctx, attemptsKey)
+	pipe.Del(ctx, fmt.Sprintf("%s%s", PrefixCooldown, email))
+	_, _ = pipe.Exec(ctx)
 
 	return true, nil
 }
 
 // generateSecureOTP creates a random 6-digit string using crypto/rand
 func generateSecureOTP() (string, error) {
-	// Range: 0 to 999999
 	max := big.NewInt(1000000)
 	n, err := rand.Int(rand.Reader, max)
 	if err != nil {
 		return "", err
 	}
-	// Format as a 6-digit string with leading zeros if necessary
 	return fmt.Sprintf("%06d", n.Int64()), nil
+}
+
+// FormatInt utility for metrics/logging
+func itoa(i int) string {
+	return strconv.Itoa(i)
 }

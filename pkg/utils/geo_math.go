@@ -31,6 +31,11 @@ func HaversineDistance(lat1, lon1, lat2, lon2 float64) float64 {
 	return EarthRadiusMeters * c
 }
 
+// HaversineDistanceCoords calculates distance between two Coordinate structs in meters.
+func HaversineDistanceCoords(c1, c2 Coordinate) float64 {
+	return HaversineDistance(c1.Latitude, c1.Longitude, c2.Latitude, c2.Longitude)
+}
+
 // CalculateBearing calculates the initial bearing (forward azimuth) from point 1 to point 2 in degrees [0, 360).
 func CalculateBearing(lat1, lon1, lat2, lon2 float64) float64 {
 	rLat1 := DegreesToRadians(lat1)

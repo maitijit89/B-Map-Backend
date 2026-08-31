@@ -71,6 +71,101 @@ func (h *Handler) GetDirections(c *gin.Context) {
 	})
 }
 
+// GetDistanceMatrix handles GET /api/v1/routes/distance-matrix?origins=lat,lng|lat,lng&destinations=lat,lng|lat,lng
+func (h *Handler) GetDistanceMatrix(c *gin.Context) {
+	originsStr := c.Query("origins")
+	destinationsStr := c.Query("destinations")
+	modeStr := c.DefaultQuery("mode", "driving")
+
+	if originsStr == "" || destinationsStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Both 'origins' and 'destinations' query parameters (pipe-separated coordinates) are required",
+		})
+		return
+	}
+
+	var origins []utils.Coordinate
+	for _, s := range strings.Split(originsStr, "|") {
+		if pt, err := parseCoordinate(s); err == nil {
+			origins = append(origins, pt)
+		}
+	}
+
+	var destinations []utils.Coordinate
+	for _, s := range strings.Split(destinationsStr, "|") {
+		if pt, err := parseCoordinate(s); err == nil {
+			destinations = append(destinations, pt)
+		}
+	}
+
+	if len(origins) == 0 || len(destinations) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid origins or destinations coordinates list"})
+		return
+	}
+
+	matrix, err := h.engine.CalculateDistanceMatrix(c.Request.Context(), origins, destinations, TravelMode(modeStr))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to calculate distance matrix: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"matrix":  matrix,
+	})
+}
+
+// SnapToRoads handles POST /api/v1/roads/snap-to-roads
+func (h *Handler) SnapToRoads(c *gin.Context) {
+	var req struct {
+		Path        []utils.Coordinate `json:"path" binding:"required"`
+		Interpolate bool               `json:"interpolate"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: " + err.Error()})
+		return
+	}
+
+	snapped, err := h.engine.SnapToRoads(c.Request.Context(), req.Path, req.Interpolate)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to snap to roads: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":        true,
+		"snapped_points": snapped,
+	})
+}
+
+// GetSpeedLimits handles GET /api/v1/roads/speed-limits?points=lat,lng|lat,lng
+func (h *Handler) GetSpeedLimits(c *gin.Context) {
+	pointsStr := c.Query("points")
+	if pointsStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Query parameter 'points' is required"})
+		return
+	}
+
+	var points []utils.Coordinate
+	for _, s := range strings.Split(pointsStr, "|") {
+		if pt, err := parseCoordinate(s); err == nil {
+			points = append(points, pt)
+		}
+	}
+
+	limits, err := h.engine.GetSpeedLimits(c.Request.Context(), points)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get speed limits: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":      true,
+		"speed_limits": limits,
+	})
+}
+
 // TrackProgress handles POST /api/v1/routes/progress (Evaluates live GPS fix, remaining ETA, and auto-rerouting)
 func (h *Handler) TrackProgress(c *gin.Context) {
 	var req struct {

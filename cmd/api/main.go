@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -10,11 +11,10 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/maitijit89/b-map-backend/config"
-	"github.com/maitijit89/b-map-backend/internal/domain"
 	"github.com/maitijit89/b-map-backend/internal/handler"
 	httpHandler "github.com/maitijit89/b-map-backend/internal/handler/http"
 	"github.com/maitijit89/b-map-backend/internal/middleware"
-	postgresRepo "github.com/maitijit89/b-map-backend/internal/repository/postgres"
+	mongoRepo "github.com/maitijit89/b-map-backend/internal/repository/mongodb"
 	redisRepo "github.com/maitijit89/b-map-backend/internal/repository/redis"
 	"github.com/maitijit89/b-map-backend/internal/service"
 	"github.com/maitijit89/b-map-backend/pkg/cloudinary"
@@ -26,20 +26,12 @@ func main() {
 	cfg := config.LoadConfig()
 	log.Printf("Starting %s in %s mode on port %s", cfg.App.Name, cfg.App.Env, cfg.App.Port)
 
-	// 2. Initialize PostgreSQL (with PostGIS)
-	db, err := database.InitPostgres(&cfg.DB, cfg.App.Env)
+	// 2. Initialize MongoDB (with 2dsphere spatial indexing)
+	db, err := database.InitMongoDB(&cfg.DB, cfg.App.Env)
 	if err != nil {
 		log.Fatalf("Fatal: Database initialization failed: %v", err)
 	}
-
-	// Run GORM Auto-Migrations
-	if err := db.AutoMigrate(&domain.User{}, &domain.Place{}); err != nil {
-		log.Fatalf("Fatal: Database migration failed: %v", err)
-	}
-	log.Println("Database auto-migrations executed successfully")
-
-	// Create GiST spatial index for high-speed PostGIS spatial queries
-	db.Exec("CREATE INDEX IF NOT EXISTS idx_places_location_gist ON places USING GIST (location);")
+	log.Println("MongoDB connected and 2dsphere indexes verified successfully")
 
 	// 3. Initialize Redis
 	redisClient, err := database.InitRedis(&cfg.Redis)
@@ -62,8 +54,8 @@ func main() {
 	}
 
 	// 5. Initialize Repositories
-	userRepo := postgresRepo.NewUserRepository(db)
-	placeRepo := postgresRepo.NewPlaceRepository(db)
+	userRepo := mongoRepo.NewUserRepository(db)
+	placeRepo := mongoRepo.NewPlaceRepository(db)
 	otpRepo := redisRepo.NewOTPRepository(redisClient)
 
 	// 6. Initialize Services
@@ -129,10 +121,11 @@ func main() {
 		log.Printf("Error closing Redis client: %v", err)
 	}
 
-	// Close SQL DB pool
-	sqlDB, err := db.DB()
-	if err == nil {
-		_ = sqlDB.Close()
+	// Close MongoDB client
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+	if db != nil {
+		_ = db.Client().Disconnect(shutdownCtx)
 	}
 
 	log.Println("Server stopped cleanly.")

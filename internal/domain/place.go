@@ -8,21 +8,21 @@ import (
 	"github.com/maitijit89/b-map-backend/pkg/database"
 )
 
-// Place represents a geographical location entity stored in PostgreSQL/PostGIS.
+// Place represents a geographical location entity stored in MongoDB with GeoJSON 2dsphere indexing.
 type Place struct {
-	ID          uuid.UUID         `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	Name        string            `gorm:"type:varchar(255);not null;index" json:"name"`
-	Description string            `gorm:"type:text" json:"description"`
-	Address     string            `gorm:"type:varchar(512)" json:"address"`
-	Category    string            `gorm:"type:varchar(100);index" json:"category"`
-	Location    database.GeoPoint `gorm:"type:geometry(Point,4326);not null;index:idx_places_location,type:gist" json:"location"`
-	PhotoURL    string            `gorm:"type:varchar(512)" json:"photo_url,omitempty"`
-	CreatedBy   *uuid.UUID        `gorm:"type:uuid" json:"created_by,omitempty"`
-	CreatedAt   time.Time         `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt   time.Time         `gorm:"autoUpdateTime" json:"updated_at"`
+	ID          uuid.UUID         `json:"id" bson:"_id,omitempty"`
+	Name        string            `json:"name" bson:"name"`
+	Description string            `json:"description" bson:"description"`
+	Address     string            `json:"address" bson:"address"`
+	Category    string            `json:"category" bson:"category"`
+	Location    database.GeoPoint `json:"location" bson:"location"`
+	PhotoURL    string            `json:"photo_url,omitempty" bson:"photo_url,omitempty"`
+	CreatedBy   *uuid.UUID        `json:"created_by,omitempty" bson:"created_by,omitempty"`
+	CreatedAt   time.Time         `json:"created_at" bson:"created_at"`
+	UpdatedAt   time.Time         `json:"updated_at" bson:"updated_at"`
 
-	// Virtual fields populated during spatial queries
-	DistanceMeters float64 `gorm:"->;-:migration" json:"distance_meters,omitempty"`
+	// Virtual field populated during spatial queries ($geoNear / Haversine)
+	DistanceMeters float64 `json:"distance_meters,omitempty" bson:"distance_meters,omitempty"`
 }
 
 // PlaceRepository defines the database access methods for Place entities.

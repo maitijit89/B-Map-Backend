@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   # -------------------------------------------------------------
-  # 1. B-Map Go (Fiber) Backend API
+  # 1. B-Map Go Backend API
   # -------------------------------------------------------------
   app:
     build:
@@ -18,13 +18,10 @@ services:
       - APP_NAME=B-Map-Backend
       - JWT_SECRET=${JWT_SECRET:-super_secret_jwt_key_b_map_2026}
       - JWT_EXPIRY_HOURS=${JWT_EXPIRY_HOURS:-72}
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=${DB_USER:-postgres}
-      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - MONGODB_URI=mongodb://mongo:27017/b_map_db
+      - DB_HOST=mongo
+      - DB_PORT=27017
       - DB_NAME=${DB_NAME:-b_map_db}
-      - DB_SSLMODE=disable
-      - DB_TIMEZONE=UTC
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
@@ -35,7 +32,7 @@ services:
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
       - CLOUDINARY_FOLDER=${CLOUDINARY_FOLDER:-b_map_uploads}
     depends_on:
-      postgres:
+      mongo:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -43,22 +40,18 @@ services:
       - bmap_network
 
   # -------------------------------------------------------------
-  # 2. PostgreSQL with PostGIS Geospatial Extension
+  # 2. MongoDB with 2dsphere Geospatial Indexing
   # -------------------------------------------------------------
-  postgres:
-    image: postgis/postgis:16-3.4-alpine
-    container_name: b_map_postgres
+  mongo:
+    image: mongo:7.0
+    container_name: b_map_mongo
     restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-      POSTGRES_DB: ${DB_NAME:-b_map_db}
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "${DB_PORT:-27017}:27017"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mongo_data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-b_map_db}"]
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -89,7 +82,7 @@ services:
 # Persistent Volumes & Network Definitions
 # ---------------------------------------------------------------
 volumes:
-  postgres_data:
+  mongo_data:
     driver: local
   redis_data:
     driver: local

@@ -5,7 +5,7 @@ import (
 	"math"
 
 	"github.com/maitijit89/b-map-backend/pkg/utils"
-	"gorm.io/gorm"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type TravelMode string
@@ -14,12 +14,13 @@ const (
 	TravelModeDriving   TravelMode = "driving"
 	TravelModeWalking   TravelMode = "walking"
 	TravelModeBicycling TravelMode = "bicycling"
+	TravelModeTransit   TravelMode = "transit"
 )
 
 type RouteRequest struct {
-	Origin      utils.Coordinate `json:"origin"`
-	Destination utils.Coordinate `json:"destination"`
-	Mode        TravelMode       `json:"mode"`
+	Origin      utils.Coordinate   `json:"origin"`
+	Destination utils.Coordinate   `json:"destination"`
+	Mode        TravelMode         `json:"mode"`
 	Waypoints   []utils.Coordinate `json:"waypoints,omitempty"`
 }
 
@@ -29,29 +30,47 @@ type RouteBounds struct {
 }
 
 type RouteResponse struct {
-	Summary          string           `json:"summary"`
-	DistanceMeters   float64          `json:"distance_meters"`
-	DurationSeconds  int              `json:"duration_seconds"`
-	OverviewPolyline string           `json:"overview_polyline"`
-	Bounds           RouteBounds      `json:"bounds"`
-	Steps            []RouteStep      `json:"steps"`
+	Summary          string             `json:"summary"`
+	DistanceMeters   float64            `json:"distance_meters"`
+	DurationSeconds  int                `json:"duration_seconds"`
+	OverviewPolyline string             `json:"overview_polyline"`
+	Bounds           RouteBounds        `json:"bounds"`
+	Steps            []RouteStep        `json:"steps"`
 	Waypoints        []utils.Coordinate `json:"waypoints,omitempty"`
+	TransitPlan      *TransitRoutePlan  `json:"transit_plan,omitempty"`
 }
 
 type Engine interface {
 	CalculateRoute(ctx context.Context, req *RouteRequest) (*RouteResponse, error)
+	CalculateDistanceMatrix(ctx context.Context, origins []utils.Coordinate, destinations []utils.Coordinate, mode TravelMode) (*DistanceMatrixResponse, error)
+	SnapToRoads(ctx context.Context, points []utils.Coordinate, interpolate bool) ([]SnappedPoint, error)
+	GetSpeedLimits(ctx context.Context, points []utils.Coordinate) ([]SpeedLimitItem, error)
 }
 
 type routesEngine struct {
-	db *gorm.DB
+	db *mongo.Database
 }
 
-func NewRoutesEngine(db *gorm.DB) Engine {
+func NewRoutesEngine(db *mongo.Database) Engine {
 	return &routesEngine{db: db}
 }
 
 // CalculateRoute computes the optimal path, travel duration, turn maneuvers, and overview polyline.
 func (e *routesEngine) CalculateRoute(ctx context.Context, req *RouteRequest) (*RouteResponse, error) {
+	if req.Mode == TravelModeTransit {
+		transitPlan, err := CalculateTransitRoute(ctx, req.Origin, req.Destination)
+		if err == nil {
+			return &RouteResponse{
+				Summary:          "Public Transit via BART / Metro",
+				DistanceMeters:   transitPlan.TotalDistanceM,
+				DurationSeconds:  transitPlan.TotalDurationSec,
+				OverviewPolyline: utils.EncodePolyline([]utils.Coordinate{req.Origin, req.Destination}),
+				Bounds:           computeBounds([]utils.Coordinate{req.Origin, req.Destination}),
+				TransitPlan:      transitPlan,
+			}, nil
+		}
+	}
+
 	speedKmh := 45.0
 	switch req.Mode {
 	case TravelModeWalking:
@@ -94,18 +113,17 @@ func (e *routesEngine) CalculateRoute(ctx context.Context, req *RouteRequest) (*
 }
 
 func interpolatePath(origin, dest utils.Coordinate, waypoints []utils.Coordinate) []utils.Coordinate {
-	var points []utils.Coordinate
+	points := make([]utils.Coordinate, 0, len(waypoints)+2)
 	points = append(points, origin)
 	points = append(points, waypoints...)
 	points = append(points, dest)
 
-	var densePath []utils.Coordinate
+	densePath := make([]utils.Coordinate, 0, len(points)*10)
 	for i := 0; i < len(points)-1; i++ {
 		p1 := points[i]
 		p2 := points[i+1]
 		dist := utils.HaversineDistance(p1.Latitude, p1.Longitude, p2.Latitude, p2.Longitude)
 
-		// Add intermediate sub-points for smooth map rendering (every ~200m)
 		numSegments := int(math.Max(1, math.Floor(dist/200.0)))
 		for s := 0; s < numSegments; s++ {
 			fraction := float64(s) / float64(numSegments)

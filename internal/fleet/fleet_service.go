@@ -14,7 +14,8 @@ import (
 	"github.com/maitijit89/b-map-backend/internal/spatial"
 	"github.com/maitijit89/b-map-backend/pkg/database"
 	"github.com/maitijit89/b-map-backend/pkg/utils"
-	"gorm.io/gorm"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type LocationUpdatePayload struct {
@@ -26,11 +27,11 @@ type LocationUpdatePayload struct {
 }
 
 type TripRequestPayload struct {
-	RiderID         uuid.UUID        `json:"rider_id"`
-	Pickup          utils.Coordinate `json:"pickup"`
-	Dropoff         utils.Coordinate `json:"dropoff"`
-	PickupAddress   string           `json:"pickup_address"`
-	DropoffAddress  string           `json:"dropoff_address"`
+	RiderID        uuid.UUID        `json:"rider_id"`
+	Pickup         utils.Coordinate `json:"pickup"`
+	Dropoff        utils.Coordinate `json:"dropoff"`
+	PickupAddress  string           `json:"pickup_address"`
+	DropoffAddress string           `json:"dropoff_address"`
 }
 
 type Service interface {
@@ -43,15 +44,17 @@ type Service interface {
 }
 
 type fleetService struct {
-	db             *gorm.DB
+	tripsColl      *mongo.Collection
+	vehiclesColl   *mongo.Collection
 	spatialIndexer spatial.SpatialIndexer
 	routesEngine   routes.Engine
 	hub            *realtime.Hub
 }
 
-func NewFleetService(db *gorm.DB, indexer spatial.SpatialIndexer, routesEngine routes.Engine, hub *realtime.Hub) Service {
+func NewFleetService(db *mongo.Database, indexer spatial.SpatialIndexer, routesEngine routes.Engine, hub *realtime.Hub) Service {
 	return &fleetService{
-		db:             db,
+		tripsColl:      db.Collection("trips"),
+		vehiclesColl:   db.Collection("vehicles"),
 		spatialIndexer: indexer,
 		routesEngine:   routesEngine,
 		hub:            hub,
@@ -81,7 +84,7 @@ func (s *fleetService) GetNearbyDrivers(ctx context.Context, lat, lng, radius fl
 	return s.spatialIndexer.FindNearbyDrivers(ctx, lat, lng, radius, limit)
 }
 
-// RequestTrip computes route distance/ETA, estimates fare, creates Trip in DB, and dispatches real-time broadcast.
+// RequestTrip computes route distance/ETA, estimates fare, creates Trip in MongoDB, and dispatches real-time broadcast.
 func (s *fleetService) RequestTrip(ctx context.Context, req *TripRequestPayload) (*domain.Trip, error) {
 	// 1. Calculate Route using Routes Engine
 	route, err := s.routesEngine.CalculateRoute(ctx, &routes.RouteRequest{
@@ -99,8 +102,9 @@ func (s *fleetService) RequestTrip(ctx context.Context, req *TripRequestPayload)
 	fare := 2.50 + (1.25 * distanceKm) + (0.30 * durationMin)
 	fare = math.Round(fare*100) / 100
 
-	// 3. Save Trip to PostgreSQL
+	// 3. Save Trip to MongoDB
 	trip := &domain.Trip{
+		ID:              uuid.New(),
 		RiderID:         req.RiderID,
 		Status:          domain.TripStatusRequested,
 		PickupLocation:  database.NewGeoPoint(req.Pickup.Latitude, req.Pickup.Longitude),
@@ -111,9 +115,10 @@ func (s *fleetService) RequestTrip(ctx context.Context, req *TripRequestPayload)
 		DurationSeconds: route.DurationSeconds,
 		FareAmount:      fare,
 		RoutePolyline:   route.OverviewPolyline,
+		CreatedAt:       time.Now(),
 	}
 
-	if err := s.db.WithContext(ctx).Create(trip).Error; err != nil {
+	if _, err := s.tripsColl.InsertOne(ctx, trip); err != nil {
 		return nil, fmt.Errorf("failed to create trip in database: %w", err)
 	}
 
@@ -137,8 +142,12 @@ func (s *fleetService) RequestTrip(ctx context.Context, req *TripRequestPayload)
 // AcceptTrip assigns driver to the requested trip.
 func (s *fleetService) AcceptTrip(ctx context.Context, driverID, tripID uuid.UUID) (*domain.Trip, error) {
 	var trip domain.Trip
-	if err := s.db.WithContext(ctx).First(&trip, "id = ?", tripID).Error; err != nil {
-		return nil, errors.New("trip not found")
+	err := s.tripsColl.FindOne(ctx, bson.M{"_id": tripID}).Decode(&trip)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, errors.New("trip not found")
+		}
+		return nil, err
 	}
 
 	if trip.Status != domain.TripStatusRequested {
@@ -148,7 +157,14 @@ func (s *fleetService) AcceptTrip(ctx context.Context, driverID, tripID uuid.UUI
 	trip.DriverID = &driverID
 	trip.Status = domain.TripStatusAccepted
 
-	if err := s.db.WithContext(ctx).Save(&trip).Error; err != nil {
+	update := bson.M{
+		"$set": bson.M{
+			"driver_id": driverID,
+			"status":    domain.TripStatusAccepted,
+		},
+	}
+
+	if _, err := s.tripsColl.UpdateOne(ctx, bson.M{"_id": tripID}, update); err != nil {
 		return nil, err
 	}
 
@@ -170,25 +186,36 @@ func (s *fleetService) AcceptTrip(ctx context.Context, driverID, tripID uuid.UUI
 
 func (s *fleetService) GetTripByID(ctx context.Context, tripID uuid.UUID) (*domain.Trip, error) {
 	var trip domain.Trip
-	if err := s.db.WithContext(ctx).First(&trip, "id = ?", tripID).Error; err != nil {
+	err := s.tripsColl.FindOne(ctx, bson.M{"_id": tripID}).Decode(&trip)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, errors.New("trip not found")
+		}
 		return nil, err
 	}
 	return &trip, nil
 }
 
 func (s *fleetService) CompleteTrip(ctx context.Context, tripID uuid.UUID) (*domain.Trip, error) {
+	now := time.Now()
+	update := bson.M{
+		"$set": bson.M{
+			"status":       domain.TripStatusCompleted,
+			"completed_at": now,
+		},
+	}
+
 	var trip domain.Trip
-	if err := s.db.WithContext(ctx).First(&trip, "id = ?", tripID).Error; err != nil {
+	err := s.tripsColl.FindOneAndUpdate(ctx, bson.M{"_id": tripID}, update).Decode(&trip)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, errors.New("trip not found")
+		}
 		return nil, err
 	}
 
-	now := time.Now()
 	trip.Status = domain.TripStatusCompleted
 	trip.CompletedAt = &now
-
-	if err := s.db.WithContext(ctx).Save(&trip).Error; err != nil {
-		return nil, err
-	}
 
 	msg := &realtime.Message{
 		Event: "trip_completed",

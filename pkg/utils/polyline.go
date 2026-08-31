@@ -11,8 +11,16 @@ type Coordinate struct {
 }
 
 // EncodePolyline encodes a slice of coordinates into a Google Polyline format string (precision: 5 decimals).
+// Optimized with pre-allocated buffer sizing to eliminate buffer growth reallocations.
 func EncodePolyline(coords []Coordinate) string {
+	if len(coords) == 0 {
+		return ""
+	}
+
 	var buffer bytes.Buffer
+	// Approximate 8 bytes per coordinate pair delta
+	buffer.Grow(len(coords) * 8)
+
 	var lastLat, lastLng int54
 
 	for _, coord := range coords {
@@ -51,10 +59,22 @@ func encodeUnsignedNumber(buffer *bytes.Buffer, num int64) {
 }
 
 // DecodePolyline decodes a Google Polyline string into a slice of coordinates.
+// Optimized with estimated slice allocation to eliminate slice appending copies.
 func DecodePolyline(encoded string) []Coordinate {
-	var coords []Coordinate
+	length := len(encoded)
+	if length == 0 {
+		return nil
+	}
+
+	// Approximate 1 coordinate per 4-5 encoded characters
+	estimatedCap := length / 4
+	if estimatedCap < 4 {
+		estimatedCap = 4
+	}
+
+	coords := make([]Coordinate, 0, estimatedCap)
 	var lat, lng int64
-	var index, length = 0, len(encoded)
+	var index int
 
 	for index < length {
 		// Decode latitude delta

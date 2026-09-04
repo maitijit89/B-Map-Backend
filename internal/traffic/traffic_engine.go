@@ -186,6 +186,12 @@ func (s *trafficService) DeleteOverride(segmentID string) bool {
 }
 
 func (s *trafficService) IngestTelemetry(ctx context.Context, pings []TelemetryPing) error {
+	if len(pings) == 0 {
+		return nil
+	}
+
+	now := time.Now().UTC()
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -204,7 +210,7 @@ func (s *trafficService) IngestTelemetry(ctx context.Context, pings []TelemetryP
 			alpha := 0.2
 			seg.CurrentSpeedKmh = math.Round((alpha*p.SpeedKmh+(1-alpha)*seg.CurrentSpeedKmh)*10) / 10
 			seg.SampleCount++
-			seg.LastUpdated = time.Now().UTC()
+			seg.LastUpdated = now
 
 			ratio := seg.CurrentSpeedKmh / seg.FreeFlowSpeedKmh
 			seg.SpeedFactor = math.Round(ratio*100) / 100

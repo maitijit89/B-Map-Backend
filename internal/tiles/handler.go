@@ -52,6 +52,7 @@ func (h *Handler) ServeTile(c *gin.Context) {
 	}
 
 	c.Header("Content-Type", "application/vnd.mapbox-vector-tile")
+	c.Header("Content-Encoding", "gzip")
 	c.Header("Access-Control-Allow-Origin", "*")
 	c.Header("Cache-Control", "public, max-age=3600")
 

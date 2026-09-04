@@ -33,6 +33,16 @@ type Client struct {
 	rooms    map[string]bool
 	clientID string
 	mu       sync.Mutex
+	closed   bool
+}
+
+func (c *Client) closeSend() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !c.closed {
+		c.closed = true
+		close(c.send)
+	}
 }
 
 type Hub struct {
@@ -56,6 +66,21 @@ func NewHub(rdb *redis.Client) *Hub {
 	}
 }
 
+func (h *Hub) removeClientLocked(client *Client) {
+	if _, ok := h.clients[client]; ok {
+		delete(h.clients, client)
+		client.closeSend()
+		for room := range client.rooms {
+			if h.rooms[room] != nil {
+				delete(h.rooms[room], client)
+				if len(h.rooms[room]) == 0 {
+					delete(h.rooms, room)
+				}
+			}
+		}
+	}
+}
+
 func (h *Hub) Run(ctx context.Context) {
 	// Start Redis Pub/Sub listener for horizontal scalability across clusters
 	go h.listenRedisPubSub(ctx)
@@ -69,48 +94,57 @@ func (h *Hub) Run(ctx context.Context) {
 
 		case client := <-h.unregister:
 			h.mu.Lock()
-			if _, ok := h.clients[client]; ok {
-				delete(h.clients, client)
-				close(client.send)
-				for room := range client.rooms {
-					if h.rooms[room] != nil {
-						delete(h.rooms[room], client)
-					}
-				}
-			}
+			h.removeClientLocked(client)
 			h.mu.Unlock()
 
 		case msg := <-h.broadcast:
-			h.mu.RLock()
+			// Pre-serialize payload outside lock to eliminate lock contention during JSON marshalling
 			msgBytes, err := json.Marshal(msg)
-			if err == nil {
-				if msg.Room != "" {
-					// Broadcast to room
-					if roomClients, ok := h.rooms[msg.Room]; ok {
-						for client := range roomClients {
-							select {
-							case client.send <- msgBytes:
-							default:
-								close(client.send)
-								delete(h.clients, client)
-							}
-						}
-					}
-				} else {
-					// Global broadcast
-					for client := range h.clients {
+			if err != nil {
+				continue
+			}
+
+			var deadClients []*Client
+
+			h.mu.RLock()
+			if msg.Room != "" {
+				// Broadcast to room
+				if roomClients, ok := h.rooms[msg.Room]; ok {
+					for client := range roomClients {
 						select {
 						case client.send <- msgBytes:
 						default:
-							close(client.send)
-							delete(h.clients, client)
+							deadClients = append(deadClients, client)
 						}
+					}
+				}
+			} else {
+				// Global broadcast
+				for client := range h.clients {
+					select {
+					case client.send <- msgBytes:
+					default:
+						deadClients = append(deadClients, client)
 					}
 				}
 			}
 			h.mu.RUnlock()
 
+			// Safely purge disconnected/blocked clients under write lock
+			if len(deadClients) > 0 {
+				h.mu.Lock()
+				for _, client := range deadClients {
+					h.removeClientLocked(client)
+				}
+				h.mu.Unlock()
+			}
+
 		case <-ctx.Done():
+			h.mu.Lock()
+			for client := range h.clients {
+				h.removeClientLocked(client)
+			}
+			h.mu.Unlock()
 			return
 		}
 	}
@@ -135,10 +169,18 @@ func (h *Hub) listenRedisPubSub(ctx context.Context) {
 	defer pubsub.Close()
 
 	ch := pubsub.Channel()
-	for msg := range ch {
-		var wsMsg Message
-		if err := json.Unmarshal([]byte(msg.Payload), &wsMsg); err == nil {
-			h.broadcast <- &wsMsg
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case msg, ok := <-ch:
+			if !ok {
+				return
+			}
+			var wsMsg Message
+			if err := json.Unmarshal([]byte(msg.Payload), &wsMsg); err == nil {
+				h.broadcast <- &wsMsg
+			}
 		}
 	}
 }

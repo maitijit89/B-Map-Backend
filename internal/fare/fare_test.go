@@ -26,9 +26,9 @@ func TestEstimateFares_DelhiAutoAndCab(t *testing.T) {
 		t.Fatal("expected at least 1 fare option")
 	}
 
-	// Delhi Auto: Base 30 + (8.5 * 11) = 30 + 93.5 = 123.5 -> ~124 INR
+	// Delhi Auto: Base 30 + (8.5 * 11) = 30 + 93.5 = 123.5 -> ~124 INR (or ~154 INR with night surcharge)
 	autoFare := resp.Fares[0]
-	if autoFare.TotalEstimated <= 100 || autoFare.TotalEstimated >= 150 {
+	if autoFare.TotalEstimated <= 100 || autoFare.TotalEstimated >= 180 {
 		t.Errorf("unexpected Delhi auto fare calculation: %f", autoFare.TotalEstimated)
 	}
 }

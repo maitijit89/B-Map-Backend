@@ -2,8 +2,11 @@ package routes
 
 import (
 	"context"
+	"fmt"
 	"math"
+	"time"
 
+	"github.com/maitijit89/b-map-backend/pkg/cache"
 	"github.com/maitijit89/b-map-backend/pkg/utils"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -48,15 +51,30 @@ type Engine interface {
 }
 
 type routesEngine struct {
-	db *mongo.Database
+	db    *mongo.Database
+	cache *cache.LRUCache
 }
 
 func NewRoutesEngine(db *mongo.Database) Engine {
-	return &routesEngine{db: db}
+	return &routesEngine{
+		db:    db,
+		cache: cache.NewLRUCache(1000, 15*time.Minute),
+	}
 }
 
 // CalculateRoute computes the optimal path, travel duration, turn maneuvers, and overview polyline.
 func (e *routesEngine) CalculateRoute(ctx context.Context, req *RouteRequest) (*RouteResponse, error) {
+	cacheKey := fmt.Sprintf("route:%s:%.5f,%.5f:%.5f,%.5f:%d",
+		req.Mode, req.Origin.Latitude, req.Origin.Longitude,
+		req.Destination.Latitude, req.Destination.Longitude, len(req.Waypoints))
+
+	if e.cache != nil {
+		if cached, found := e.cache.Get(cacheKey); found {
+			if resp, ok := cached.(*RouteResponse); ok {
+				return resp, nil
+			}
+		}
+	}
 	if req.Mode == TravelModeTransit {
 		transitPlan, err := CalculateTransitRoute(ctx, req.Origin, req.Destination)
 		if err == nil {
@@ -102,14 +120,20 @@ func (e *routesEngine) CalculateRoute(ctx context.Context, req *RouteRequest) (*
 	// Calculate bounds
 	bounds := computeBounds(pathCoords)
 
-	return &RouteResponse{
+	resp := &RouteResponse{
 		Summary:          formatRouteSummary(req.Origin, req.Destination, totalDistance),
 		DistanceMeters:   math.Round(totalDistance*10) / 10,
 		DurationSeconds:  totalDuration,
 		OverviewPolyline: overviewPolyline,
 		Bounds:           bounds,
 		Steps:            steps,
-	}, nil
+	}
+
+	if e.cache != nil {
+		e.cache.Set(cacheKey, resp)
+	}
+
+	return resp, nil
 }
 
 func interpolatePath(origin, dest utils.Coordinate, waypoints []utils.Coordinate) []utils.Coordinate {

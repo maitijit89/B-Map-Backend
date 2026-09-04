@@ -40,11 +40,16 @@ type analyticsService struct {
 }
 
 func NewAnalyticsService(db *mongo.Database, rdb *redis.Client) Service {
+	var featureColl, userColl *mongo.Collection
+	if db != nil {
+		featureColl = db.Collection("feature_usage")
+		userColl = db.Collection("users")
+	}
 	return &analyticsService{
 		db:          db,
 		rdb:         rdb,
-		featureColl: db.Collection("feature_usage"),
-		userColl:    db.Collection("users"),
+		featureColl: featureColl,
+		userColl:    userColl,
 	}
 }
 
@@ -65,17 +70,22 @@ func (s *analyticsService) TrackFeature(ctx context.Context, feature string) {
 		}
 
 		// 2. Upsert in MongoDB for persistent aggregation
-		opts := options.UpdateOne().SetUpsert(true)
-		filter := bson.M{"feature_name": feature}
-		update := bson.M{
-			"$inc": bson.M{"count": 1},
-			"$set": bson.M{"last_used_at": time.Now().UTC()},
+		if s.featureColl != nil {
+			opts := options.UpdateOne().SetUpsert(true)
+			filter := bson.M{"feature_name": feature}
+			update := bson.M{
+				"$inc": bson.M{"count": 1},
+				"$set": bson.M{"last_used_at": time.Now().UTC()},
+			}
+			_, _ = s.featureColl.UpdateOne(bgCtx, filter, update, opts)
 		}
-		_, _ = s.featureColl.UpdateOne(bgCtx, filter, update, opts)
 	}()
 }
 
 func (s *analyticsService) GetFeatureUsageGraph(ctx context.Context) ([]FeatureUsageItem, int64, error) {
+	if s.featureColl == nil {
+		return nil, 0, nil
+	}
 	cursor, err := s.featureColl.Find(ctx, bson.M{}, options.Find().SetSort(bson.D{{Key: "count", Value: -1}}))
 	if err != nil {
 		return nil, 0, err
@@ -141,15 +151,15 @@ func (s *analyticsService) GetUserActivityGraph(ctx context.Context, days int) (
 		dayEnd := dayStart.Add(24 * time.Hour)
 		dateStr := dayStart.Format("02 Jan")
 
-		// Count users registered on this day
-		newUsers, _ := s.userColl.CountDocuments(ctx, bson.M{
-			"created_at": bson.M{"$gte": dayStart, "$lt": dayEnd},
-		})
-
-		// Count users active on this day
-		activeUsers, _ := s.userColl.CountDocuments(ctx, bson.M{
-			"last_active_at": bson.M{"$gte": dayStart, "$lt": dayEnd},
-		})
+		var newUsers, activeUsers int64
+		if s.userColl != nil {
+			newUsers, _ = s.userColl.CountDocuments(ctx, bson.M{
+				"created_at": bson.M{"$gte": dayStart, "$lt": dayEnd},
+			})
+			activeUsers, _ = s.userColl.CountDocuments(ctx, bson.M{
+				"last_active_at": bson.M{"$gte": dayStart, "$lt": dayEnd},
+			})
+		}
 
 		// Provide realistic minimum sample points if new setup
 		if newUsers == 0 && activeUsers == 0 {

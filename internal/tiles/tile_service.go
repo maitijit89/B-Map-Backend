@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"sync"
 	"time"
@@ -24,6 +25,13 @@ var tileBufferPool = sync.Pool{
 	},
 }
 
+var gzipWriterPool = sync.Pool{
+	New: func() interface{} {
+		w, _ := gzip.NewWriterLevel(io.Discard, gzip.BestSpeed)
+		return w
+	},
+}
+
 type TileService interface {
 	GetVectorTile(ctx context.Context, z, x, y int) ([]byte, error)
 }
@@ -35,8 +43,12 @@ type tileService struct {
 }
 
 func NewTileService(db *mongo.Database, rdb *redis.Client) TileService {
+	var coll *mongo.Collection
+	if db != nil {
+		coll = db.Collection("places")
+	}
 	return &tileService{
-		coll:    db.Collection("places"),
+		coll:    coll,
 		rdb:     rdb,
 		l1Cache: cache.NewLRUCache(4000, 30*time.Minute),
 	}
@@ -154,11 +166,18 @@ func (s *tileService) GetVectorTile(ctx context.Context, z, x, y int) ([]byte, e
 	buf.Reset()
 	defer tileBufferPool.Put(buf)
 
-	gzWriter := gzip.NewWriter(buf)
+	gzWriter := gzipWriterPool.Get().(*gzip.Writer)
+	gzWriter.Reset(buf)
 	if _, err := gzWriter.Write(tileJSON); err != nil {
+		gzipWriterPool.Put(gzWriter)
 		return nil, err
 	}
-	_ = gzWriter.Close()
+	if err := gzWriter.Close(); err != nil {
+		gzipWriterPool.Put(gzWriter)
+		return nil, err
+	}
+	gzipWriterPool.Put(gzWriter)
+
 	tileData := make([]byte, buf.Len())
 	copy(tileData, buf.Bytes())
 

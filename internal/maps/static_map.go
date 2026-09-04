@@ -4,9 +4,16 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"sync"
 
 	"github.com/maitijit89/b-map-backend/pkg/utils"
 )
+
+var svgBufferPool = sync.Pool{
+	New: func() interface{} {
+		return new(bytes.Buffer)
+	},
+}
 
 type StaticMarker struct {
 	Location utils.Coordinate
@@ -56,7 +63,9 @@ func GenerateStaticMapSVG(req *StaticMapRequest) []byte {
 		waterColor = "#b4d3d4"
 	}
 
-	var buf bytes.Buffer
+	buf := svgBufferPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer svgBufferPool.Put(buf)
 	buf.Grow(4096 + len(req.Path)*32 + len(req.Markers)*256)
 
 	// SVG Header
@@ -78,7 +87,7 @@ func GenerateStaticMapSVG(req *StaticMapRequest) []byte {
 
 	// Project path coordinates to pixel coordinates
 	if len(req.Path) >= 2 {
-		buf.WriteString(fmt.Sprintf(`<path d="M`))
+		buf.WriteString(`<path d="M`)
 		for i, pt := range req.Path {
 			px, py := projectCoordToPixel(pt, req.Center, req.Zoom, req.Width, req.Height)
 			if i == 0 {
@@ -112,7 +121,9 @@ func GenerateStaticMapSVG(req *StaticMapRequest) []byte {
 		req.Width-45, req.Height-12))
 
 	buf.WriteString(`</svg>`)
-	return buf.Bytes()
+	res := make([]byte, buf.Len())
+	copy(res, buf.Bytes())
+	return res
 }
 
 func projectCoordToPixel(coord, center utils.Coordinate, zoom, width, height int) (float64, float64) {

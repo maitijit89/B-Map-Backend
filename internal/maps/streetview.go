@@ -47,8 +47,8 @@ func GetStreetViewMetadata(lat, lng, radius float64) *PanoramaMetadata {
 		Heading:   45.0,
 		Pitch:     0.0,
 		FOV:       90.0,
-		ThumbnailURL: fmt.Sprintf("https://images.unsplash.com/photo-1506146332389-18140dc7b2fb?auto=format&fit=crop&w=400&h=200&q=80"),
-		PanoramaURL:  fmt.Sprintf("https://images.unsplash.com/photo-1506146332389-18140dc7b2fb?auto=format&fit=crop&w=2048&h=1024&q=90"),
+		ThumbnailURL: "https://images.unsplash.com/photo-1506146332389-18140dc7b2fb?auto=format&fit=crop&w=400&h=200&q=80",
+		PanoramaURL:  "https://images.unsplash.com/photo-1506146332389-18140dc7b2fb?auto=format&fit=crop&w=2048&h=1024&q=90",
 		AdjacentPanos: []string{
 			fmt.Sprintf("pano_%0.4f_%0.4f", lat+0.0002, lng),
 			fmt.Sprintf("pano_%0.4f_%0.4f", lat-0.0002, lng),

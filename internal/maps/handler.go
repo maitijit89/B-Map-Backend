@@ -6,9 +6,12 @@ import (
 	"strconv"
 	"strings"
 
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/maitijit89/b-map-backend/config"
 	"github.com/maitijit89/b-map-backend/internal/domain"
+	"github.com/maitijit89/b-map-backend/pkg/cache"
 	"github.com/maitijit89/b-map-backend/pkg/utils"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -16,8 +19,10 @@ import (
 )
 
 type Handler struct {
-	coll *mongo.Collection
-	cfg  *config.Config
+	coll           *mongo.Collection
+	cfg            *config.Config
+	styleCache     *cache.LRUCache
+	staticMapCache *cache.LRUCache
 }
 
 func NewHandler(db *mongo.Database, cfg *config.Config) *Handler {
@@ -26,8 +31,10 @@ func NewHandler(db *mongo.Database, cfg *config.Config) *Handler {
 		coll = db.Collection("places")
 	}
 	return &Handler{
-		coll: coll,
-		cfg:  cfg,
+		coll:           coll,
+		cfg:            cfg,
+		styleCache:     cache.NewLRUCache(50, 24*time.Hour),
+		staticMapCache: cache.NewLRUCache(1000, 30*time.Minute),
 	}
 }
 
@@ -39,7 +46,17 @@ func (h *Handler) GetStyleJSON(c *gin.Context) {
 		baseURL = fmt.Sprintf("http://localhost:%s", h.cfg.App.Port)
 	}
 
+	cacheKey := fmt.Sprintf("style:%s:%s", baseURL, theme)
+	if cached, found := h.styleCache.Get(cacheKey); found {
+		if style, ok := cached.(*MapboxStyleSpec); ok {
+			c.Header("Cache-Control", "public, max-age=86400, stale-while-revalidate=3600")
+			c.JSON(http.StatusOK, style)
+			return
+		}
+	}
+
 	style := GenerateStyleJSON(baseURL, theme)
+	h.styleCache.Set(cacheKey, style)
 	c.Header("Cache-Control", "public, max-age=86400, stale-while-revalidate=3600")
 	c.JSON(http.StatusOK, style)
 }
@@ -55,6 +72,16 @@ func (h *Handler) GetStaticMap(c *gin.Context) {
 	if centerStr == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Query parameter 'center' (lat,lng) is required"})
 		return
+	}
+
+	cacheKey := fmt.Sprintf("static:%s:%s:%s:%s:%s:%s:%s", centerStr, zoomStr, sizeStr, theme, pathColor, c.Query("markers"), c.Query("path"))
+	if cached, found := h.staticMapCache.Get(cacheKey); found {
+		if svgBytes, ok := cached.([]byte); ok && len(svgBytes) > 0 {
+			c.Header("Content-Type", "image/svg+xml")
+			c.Header("Cache-Control", "public, max-age=86400")
+			c.Data(http.StatusOK, "image/svg+xml", svgBytes)
+			return
+		}
 	}
 
 	centerParts := strings.Split(centerStr, ",")
@@ -113,6 +140,7 @@ func (h *Handler) GetStaticMap(c *gin.Context) {
 	}
 
 	svgBytes := GenerateStaticMapSVG(req)
+	h.staticMapCache.Set(cacheKey, svgBytes)
 
 	c.Header("Content-Type", "image/svg+xml")
 	c.Header("Cache-Control", "public, max-age=86400")

@@ -22,7 +22,7 @@ func RegisterRoutes(rc *RouterConfig) {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
 			"status":  "healthy",
 			"app":     rc.Config.App.Name,
-			"version": "1.0.0",
+			"version": rc.Config.App.Version,
 		})
 	})
 

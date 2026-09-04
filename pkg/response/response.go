@@ -2,9 +2,33 @@ package response
 
 import (
 	"net/http"
+	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
+
+var (
+	versionMu   sync.RWMutex
+	currentAppVersion = "0.1.2"
+)
+
+// SetAppVersion updates the global app version used in API envelopes.
+func SetAppVersion(v string) {
+	if v == "" {
+		return
+	}
+	versionMu.Lock()
+	defer versionMu.Unlock()
+	currentAppVersion = v
+}
+
+// GetAppVersion returns the current global app version.
+func GetAppVersion() string {
+	versionMu.RLock()
+	defer versionMu.RUnlock()
+	return currentAppVersion
+}
 
 // StandardResponse is the unified JSON response envelope.
 type StandardResponse struct {
@@ -36,7 +60,8 @@ func Success(c *gin.Context, statusCode int, data interface{}) {
 		Data:    data,
 		Meta: &MetaInfo{
 			RequestID: reqIDStr,
-			Version:   "1.0.0",
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			Version:   GetAppVersion(),
 		},
 	})
 }
@@ -60,7 +85,8 @@ func Error(c *gin.Context, statusCode int, message string, details ...string) {
 		},
 		Meta: &MetaInfo{
 			RequestID: reqIDStr,
-			Version:   "1.0.0",
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			Version:   GetAppVersion(),
 		},
 	})
 }

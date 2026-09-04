@@ -52,9 +52,14 @@ type fleetService struct {
 }
 
 func NewFleetService(db *mongo.Database, indexer spatial.SpatialIndexer, routesEngine routes.Engine, hub *realtime.Hub) Service {
+	var tripsColl, vehiclesColl *mongo.Collection
+	if db != nil {
+		tripsColl = db.Collection("trips")
+		vehiclesColl = db.Collection("vehicles")
+	}
 	return &fleetService{
-		tripsColl:      db.Collection("trips"),
-		vehiclesColl:   db.Collection("vehicles"),
+		tripsColl:      tripsColl,
+		vehiclesColl:   vehiclesColl,
 		spatialIndexer: indexer,
 		routesEngine:   routesEngine,
 		hub:            hub,

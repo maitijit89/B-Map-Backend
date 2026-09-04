@@ -40,9 +40,10 @@ func GzipMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Skip WebSocket upgrades and Server-Sent Events
+		// Skip WebSocket upgrades, Server-Sent Events, and pre-compressed vector tiles
 		if strings.Contains(c.GetHeader("Upgrade"), "websocket") ||
-			strings.Contains(c.GetHeader("Accept"), "text/event-stream") {
+			strings.Contains(c.GetHeader("Accept"), "text/event-stream") ||
+			strings.HasPrefix(c.Request.URL.Path, "/api/v1/tiles") {
 			c.Next()
 			return
 		}

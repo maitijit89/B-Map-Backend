@@ -15,18 +15,43 @@ type tokenBucket struct {
 	lastRefillTime time.Time
 }
 
+const numShards = 32
+
+type shard struct {
+	mu      sync.Mutex
+	buckets map[string]*tokenBucket
+}
+
 type RateLimiter struct {
-	mu         sync.Mutex
-	buckets    map[string]*tokenBucket
+	shards     [numShards]shard
 	capacity   float64
 	refillRate float64
+	stopChan   chan struct{}
+	stopped    sync.Once
+}
+
+func fnv32(key string) uint32 {
+	hash := uint32(2166136261)
+	const prime32 = uint32(16777619)
+	for i := 0; i < len(key); i++ {
+		hash ^= uint32(key[i])
+		hash *= prime32
+	}
+	return hash
+}
+
+func (rl *RateLimiter) getShard(key string) *shard {
+	return &rl.shards[fnv32(key)%numShards]
 }
 
 func NewRateLimiter(ratePerSecond float64, burstCapacity int) *RateLimiter {
 	rl := &RateLimiter{
-		buckets:    make(map[string]*tokenBucket),
 		capacity:   float64(burstCapacity),
 		refillRate: ratePerSecond,
+		stopChan:   make(chan struct{}),
+	}
+	for i := 0; i < numShards; i++ {
+		rl.shards[i].buckets = make(map[string]*tokenBucket)
 	}
 
 	// Periodically cleanup stale buckets
@@ -34,12 +59,17 @@ func NewRateLimiter(ratePerSecond float64, burstCapacity int) *RateLimiter {
 	return rl
 }
 
+func (rl *RateLimiter) Allow(key string) bool {
+	return rl.allow(key)
+}
+
 func (rl *RateLimiter) allow(key string) bool {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
+	s := rl.getShard(key)
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	now := time.Now()
-	b, exists := rl.buckets[key]
+	b, exists := s.buckets[key]
 	if !exists {
 		b = &tokenBucket{
 			tokens:         rl.capacity - 1,
@@ -47,7 +77,7 @@ func (rl *RateLimiter) allow(key string) bool {
 			refillRate:     rl.refillRate,
 			lastRefillTime: now,
 		}
-		rl.buckets[key] = b
+		s.buckets[key] = b
 		return true
 	}
 
@@ -69,16 +99,33 @@ func (rl *RateLimiter) allow(key string) bool {
 
 func (rl *RateLimiter) cleanupRoutine() {
 	ticker := time.NewTicker(10 * time.Minute)
-	for range ticker.C {
-		rl.mu.Lock()
-		cutoff := time.Now().Add(-15 * time.Minute)
-		for k, b := range rl.buckets {
-			if b.lastRefillTime.Before(cutoff) {
-				delete(rl.buckets, k)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-rl.stopChan:
+			return
+		case <-ticker.C:
+			cutoff := time.Now().Add(-15 * time.Minute)
+			for i := 0; i < numShards; i++ {
+				s := &rl.shards[i]
+				s.mu.Lock()
+				for k, b := range s.buckets {
+					if b.lastRefillTime.Before(cutoff) {
+						delete(s.buckets, k)
+					}
+				}
+				s.mu.Unlock()
 			}
 		}
-		rl.mu.Unlock()
 	}
+}
+
+// Stop terminates the background cleanup goroutine gracefully.
+func (rl *RateLimiter) Stop() {
+	rl.stopped.Do(func() {
+		close(rl.stopChan)
+	})
 }
 
 // RateLimitMiddleware returns a Gin middleware enforcing token bucket rate limits per client IP.

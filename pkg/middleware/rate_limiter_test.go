@@ -43,3 +43,24 @@ func TestRateLimiter_Throttle(t *testing.T) {
 		t.Errorf("expected 429 Too Many Requests, got %d", w3.Code)
 	}
 }
+
+func TestRateLimiter_ConcurrentShards(t *testing.T) {
+	rl := middleware.NewRateLimiter(10.0, 50)
+	defer rl.Stop()
+
+	done := make(chan bool)
+	for i := 0; i < 20; i++ {
+		go func(workerID int) {
+			for j := 0; j < 50; j++ {
+				key := string(rune('a' + (workerID % 26)))
+				rl.Allow(key)
+			}
+			done <- true
+		}(i)
+	}
+
+	for i := 0; i < 20; i++ {
+		<-done
+	}
+}
+

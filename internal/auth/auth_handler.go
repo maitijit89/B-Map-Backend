@@ -35,11 +35,15 @@ type AuthHandler struct {
 
 // NewAuthHandler initializes the handlers with OTP service, JWT service, Email service, and MongoDB
 func NewAuthHandler(otpService *OTPService, jwtService *JWTService, emailService email.Service, db *mongo.Database) *AuthHandler {
+	var coll *mongo.Collection
+	if db != nil {
+		coll = db.Collection("users")
+	}
 	return &AuthHandler{
 		otpService:   otpService,
 		jwtService:   jwtService,
 		emailService: emailService,
-		coll:         db.Collection("users"),
+		coll:         coll,
 	}
 }
 

@@ -49,8 +49,12 @@ type geocodingService struct {
 }
 
 func NewGeocodingService(db *mongo.Database) Service {
+	var coll *mongo.Collection
+	if db != nil {
+		coll = db.Collection("places")
+	}
 	return &geocodingService{
-		coll: db.Collection("places"),
+		coll: coll,
 	}
 }
 
@@ -160,7 +164,7 @@ func (s *geocodingService) ValidateAddress(ctx context.Context, rawAddress strin
 		return nil, fmt.Errorf("address cannot be empty")
 	}
 
-	hasNumber := strings.IndexAny(trimmed, "0123456789") != -1
+	hasNumber := strings.ContainsAny(trimmed, "0123456789")
 	verdict := "CONFIRMED"
 	score := 95
 	var missing []string

@@ -3,6 +3,7 @@ package places
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"regexp"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/maitijit89/b-map-backend/internal/domain"
+	"github.com/maitijit89/b-map-backend/pkg/cache"
 	"github.com/maitijit89/b-map-backend/pkg/database"
 	"github.com/maitijit89/b-map-backend/pkg/utils"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -44,16 +46,26 @@ type Service interface {
 }
 
 type placesService struct {
-	coll *mongo.Collection
+	coll    *mongo.Collection
+	l1Cache *cache.LRUCache
 }
 
 func NewPlacesService(db *mongo.Database) Service {
+	var coll *mongo.Collection
+	if db != nil {
+		coll = db.Collection("places")
+	}
 	return &placesService{
-		coll: db.Collection("places"),
+		coll:    coll,
+		l1Cache: cache.NewLRUCache(2000, 5*time.Minute),
 	}
 }
 
 func (s *placesService) Search(ctx context.Context, q *SearchQuery) ([]domain.Place, int64, error) {
+	if s.coll == nil {
+		return nil, 0, errors.New("database not connected")
+	}
+
 	limit := q.Limit
 	if limit <= 0 {
 		limit = 20
@@ -186,6 +198,27 @@ func (s *placesService) Autocomplete(ctx context.Context, prefix string, lat, ln
 	}
 
 	trimmed := strings.TrimSpace(prefix)
+	latKey := "nil"
+	lngKey := "nil"
+	if lat != nil {
+		latKey = fmt.Sprintf("%.4f", *lat)
+	}
+	if lng != nil {
+		lngKey = fmt.Sprintf("%.4f", *lng)
+	}
+	cacheKey := fmt.Sprintf("places:auto:%s:%s:%s:%d", strings.ToLower(trimmed), latKey, lngKey, limit)
+	if s.l1Cache != nil {
+		if val, found := s.l1Cache.Get(cacheKey); found {
+			if cachedItems, ok := val.([]AutocompleteItem); ok {
+				return cachedItems, nil
+			}
+		}
+	}
+
+	if s.coll == nil {
+		return nil, errors.New("database not connected")
+	}
+
 	escaped := regexp.QuoteMeta(trimmed)
 
 	filter := bson.M{
@@ -241,10 +274,18 @@ func (s *placesService) Autocomplete(ctx context.Context, prefix string, lat, ln
 		}
 	}
 
+	if s.l1Cache != nil {
+		s.l1Cache.Set(cacheKey, items)
+	}
+
 	return items, nil
 }
 
 func (s *placesService) ReverseGeocode(ctx context.Context, lat, lng float64) (*domain.Place, error) {
+	if s.coll == nil {
+		return nil, errors.New("database not connected")
+	}
+
 	// Try $geoNear aggregation first to fetch nearest place and compute distance
 	pipeline := mongo.Pipeline{
 		{{Key: "$geoNear", Value: bson.D{
@@ -292,6 +333,10 @@ func (s *placesService) ReverseGeocode(ctx context.Context, lat, lng float64) (*
 }
 
 func (s *placesService) CreatePlace(ctx context.Context, place *domain.Place) error {
+	if s.coll == nil {
+		return errors.New("database not connected")
+	}
+
 	if place.Location.Latitude == 0 && place.Location.Longitude == 0 {
 		return domain.ErrInvalidLocationPoint
 	}
@@ -313,6 +358,9 @@ func (s *placesService) CreatePlace(ctx context.Context, place *domain.Place) er
 	}
 
 	_, err := s.coll.InsertOne(ctx, place)
+	if err == nil && s.l1Cache != nil {
+		s.l1Cache.Clear()
+	}
 	return err
 }
 

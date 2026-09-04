@@ -19,10 +19,11 @@ type Config struct {
 }
 
 type AppConfig struct {
-	Env  string
-	Port string
-	Name string
-	URL  string
+	Env     string
+	Port    string
+	Name    string
+	URL     string
+	Version string
 }
 
 type JWTConfig struct {
@@ -85,10 +86,11 @@ func LoadConfig() *Config {
 
 	return &Config{
 		App: AppConfig{
-			Env:  getEnv("APP_ENV", "development"),
-			Port: port,
-			Name: getEnv("APP_NAME", "B Map"),
-			URL:  appURL,
+			Env:     getEnv("APP_ENV", "development"),
+			Port:    port,
+			Name:    getEnv("APP_NAME", "B Map"),
+			URL:     appURL,
+			Version: getEnv("APP_VERSION", "0.1.2"),
 		},
 		JWT: JWTConfig{
 			Secret:      getEnv("JWT_SECRET", "super_secret_jwt_key_b_map_2026"),

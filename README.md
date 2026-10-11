@@ -1,349 +1,540 @@
-# B-Map Backend 🗺️
+# 🗺️ B-Map Navigation Backend
 
-[![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat&logo=go)](https://golang.org)
-[![MongoDB](https://img.shields.io/badge/MongoDB-7.0%202dsphere-47A248?style=flat&logo=mongodb)](https://mongodb.com)
-[![Redis](https://img.shields.io/badge/Redis-7.0-DC382D?style=flat&logo=redis)](https://redis.io)
-[![Gin Framework](https://img.shields.io/badge/Framework-Gin-008ECF?style=flat)](https://gin-gonic.com)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-
-A high-performance, enterprise-grade navigation, mapping, and geospatial platform backend built in **Go (Golang)**. Designed as a comprehensive **Google Maps Platform equivalent**, featuring real-time navigation, Contraction Hierarchies, V2X municipal traffic light integration (SPaT), RTK lane-level positioning, dynamic MongoDB 2dsphere vector tiles (MVT), and offline bounding box map packaging.
+A high-performance, real-time navigation and geospatial backend built with **Node.js**, **TypeScript**, and **Express.js**, featuring **Socket.IO** for live tracking, **MongoDB** with `2dsphere` indexes, **OSRM (Open Source Routing Machine)** for turn-by-turn routing, and **Redis** for sub-millisecond caching and geospatial proximity queries.
 
 ---
 
-## 📚 Documentation
-- 📐 **[System Architecture & Design Document (architecture.md)](architecture.md)**
-- 📜 **[Engineering & Security Guidelines (rules.md)](rules.md)**
-- 📄 **[OpenAPI 3.0 Specification (api/openapi.yaml)](api/openapi.yaml)**
-
----
-
-## 🏛️ System Architecture Overview
+## 🏛️ Core Architecture
 
 ```
-e:\B-Map-Backend
-├── cmd/
-│   ├── api/               # Fiber HTTP API entrypoint
-│   └── server/            # Production Gin HTTP / WebSocket server entrypoint
-│       └── main.go
-├── config/                # Environment configuration loader (.env)
-│   └── config.go
-├── internal/              # Core domain engines & business logic
-│   ├── auth/              # Cryptographic OTP, JWT dual-token lifecycle & profile
-│   ├── boundaries/        # Survey of India (SOI) official red territorial borders
-│   ├── domain/            # Core models (Place, Vehicle, Trip, RoadNode, Boundary)
-│   ├── environment/       # Air Quality Index (AQI), Solar potential, Pollen API
-│   ├── fleet/             # Real-time driver matching, trip dispatch & telemetry
-│   ├── geocoding/         # Forward/reverse geocoding & address validation (0-100 score)
-│   ├── geoextras/         # Geolocation (IP/WiFi), Elevation (DEM), TimeZone lookup
-│   ├── hdmap/             # Autonomous driving perception ingestion & change consensus
-│   ├── lanelevel/         # RTK ground enhancement (cm-accuracy) & lane guidance
-│   ├── maps/              # Dynamic Mapbox Style Spec v8, Static SVG maps & clustering
-│   ├── navic/             # NavIC (IRNSS) & GAGAN SBAS Regional Satellite Positioning
-│   ├── offline/           # Bounding box map bundler (.bmap / .tar.gz) with SHA-256
-│   ├── pincode/           # 6-Digit Indian PIN Code lookup & landmark-centric parsing
-│   ├── places/            # Full-text & proximity POI search, autocomplete & Indian seeding
-│   ├── realtime/          # Gorilla WebSocket Hub & Redis Pub/Sub broadcast coordinator
-│   ├── repository/        # MongoDB & Redis data repositories
-│   │   ├── mongodb/       # MongoDB collections (Users, Places with 2dsphere index)
-│   │   └── redis/         # Redis OTP store
-│   ├── roadhazards/       # Indian speed breaker & monsoon flood warning intelligence
-│   ├── routes/            # Contraction Hierarchies (CH), A*, Multi-Modal Transit, Roads API
-│   ├── spatial/           # O(log N) Redis GEO spatial indexer
-│   ├── tiles/             # Dynamic 2dsphere vector tile server with L1/L2 caching
-│   ├── toll/              # Indian FASTag electronic toll collection & expressways
-│   ├── traffic/           # High-throughput GPS telemetry ingest & dynamic ETA engine
-│   ├── v2x/               # Municipal SPaT signal timing & GLOSA speed advisory
-│   └── vernacular/        # Multilingual voice turn guidance (10 Indian official languages)
-├── pkg/                   # Enterprise infrastructure packages
-│   ├── cache/             # High-performance in-memory L1 LRU cache (TTL & eviction)
-│   ├── database/          # MongoDB (2dsphere geospatial) & Redis connection pools
-│   ├── metrics/           # Prometheus metrics middleware & health monitor (/metrics)
-│   ├── middleware/        # Token bucket rate limiter, OWASP security headers, Request ID
-│   ├── response/          # Unified JSON standard response envelope
-│   └── utils/             # Haversine, bearing, turn angles & Google Polyline 5-decimal
-├── api/
-│   └── openapi.yaml       # OpenAPI 3.0 API Specification
-├── deployments/
-│   ├── docker/            # Multi-stage Docker container build & Compose setup
-│   └── k8s/               # Kubernetes Deployment & Service manifests
-├── scripts/               # Standalone database seeders and migration utilities
-├── Makefile               # Enterprise build, test, and container automation
-├── Dockerfile             # Multi-stage production container build
-├── docker-compose.yml     # Local orchestration with MongoDB 7.0 & Redis 7
-├── go.mod
-└── go.sum
+                       +---------------------------------------+
+                       |           Clients & Frontends         |
+                       |  (Mobile App / Web Map / Dashboards)  |
+                       +-------------------+-------------------+
+                                           |
+                    REST Requests          |  WebSocket Events
+                   (HTTP / HTTPS)          |  (Socket.IO bi-directional)
+                                           |
+                                           v
+                       +---------------------------------------+
+                       |     B-Map Node.js / Express Server    |
+                       +-------------------+-------------------+
+                                           |
+       +-----------------------+-----------+-----------+-----------------------+
+       |                       |                       |                       |
+       v                       v                       v                       v
++---------------+      +---------------+      +---------------+      +---------------+
+|  OSRM Engine  |      |  Redis Cache  |      |   Socket.IO   |      | MongoDB (2ds) |
+|               |      |  & Geo Index  |      |   Real-Time   |      |               |
+| - /route      |      | - Route Cache |      | - HUD stream  |      | - POIs ($near)|
+| - /trip (TSP) |      | - GEOADD      |      | - Reroute push|      | - Trips log   |
+| - /match      |      | - GEOSEARCH   |      | - Driver track|      | - GeoJSON     |
+| - /table      |      | - Sub-ms look |      | - Off-route   |      |   LineStrings |
++---------------+      +---------------+      +---------------+      +---------------+
 ```
+
+### Technology Matrix
+
+| Layer | Technology | Role & Purpose |
+| :--- | :--- | :--- |
+| **Server Framework** | **Express.js 5 / Node.js 24** | Robust HTTP REST API layer with Helmet, CORS, and Zod validation |
+| **Language** | **TypeScript 5+** | Full type safety across GeoJSON, OSRM responses, and Socket payloads |
+| **Real-time Layer** | **Socket.IO 4+** | Bi-directional live driver tracking, HUD progress streaming, and instant reroute pushes |
+| **Geospatial Database** | **MongoDB (Mongoose)** | Stores POIs (Places), historical routes, and tracking breadcrumbs with `2dsphere` indexes |
+| **Routing Engine** | **OSRM** | Turn-by-turn navigation, waypoint optimization (TSP), map matching, and distance matrix |
+| **Cache Layer** | **Redis (ioredis)** | Route query caching (TTL) + `GEOADD`/`GEOSEARCH` for high-throughput driver proximity |
 
 ---
 
-## ⚡ Quick Start
+## 🚀 Quick Start
 
 ### 1. Prerequisites
-- **Go 1.22+**
-- **Docker & Docker Compose**
+- **Node.js** >= 18 (Node 24 tested)
+- **MongoDB** (running locally or via Docker)
+- **Redis** (running locally or via Docker)
 
-### 2. Clone & Setup Environment
+### 2. Installation
+
 ```bash
-git clone https://github.com/maitijit89/B-Map-Backend.git
+# Clone and enter workspace
+git clone <repo_url>
 cd B-Map-Backend
-cp .env.example .env
+
+# Install dependencies
+npm install
 ```
 
-### 3. Launch Database & Redis
-```bash
-docker-compose up -d
+### 3. Environment Setup
+
+Create `.env` based on `.env.example`:
+
+```env
+PORT=4000
+NODE_ENV=development
+API_PREFIX=/api/v1
+CORS_ORIGIN=*
+
+# MongoDB Geospatial Database
+MONGODB_URI=mongodb://localhost:27017/b_map_navigation
+
+# Redis Cache & Real-Time Geo Layer
+REDIS_URL=redis://localhost:6379
+REDIS_KEY_PREFIX=bmap:
+REDIS_ROUTE_CACHE_TTL_SECONDS=3600
+
+# OSRM Routing Engine
+OSRM_BASE_URL=https://router.project-osrm.org
+OSRM_DEFAULT_PROFILE=driving
+OSRM_TIMEOUT_MS=8000
+
+# Navigation Thresholds
+OFF_ROUTE_THRESHOLD_METERS=40
+REROUTE_COOLDOWN_SECONDS=5
 ```
 
-### 4. Run the Production Server
-```bash
-go run cmd/server/main.go
-# or using Makefile:
-make run
-```
-The server will start on `http://localhost:8080` with all spatial indexes auto-created and sample POI data seeded.
+### 4. Run Development Server
 
-### 5. Run Comprehensive Test Suite
 ```bash
-go test -v ./...
-# or using Makefile:
-make test
+npm run dev
+```
+
+Server starts at: `http://localhost:4000`
+
+### 5. Run with Docker Compose
+
+Run MongoDB, Redis, and B-Map backend with a single command:
+
+```bash
+docker-compose up --build
 ```
 
 ---
 
-## 📡 Complete API Catalog & cURL Examples
+## 📡 REST API Reference
 
-### 1. 🔐 Authentication Module (OTP-Based)
+Base URL: `http://localhost:4000/api/v1`
+
+### 1. Routing Engine (`/routes`)
+- **`GET /routes/directions`**: Turn-by-turn route calculation (cached in Redis).
+  - Query: `origin=lon,lat&destination=lon,lat&waypoints=lon,lat|...&profile=driving|bike|foot&alternatives=true`
+- **`POST /routes/optimize`**: Traveling Salesperson Problem (TSP) multi-waypoint optimization.
+  - Body: `{ "coordinates": [[13.38, 52.51], [13.39, 52.52], [13.40, 52.50]], "profile": "driving" }`
+- **`POST /routes/match`**: Map matching GPS traces to the road network.
+  - Body: `{ "coordinates": [[lon, lat], ...], "timestamps": [...] }`
+- **`GET /routes/matrix`**: Distance & duration matrix across multiple points.
+  - Query: `coordinates=lon1,lat1;lon2,lat2;lon3,lat3`
+
+### 2. Places & POI Geospatial Search (`/places`)
+- **`POST /places`**: Create a new Point of Interest.
+  - Body: `{ "name": "Berlin Central Station", "category": "station", "coordinates": [13.369, 52.525], "tags": ["transit"] }`
+- **`GET /places/nearby`**: Geospatial `$near` search with distance sorting.
+  - Query: `longitude=13.38&latitude=52.51&maxDistance=3000&category=fuel`
+- **`POST /places/within-polygon`**: Geospatial search inside bounding polygon via `$geoWithin`.
+- **`GET /places/search`**: Keyword search with text regex indexing.
+  - Query: `q=station&category=transit`
+- **`GET /places/:id`**: Place details.
+
+### 3. Turn-by-Turn Navigation Sessions (`/navigation`)
+- **`POST /navigation/start`**: Start a navigation session.
+  - Body: `{ "userId": "usr_1", "origin": [13.388, 52.517], "destination": [13.397, 52.529], "profile": "driving" }`
+- **`POST /navigation/progress`**: Submit REST location update.
+- **`GET /navigation/:sessionId`**: Get session status and metrics.
+- **`POST /navigation/:sessionId/end`**: Conclude or cancel session.
+
+### 4. Live Vehicle & Driver Tracking (`/tracking`)
+- **`POST /tracking/update`**: Ingest live location into Redis geospatial index.
+- **`GET /tracking/nearby`**: Query active drivers within radius using Redis `GEOSEARCH`.
+  - Query: `longitude=13.38&latitude=52.51&radius=5000&role=driver`
+- **`GET /tracking/:userId`**: Query current coordinates for a specific user.
+
+### 5. High-Precision & Weak-Signal Positioning Engine (`/positioning`)
+- **`POST /positioning/fuse`**: Ingest multi-sensor packet (GNSS + IMU + Odometry + Wi-Fi/BLE) and compute fused position with sub-meter precision.
+- **`POST /positioning/anchors`**: Register a ground-truth BLE beacon or Wi-Fi anchor in an underground parking garage or tunnel.
+- **`GET /positioning/anchors/nearby`**: Query registered anchors in a facility.
+- **`POST /positioning/rtk/base-station`**: Register a CORS RTK base station.
+
+### 6. Lane-Level Routing & "Veteran Driver" Layering (`/lane-routing`)
+- **`POST /lane-routing/guidance`**: Real-time lane guidance HUD: evaluates current lane, time-dependent bus/HOV restrictions, and generates early lane change warnings.
+- **`POST /lane-routing/plan`**: Plan routes with Veteran Driver personas (`veteran_fast`, `veteran_smooth`, `novice_friendly`, `commuter_smart`).
+- **`POST /lane-routing/veteran/experience`**: Ingest crowdsourced driver experience reports, hazards, and local shortcut links.
+- **`POST /lane-routing/segments`**: Register HD lane segments with directional constraints and transitions.
+
+### 7. Unified Underlying Engine & Dynamic Recommendations (`/unified`)
+- **`POST /unified/session/start`**: Initialize a full unified session binding positioning, routing, lane guidance, and recommendations.
+- **`POST /unified/tick`**: Process a single unified telemetry tick (GNSS + IMU + Odo + Battery) through the unified underlying pipeline.
+- **`POST /unified/recommendations/accept`**: Accept a dynamic recommendation (switch to faster route, add parking lot waypoint).
+- **`POST /unified/recommendations/dismiss`**: Dismiss a recommendation.
+
+### 8. AI-Powered Data Production & Big-Data POI Mining (`/data-mining`)
+- **`POST /data-mining/trajectories/mine-staypoints`**: ST-DBSCAN stay-point extraction, hotspot discovery, and curbside PUDO entrance mining.
+- **`POST /data-mining/poi/resolve`**: Entity resolution, Jaccard/geospatial deduplication, and Master Golden Record fusion.
+- **`POST /data-mining/road-production/detect-new-roads`**: Automated new road centerline extraction from trajectory clusters.
+- **`POST /data-mining/road-production/detect-closure`**: Zero-flow road closure anomaly detection.
+- **`GET /data-mining/road-production/changes`**: List AI-detected road network changes.
+
+### 9. Lane-Level Guidance (SR Navigation) (`/sr-navigation`)
+- **`POST /sr-navigation/hud-state`**: Compute sub-meter lateral offset, boundary clearances, Lane Departure Warning (LDW), forward collision warning (FCW), cut-in alerts, and 3D Junction Cards with overhead gantries.
+- **`POST /sr-navigation/roads`**: Register high-definition 3D lane boundaries and asphalt markings.
+- **`GET /sr-navigation/roads/:segmentId`**: Retrieve HD road model.
+
+### 10. Automotive & Ecosystem Integration (`/automotive`)
+- **`POST /automotive/carplay/template`**: Generate Apple CarPlay `CPNavigationTemplate` with maneuver variants, color scheme, and voice prompts.
+- **`POST /automotive/android-auto/template`**: Generate Android Auto `NavigationTemplate` for Android for Cars App Library.
+- **`POST /automotive/aaos/properties`**: Ingest native Android Automotive OS (AAOS) VHAL `CarPropertyManager` properties (speed, gear, turn signal, battery).
+- **`POST /automotive/telemetry/can`**: Stream high-frequency CAN Bus / OBD-II frames and compute real-time Eco-Driving score (0-100) and efficiency coaching.
+- **`POST /automotive/ev/plan`**: Smart EV route planning with battery consumption model, DC fast charging station insertion, and automated battery thermal pre-conditioning.
+- **`POST /automotive/hud/frame`**: Ultra-compact 8-byte optical waveguide HUD binary hex payload generation.
+
+### 11. Rider Mode (Motorcycle & Two-Wheeler) (`/rider-mode`)
+- **`POST /rider-mode/route/plan`**: Specialized two-wheeler routing respecting expressway bans, toll avoidance, dedicated motorcycle lanes, and narrow passable alleys.
+- **`POST /rider-mode/dynamics`**: Ingest IMU roll/pitch/yaw dynamics; compute real-time lean angle, safe cornering speed advisory, and riding smoothness.
+- **`POST /rider-mode/weather-safety`**: Evaluate two-wheeler crosswind warnings on bridges (>35 km/h), wet slick surface advisories, and black ice hazards.
+- **`POST /rider-mode/helmet/cue`**: Generate ultra-concise Bluetooth audio cues with 75% audio ducking for intercom chat.
+- **`GET /rider-mode/glove-ui`**: Oversized 4-button glove-friendly touchscreen layout or handlebar remote switch configuration.
+- **`POST /rider-mode/crash/detect`**: Autonomous motorcycle fall / crash detection (e-Call) with impact G-force (>3.8g), high tilt (>65°), zero velocity, and rider SOS dispatch.
+- **`POST /rider-mode/crash/cancel/:eventId`**: Manually cancel e-Call when rider confirms "I am OK".
+- **`GET /rider-mode/hazards/nearby`**: Query nearby two-wheeler hazards (tram tracks, metal bridge joints, loose gravel).
+- **`POST /rider-mode/hazards/report`**: Report crowdsourced rider hazards.
+
+### 12. Parking Space-Level Navigation (`/parking`)
+- **`POST /parking/entrance/detect`**: Detect vehicle crossing facility geofence / entry barrier for seamless outdoor-to-indoor navigation transition.
+- **`GET /parking/facilities/:facilityId`**: Get multi-floor underground facility details, ramps, elevators, and gate coordinates.
+- **`GET /parking/facilities/:facilityId/bays`**: Query bays filtered by floor level, EV charger (kW & plug type), vacancy, and walking distance to elevator.
+- **`POST /parking/indoor/plan`**: Plan indoor A* turn-by-turn guidance from entrance gate down ramps directly into designated parking bay.
+- **`POST /parking/find-my-car`**: Reverse pedestrian walking route from shopping mall elevator back to parked vehicle.
+- **`POST /parking/reserve`**: 30-minute digital space reservation with PIN code.
+- **`POST /parking/check-in`**: Confirm arrival and begin parking billing session.
+- **`POST /parking/check-out`**: Conclude session and calculate parking fees.
+
+### 13. Multi-Mode: Car Navigation (`/car-nav`)
+- **`POST /car-nav/plan`**: Multi-strategy car routing (`fastest`, `shortest`, `avoid_tolls`, `avoid_highways`, `eco_friendly`, `avoid_congestion`, `scenic`) with alternative route comparison matrix (duration delta, tolls, fuel/kWh consumption, traffic lights count).
+- **`POST /car-nav/optimize-stops`**: Multi-stop sequence optimizer (TSP with arrival time estimates).
+- **`GET /car-nav/cameras/nearby`**: Query speed enforcement, red-light, and average speed section control cameras.
+
+### 14. Multi-Mode: Public Transit Mastery (`/transit`)
+- **`POST /transit/itinerary`**: Multimodal trip planner (Subway, Commuter Rail, Tram, Bus) with walking legs, optimal train carriage boarding advice, station exit gate recommendations, and fare advice.
+- **`GET /transit/stations/:stationId/departures`**: Real-time station departure board with delays, track/platform numbers, crowding levels, and live vehicle IDs.
+- **`GET /transit/stations/nearby`**: Discover nearby transit stations and interchanges.
+
+### 15. Multi-Mode: Augmented Reality (AR) Walk/Cycle Navigation (`/ar-walk-cycle`)
+- **`POST /ar-walk-cycle/ar/hud-frame`**: Real-time AR 3D world anchors projected onto device camera viewport coordinates (`screenX%`, `screenY%`, depth distance, perspective scale) with zebra crosswalk entrance alerts.
+- **`POST /ar-walk-cycle/walk/plan`**: Accessible pedestrian walking (wheelchair/stroller, no stairs, curb ramps) & weather-sheltered covered arcade routing.
+- **`POST /ar-walk-cycle/cycle/plan`**: Cycle routing with elevation profile (total ascent/descent, slope %), steep incline warnings, calories burned, and en-route bicycle amenities.
+- **`GET /ar-walk-cycle/cycle/amenities`**: Nearby bike repair stands, free air pumps, e-bike smart chargers, and bike share stations.
+
+### 16. Comprehensive AI & Large Language Model (LLM) Features (`/ai-copilot`)
+- **`POST /ai-copilot/chat`**: In-drive conversational AI copilot with multi-turn session persistence, vehicle context awareness (speed, battery/fuel, remaining distance), and agentic tool dispatching (`search_pois_along_route`, `reroute_traffic_avoidance`, `find_fatigue_rest_stop`, `query_smart_parking_bay`, `adjust_nav_control`).
+  - Body: `{ "conversationId": "conv_123", "prompt": "Find a coffee shop along route", "vehicleContext": { "currentSpeedKmh": 65, "batteryLevelPct": 45 } }`
+- **`GET /ai-copilot/sessions/:conversationId`**: Retrieve multi-turn conversation history and dialogue context.
+- **`POST /ai-copilot/vision/analyze`**: Multimodal Vision AI dashcam / street camera frame analyzer. Detects road hazards (potholes, debris, flooding, construction barricades), reads traffic signs (OCR speed limits & warnings), and estimates parking occupancy.
+  - Body: `{ "imageUrl": "https://...", "location": [13.388, 52.517], "heading": 180, "captureTimestamp": "2026-10-09T16:30:00Z" }`
+- **`POST /ai-copilot/traffic/forecast`**: Spatio-temporal AI predictive travel time forecaster and departure slot optimizer. Analyzes cyclical rush-hour harmonics and predicts bottleneck probability.
+  - Body: `{ "origin": [13.389, 52.517], "destination": [13.320, 52.502], "targetDepartureTime": "2026-10-10T08:00:00Z" }`
+- **`POST /ai-copilot/poi/intelligence`**: POI review intelligence and destination arrival briefing generator. Synthesizes sentiment (0-100), highlights pros/cons, best parking advice, and in-car audio arrival briefings.
+  - Body: `{ "poiId": "poi_potsdamer_mall", "name": "Potsdamer Platz Hub", "category": "shopping_mall" }`
+
+### 17. Health Check (`/health`)
+- **`GET /health`**: Returns real-time connectivity status of MongoDB, Redis, and OSRM.
+
+---
+
+## 🧠 Comprehensive AI & Large Language Model (LLM) Suite
+
+### 1. In-Drive Conversational Copilot & Voice Agent
+- **Multi-Turn Context & Intent Classifier**: Classifies driver requests into explicit spatial intents (`FIND_ALONG_ROUTE`, `REROUTE_TRAFFIC_WEATHER`, `FATIGUE_REST_ASSIST`, `QUERY_PARKING_LAST_METER`, `NAV_CONTROL`, `POI_DETAILS_INQUIRY`, `GENERAL_TRAVEL_QNA`) with confidence calibration.
+- **Agentic Tool Execution**:
+  - `search_pois_along_route`: Evaluates minimal detour duration and distance off active route.
+  - `reroute_traffic_avoidance`: Calculates alternative bypasses saving $\ge 5$ minutes.
+  - `find_fatigue_rest_stop`: Recommends rest stops when continuous drive $> 2$ hours.
+  - `query_smart_parking_bay`: Queries multi-floor facility vacancies, EV charging plugs, and reserves bays.
+  - `adjust_nav_control`: Mutes voice guidance, changes 2D/3D perspective, or toggles HUD layers.
+- **In-Drive Safety Constraints**: Returns max 3 concise quick-suggestion chips to minimize driver cognitive load.
+
+### 2. Multimodal Vision AI & Road Hazard Analyzer
+- **Road Surface Defect & Hazard Detection**: Identifies potholes, debris, standing water/flooding, and construction channelizers with bounding boxes and severity grading (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`).
+- **Traffic Sign Recognition & OCR**: Reads temporary speed limits, work zone warnings, and no-entry signs directly from forward-facing dashcam frames.
+- **Curbside & Parking Lot Occupancy**: Estimates parking lot fullness and vacant bay counts from aerial or gate camera frames.
+- **Spatial Incident Logging**: Ingests detections into MongoDB with geospatial `2dsphere` indexes to crowdsource live hazard warnings for following vehicles.
+
+### 3. AI Predictive Traffic & Spatio-Temporal Forecaster
+- **Harmonic Rush-Hour Travel Time Modeling**: Combines free-flow travel times with historical cyclical rush-hour surge curves and peak congestion coefficients.
+- **Spatio-Temporal Departure Windows**: Computes travel duration and jam probability across multiple departure slots (e.g. -15m, target, +20m, +45m) and recommends the optimal departure time.
+- **Bottleneck Anomaly Identification**: Flags critical choke points, anticipated delay minutes, and recommended alternate arterials.
+
+### 4. AI POI Intelligence & Arrival Audio Briefings
+- **Review Sentiment & Aspect Extraction**: Analyzes crowdsourced reviews to derive sentiment score (0–100), key pros and cons, peak crowd hours, and parking difficulty.
+- **In-Car Arrival Audio Briefings**: Generates natural speech scripts preparing drivers for parking barrier locations, elevator access, and nearest EV charging bays upon approaching destination.
+
+---
+
+## 🤖 AI-Powered Data Production & Big-Data POI Mining
+
+### 1. Spatio-Temporal Trajectory Mining (ST-DBSCAN)
+- **Dwell / Stay-Point Extraction**: Filters low-speed ($v < 1.2\text{ m/s}$) stops lasting $\ge 5$ minutes to identify human activities.
+- **Cluster Category Inference**: Infers business types (`fuel`, `restaurant`, `shopping`, `workplace`) from dwell duration distributions and peak hours.
+- **PUDO & Entrance Discovery**: Mines short vehicle stops (45s–180s) along curbs to pinpoint building and parking entrances.
+
+### 2. POI Entity Resolution & Golden Record Fusion
+- **Multi-Attribute Hybrid Similarity**: Fuses Jaccard token overlap, substring containment, and geospatial decay ($S_{\text{geo}} = 1 - d/100$) to match multi-source duplicates.
+- **Master Golden Records**: Merges aliases, binds multi-modal entrances, computes 30-day footfall, and tracks business vitality and closure risk.
+
+### 3. Automated Road Centerline Extraction & Change Detection
+- **Unmapped Road Discovery**: Groups unmapped trajectory trails and fits smoothed GeoJSON `LineString` centerlines with confidence scoring.
+- **Closure Anomaly Detection**: Flags blocked roads based on zero vehicle flow during expected peak traffic periods.
+
+---
+
+## ⚡ Unified Underlying Engine & Dynamic Recommendations
+
+### 1. Unified Navigation Lifecycle Pipeline
+- Ingests high-frequency sensor ticks (10Hz–50Hz) and coordinates the entire stack in sub-10ms:
+  1. **Sensor Fusion**: RTK / EKF / Dead Reckoning high-precision position.
+  2. **Active Route Progress**: Distance to destination, ETA, off-route detection, and dynamic rerouting.
+  3. **Lane-Level Real-Time Guidance**: Matches vehicle's current lane index to recommended maneuver lanes.
+  4. **Context-Aware Dynamic Recommendations**: Evaluates arrival envelope, traffic deltas, energy reserves, and driver fatigue.
+
+### 2. Context-Aware Dynamic Recommendations
+- **Faster Route Advisor**: Periodically probes alternative routes; recommends switch if $\ge 3$ minutes are saved.
+- **Destination Parking Recommender**: Triggers within 2km of arrival; recommends nearest parking garage with walking distance to destination and real-time open bay counts.
+- **Low-Energy Replenishment**: Triggers when battery/fuel $< 20\%$; finds optimal charging hub directly along route with minimal detour duration.
+- **Fatigue Break Monitor**: Proactively suggests rest areas after 2 hours of continuous driving.
+
+---
+
+## 🛣️ Lane-Level Routing & "Veteran Driver" Layering
+
+### 1. HD Lane-Level Guidance & Early Warning
+- **Per-Lane Direction Modeling**: Identifies straight, turn-left, turn-right, and compound lanes.
+- **Dynamic Time Restrictions**: Prohibits Bus/HOV/Tidal lanes during specified peak hours (e.g. Mon-Fri 07:00-09:00).
+- **Proactive Multi-Lane Change Prompts**: Calculates required transition distance based on vehicle speed ($v$) and number of lanes to cross, issuing `early_notice`, `recommended`, `urgent`, or `critical` alerts.
+
+### 2. "Veteran Driver" Experience Layer (老司机经验图层)
+- **Crowdsourced Habit Mining**: Injects speed efficiency multipliers and historical pace ratios onto links to bypass known signal traps and bottleneck intersections.
+- **Routing Personas**:
+  - `veteran_fast`: Exploits proven local arterial shortcuts to bypass gridlock.
+  - `veteran_smooth`: Avoids potholes, awkward merges, and illegal parking bottlenecks.
+  - `novice_friendly`: Shields beginner drivers from high-stress 6-lane unprotected left turns and narrow blind-corner alleyways.
+  - `commuter_smart`: Adapts to learned daily commute schedules.
+
+---
+
+## 🛰️ High-Precision & Weak-Signal Positioning Engine
+
+### Algorithmic Capabilities
+1. **Extended Kalman Filter (EKF) Sensor Fusion**:
+   - 6-state vector $[x, y, v_x, v_y, \theta, b_g]$ fusing IMU (accelerometer + gyro) with GNSS observations.
+   - Non-Holonomic Constraints (NHC) preventing lateral slippage ($v_{\text{lat}} \approx 0$).
+   - Dynamic innovation gating to reject multipath spikes in urban canyons.
+2. **RTK / DGNSS Differential Correction Engine**:
+   - Carrier phase ambiguity resolution emulation with baseline vector computation.
+   - Decimeter-level RTK Float (< 0.5m) and centimeter-level RTK Fixed (< 0.05m).
+   - Real-time **Lane-Level Resolution** mapping vehicle offset to exact highway lanes (e.g. Lane 0, Lane 1, HOV).
+3. **Zero-Jump Dead Reckoning (VDR & PDR)**:
+   - Activates instantly upon GNSS blackout (tunnels, indoor ramps).
+   - Heading integration via gyroscope yaw-rate with stationary bias calibration (ZUPT).
+   - Longitudinal speed integration with uncertainty growth modeling.
+4. **Weak-Signal BLE / Wi-Fi Trilateration Engine**:
+   - Log-Distance Path Loss model: $d = 10^{\frac{\text{TxPower} - \text{RSSI}}{10 \cdot n}}$.
+   - Weighted Centroid Localization (WCL) for underground parking garages and multi-floor facilities.
+   - MongoDB `2dsphere` facility anchor registry (`BeaconAnchorModel`).
+
+---
+
+## 🔌 Socket.IO Real-Time Protocol
+
+WebSocket Endpoint: `ws://localhost:4000`
+
+### Real-Time Positioning & Telemetry Stream
+| Event | Direction | Payload | Description |
+| :--- | :--- | :--- | :--- |
+| `positioning:telemetry` | Client -> Server | `RawSensorPacket` (GNSS + IMU + Odo + Beacons) | High-frequency telemetry stream (10Hz-50Hz) |
+| `positioning:fused_state`| Server -> Client | `FusedPositionState` | Sub-meter fused position, environment, lane index, confidence |
+| `positioning:subscribe` | Client -> Server | `{ targetDeviceId }` | Subscribes to live HUD or fleet vehicle stream |
+
+### Driver / Vehicle Location Streaming
+| Event | Direction | Payload | Description |
+| :--- | :--- | :--- | :--- |
+| `location:update` | Client -> Server | `{ userId, longitude, latitude, heading, speed, role }` | Ingests GPS point into Redis `GEOADD` and broadcasts |
+| `location:broadcast` | Server -> Client | Telemetry payload | Broadcast to subscribed clients |
+| `location:subscribe` | Client -> Server | `{ targetUserId }` | Subscribes to live location of driver |
+| `nearby:drivers:request` | Client -> Server | `{ longitude, latitude, radiusInMeters }` | Queries nearby drivers over socket |
+| `nearby:drivers:response`| Server -> Client | `{ count, results: [...] }` | Real-time list of nearby drivers with distance |
+
+### Turn-by-Turn Navigation Session Events
+| Event | Direction | Payload | Description |
+| :--- | :--- | :--- | :--- |
+| `nav:join` | Client -> Server | `{ sessionId }` | Joins the navigation session room |
+| `nav:update_progress` | Client -> Server | `{ sessionId, currentLocation: [lon, lat], heading, speed }` | Streams continuous GPS progress |
+| `nav:progress_state` | Server -> Client | `{ currentStep, remainingDistanceMeters, remainingDurationSeconds, distanceToNextStepMeters }` | HUD updates |
+| `nav:off_route_alert` | Server -> Client | `{ distanceFromRouteMeters, timestamp }` | Triggered when vehicle deviates > threshold |
+| `nav:reroute_success` | Server -> Client | `{ newRoute, distanceFromRouteMeters }` | Automatically sends newly recalculated OSRM route |
+| `nav:destination_reached` | Server -> Client | `{ message, completedAt }` | Triggered when within arrival radius (< 25m) |
+
+### Next-Gen Intelligent Driving & Lane-Level Events
+| Event | Direction | Payload | Description |
+| :--- | :--- | :--- | :--- |
+| `sr:telemetry_stream` | Client -> Server | `SRTelemetryPayload` | Streams sub-meter coordinates, lateral offset & objects |
+| `sr:hud_broadcast` | Server -> Client | `SRNavigationHUDState` | Broadcasts 3D photorealistic HUD, lane matrix & gantries |
+| `sr:lane_drift_alert` | Server -> Client | `{ direction, lateralOffsetMeters, message }` | Lane Departure Warning (LDW) when unblinker drift occurs |
+| `sr:collision_warning` | Server -> Client | `{ level, message }` | Forward Collision Warning (FCW) when TTC is critical |
+| `auto:can_stream` | Client -> Server | `CANBusTelemetryPacket` | Streams high-frequency CAN frames / OBD-II PID telemetry |
+| `auto:eco_score_broadcast`| Server -> Client | `EcoDrivingScore` | Real-time 0-100 score, fuel savings, and eco coaching |
+| `auto:hud_frame_stream` | Bi-directional | `SmartHUDFrame` | Serializes compact 8-byte binary frame for optical HUDs |
+| `rider:dynamics_stream` | Client -> Server | `RiderDynamicsTelemetry` | Streams roll angle, yaw rate, lateral acceleration & IMU |
+| `rider:lean_broadcast` | Server -> Client | `RiderLeanStats` | Returns max lean angles, traction limit & cornering speed |
+| `rider:crash_alert` | Server -> Client | `RiderCrashEvent` | Autonomous fall/crash detection e-Call dispatch |
+| `rider:crash_cancel` | Client -> Server | `{ eventId }` | Rider cancels emergency dispatch ("I am OK") |
+| `parking:entrance_detect`| Client -> Server | `{ coordinates }` | Checks outdoor-to-indoor transition at facility gate |
+| `parking:indoor_guidance` | Client -> Server | `{ facilityId, targetBayId }` | Streams indoor A* ramp and aisle guidance to spot |
+
+### Comprehensive AI & LLM Copilot Events
+| Event | Direction | Payload | Description |
+| :--- | :--- | :--- | :--- |
+| `copilot:message_stream` | Client -> Server | `{ conversationId, prompt, vehicleContext }` | Live in-drive voice query or driver instruction |
+| `copilot:message_response`| Server -> Client | `AICopilotResponse` | Assistant response, tool execution, HUD action & suggestions |
+
+---
+
+## 🧪 Simulation & Testing
+
+Run the verification suites to test routing, sensor fusion, and intelligent driving:
+
 ```bash
-# Request 6-digit cryptographic OTP
-curl -X POST http://localhost:8080/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "user@example.com"}'
+# 1. Routing & Geo calculation simulation
+npx tsx scripts/test-simulation.ts
 
-# Verify OTP & retrieve JWT
-curl -X POST http://localhost:8080/api/v1/auth/verify \
-  -H "Content-Type: application/json" \
-  -d '{"email": "user@example.com", "otp": "123456"}'
+# 2. High-Precision RTK & Weak-Signal Positioning simulation
+npx tsx scripts/test-positioning-engine.ts
+
+# 3. Lane-Level Routing & "Veteran Driver" Layer simulation
+npx tsx scripts/test-lane-veteran-routing.ts
+
+# 4. Unified Underlying Engine & Dynamic Recommendations simulation
+npx tsx scripts/test-unified-engine.ts
+
+# 5. AI-Powered Data Production & Big-Data POI Mining simulation
+npx tsx scripts/test-ai-data-mining.ts
+
+# 6. Next-Gen Intelligent Driving & Lane-Level Navigation simulation (4 Pillars)
+npx tsx scripts/test-nextgen-driving-navigation.ts
+
+# 7. Multi-Mode Core Navigation (Car, Transit, AR Walk/Cycle) simulation
+npx tsx scripts/test-multi-mode-navigation.ts
+
+# 8. Comprehensive AI & Large Language Model (LLM) Features simulation (4 Pillars)
+npx tsx scripts/test-ai-copilot-engine.ts
+
+# 9. Advanced Visualization & Spatial Mapping simulation (6 Pillars)
+npx tsx scripts/test-spatial-visualization.ts
+
+# 10. 4D Dynamic Space Rendering & High-Precision Indoor View simulation (6 Pillars)
+npx tsx scripts/test-4d-space-and-indoor-view.ts
+
+# 11. Unified Lifestyle & Commercial Super-App Ecosystem simulation (3 Pillars)
+npx tsx scripts/test-super-app-ecosystem.ts
 ```
 
-### 2. 🗺️ Maps, Styles, Static Maps & Marker Clustering
+### 📱 Unified Lifestyle & Commercial Super-App Ecosystem API Reference
+
+#### 1. All-in-One Ride-Hailing Platform
+- `POST /api/v1/super-app/rides/quote`: Calculate real-time fare quotes across all vehicle categories (Auto-Rickshaw, Bike Taxi, Mini Hatchback, Prime Sedan, Green EV, SUV XL, Outstation Intercity) with surge pricing and municipal night tariffs.
+- `GET /api/v1/super-app/rides/drivers/nearby`: Discover active nearby drivers within radius with real-time ETAs and driver ratings.
+- `POST /api/v1/super-app/rides/request`: Request a ride, match driver, allocate 4-digit start OTP, and initialize trip lifecycle.
+- `GET /api/v1/super-app/rides/:bookingId`: Retrieve live ride tracking status, assigned driver details, vehicle registration, and ETA.
+- `POST /api/v1/super-app/rides/:bookingId/verify-otp`: Secure 4-digit OTP verification starting the trip (`in_transit`).
+- `POST /api/v1/super-app/rides/:bookingId/complete`: Finalize trip, calculate distance, and settle digital invoice.
+- `POST /api/v1/super-app/rides/:bookingId/cancel`: Cancel ride with grace-period validation and cancellation fee determination.
+
+#### 2. POI Discovery & Lifestyle Booking Engine
+- `GET /api/v1/super-app/lifestyle/places`: Contextual lifestyle search with dietary tags (`Pure Veg`, `Jain Available`, `Halal`), price tiers (`₹` to `₹₹₹₹`), ratings, and proximity radius.
+- `GET /api/v1/super-app/lifestyle/places/:poiId`: Detailed lifestyle venue profile, menus, service catalog, photos, and available booking slots.
+- `POST /api/v1/super-app/lifestyle/book`: Create instant dining table reservations or wellness spa/salon appointments with QR confirmation vouchers (`BMAP-XXXXXX`).
+- `GET /api/v1/super-app/lifestyle/bookings/:bookingId`: Retrieve booking details and confirmation voucher.
+- `POST /api/v1/super-app/lifestyle/bookings/:bookingId/cancel`: Cancel reservation with automatic deposit refund handling.
+
+#### 3. Offline Maps Utilities & Storage Optimization
+- `GET /api/v1/super-app/offline/bundles`: Catalog of pre-packaged regional offline map bundles (Delhi NCR, Mumbai MMR, Bengaluru, Himalayan Highway, Golden Triangle).
+- `GET /api/v1/super-app/offline/bundles/:bundleId`: Inspect multi-layer bundle manifest (Vector tiles, Road routing graph, Searchable POI SQLite index, 3D landmark meshes).
+- `GET /api/v1/super-app/offline/bundles/:bundleId/delta`: Differential delta patch generation providing ~82.5% download bandwidth savings.
+- `POST /api/v1/super-app/offline/route-fallback`: Client-side offline navigation fallback computing turn-by-turn routes with zero cellular connectivity.
+- `GET /api/v1/super-app/offline/storage-quota`: Device storage quota analysis with recommended bundle pruning list.
+
+### 🌐 4D Dynamic Space Rendering & High-Precision Indoor View API Reference
+
+#### 360-Degree Street View covering >95% Indian Urban Centers
+- `GET /api/v1/spatial-vis/street-view/coverage`: Quantitative coverage analytics across Tier 1, Tier 2, and Tier 3 Indian urban centers (>95% coverage, 520+ urban centers, 1.25M+ km mapped, National Geospatial Policy 2022 compliant).
+- `GET /api/v1/spatial-vis/street-view/cities`: Directory of Indian urban centers filtered by region (`north`, `south`, `west`, `east`, `central`, `northeast`) or tier (`tier1`, `tier2`, `tier3`).
+- `GET /api/v1/spatial-vis/street-view/nearest`: Nearest high-definition 360-degree spherical panorama lookup by latitude, longitude, and heading tolerance.
+- `GET /api/v1/spatial-vis/street-view/panorama/:panoId`: Full 8K UHD panorama metadata, spherical equirectangular & cubemap URLs, 3D LiDAR depth buffers, connected road graph hotspots, and semantic AR overlays (Delhi/Mumbai Metro pillars, speed limits, shop facades).
+- `POST /api/v1/spatial-vis/street-view/sequence`: Virtual 360 drive-through tour sequence along a road or route corridor with smooth heading interpolation.
+- `POST /api/v1/spatial-vis/street-view/depth-measure`: Sub-meter 3D depth measurement from equirectangular pixels using LiDAR depth maps (facade distances, road widths, vertical clearances).
+
+#### High-Precision Indoor View (Interactive Maps)
+- `GET /api/v1/spatial-vis/indoor/facilities`: Catalog of high-precision indoor facilities categorized by `commercial_complex`, `international_airport`, `train_hub`, or `metro_interchange`.
+  - **Commercial Complexes**: DLF Cyber City & Cyber Hub Gurugram, World Trade Center Bengaluru, Bandra-Kurla Complex (BKC) Mumbai.
+  - **International Airports**: Indira Gandhi International (DEL / IGI Terminal 3), Chhatrapati Shivaji Maharaj International (BOM / CSMIA Terminal 2), Kempegowda International (BLR T2 Garden Terminal).
+  - **Multi-Level Train Hubs**: New Delhi Railway Station (NDLS) + Airport Express Metro Interchange, CSMT Mumbai, Anand Vihar Multi-Modal Mega Hub.
+- `GET /api/v1/spatial-vis/indoor/facilities/:facilityId`: Digital twin facility metadata, multi-floor levels, boundary, and vertical connectors.
+- `GET /api/v1/spatial-vis/indoor/facilities/:facilityId/floors/:floorLevel`: High-precision interactive 2D/3D floor plan (corridors, DigiYatra gates, CISF security checkpoints, boarding gates, baggage carousels, train platforms, skywalks, food courts).
+- `POST /api/v1/spatial-vis/indoor/facilities/:facilityId/route`: Multi-floor indoor turn-by-turn routing with vertical transitions (elevators, escalators, stairs) and wheelchair accessibility (`accessibleOnly: true`).
+
+#### 4D Dynamic Space Rendering
+- `GET /api/v1/spatial-vis/dynamic-4d/scene`: 4D space rendering state combining 3D space with the temporal dimension $t$, diurnal lighting phases (`dawn`, `morning_peak`, `midday`, `golden_hour`, `twilight`, `night_urban`), dynamic vehicle/pedestrian streams, and Indian weather dynamics (monsoon wet reflections, Delhi winter fog).
+- `POST /api/v1/spatial-vis/dynamic-4d/time-slider`: 4D temporal time-slider interpolation between capture epochs, demonstrating infrastructure evolution over time.
+
+
+
+Compile TypeScript for production:
+
 ```bash
-# Mapbox Style Spec v8 (Themes: standard, dark, night, retro, silver, aubergine)
-curl "http://localhost:8080/api/v1/maps/style.json?theme=dark"
-
-# High-resolution Static Map (SVG/PNG with drop-shadow pins)
-curl "http://localhost:8080/api/v1/maps/static?center=37.7749,-122.4194&zoom=14&size=800x600&theme=dark"
-
-# Dynamic Marker Clustering
-curl "http://localhost:8080/api/v1/maps/clusters?zoom=12"
-```
-
-### 3. 🔴 The Red Border, Mandated Lines & Search Highlighting
-```bash
-# Sovereign Red Borders (Jurisdictions: GLOBAL, IN, US)
-curl "http://localhost:8080/api/v1/boundaries/territorial?locale=GLOBAL&level=0"
-
-# Search Highlighting with Inverted Background Mask
-curl "http://localhost:8080/api/v1/boundaries/highlight?q=California"
-```
-
-### 4. 🧠 Routing, Directions & Contraction Hierarchies
-```bash
-# Multi-modal routing (driving, walking, bicycling, transit)
-curl "http://localhost:8080/api/v1/routes/directions?origin=37.7749,-122.4194&destination=37.7955,-122.3937&mode=driving"
-
-# Public Transit with subway/bus legs and transfer stations
-curl "http://localhost:8080/api/v1/routes/directions?origin=37.7749,-122.4194&destination=37.7955,-122.3937&mode=transit"
-
-# N x M Distance Matrix
-curl "http://localhost:8080/api/v1/routes/distance-matrix?origins=37.7749,-122.4194|37.7833,-122.4167&destinations=37.7955,-122.3937|37.7681,-122.3920"
-```
-
-### 5. 🚦 Connected Vehicles (V2X) & Traffic Light Timing (SPaT)
-```bash
-# Query live signal phase & countdown
-curl "http://localhost:8080/api/v1/v2x/spat/sig_market_4th"
-
-# Green Light Optimal Speed Advisory (GLOSA)
-curl -X POST http://localhost:8080/api/v1/v2x/glosa/advisory \
-  -H "Content-Type: application/json" \
-  -d '{
-    "vehicle_location": { "lat": 37.7850, "lng": -122.4060 },
-    "speed_kmh": 40.0,
-    "intersection_id": "sig_market_4th"
-  }'
-```
-
-### 6. 🛰️ Ground Enhancement & Lane-Level Positioning
-```bash
-# RTK Carrier-Phase GNSS Correction (cm-accuracy)
-curl -X POST http://localhost:8080/api/v1/lanelevel/rtk/correct \
-  -H "Content-Type: application/json" \
-  -d '{
-    "latitude": 37.7749,
-    "longitude": -122.4194,
-    "altitude_meters": 15.2,
-    "hdop": 0.85,
-    "satellites_in_view": 16
-  }'
-
-# Active Lane Guidance Cues
-curl "http://localhost:8080/api/v1/lanelevel/guidance?lat=37.77&lng=-122.41&maneuver=turn_left&dist=200"
-```
-
-### 7. ⚡ Real-Time Traffic & Dynamic ETA Recalculation
-```bash
-# Ingest vehicle GPS telemetry pings
-curl -X POST http://localhost:8080/api/v1/traffic/telemetry \
-  -H "Content-Type: application/json" \
-  -d '{
-    "pings": [
-      {
-        "device_id": "car_01",
-        "location": { "lat": 37.7850, "lng": -122.4070 },
-        "speed_kmh": 14.0,
-        "heading": 90.0,
-        "timestamp": "2026-08-31T13:00:00Z",
-        "road_segment_id": "seg_market_st"
-      }
-    ]
-  }'
-
-# Dynamic ETA with Faster Detour Alert
-curl -X POST http://localhost:8080/api/v1/traffic/evaluate-eta \
-  -H "Content-Type: application/json" \
-  -d '{
-    "route_polyline": "mock_polyline",
-    "initial_eta_seconds": 600
-  }'
-```
-
-### 8. 📦 Offline Map Sync (Bounding Box Bundles)
-```bash
-# Generate offline map package (.bmap)
-curl -X POST http://localhost:8080/api/v1/offline/bundles \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "San Francisco Bay Area",
-    "bounding_box": [-122.515, 37.708, -122.355, 37.835],
-    "min_zoom": 10,
-    "max_zoom": 14
-  }'
-
-# Download binary archive with SHA-256 integrity check
-curl -OJ "http://localhost:8080/api/v1/offline/bundles/{bundle_id}/download"
-```
-
-### 9. 🛡️ Coordinate Obfuscation (GCJ-02/BD-09 & Differential Privacy)
-```bash
-# Geopolitical datum shift (WGS84 -> GCJ02)
-curl -X POST http://localhost:8080/api/v1/obfuscation/transform \
-  -H "Content-Type: application/json" \
-  -d '{
-    "location": { "lat": 39.9042, "lng": 116.4074 },
-    "source_datum": "WGS84",
-    "target_datum": "GCJ02"
-  }'
-
-# Differential Privacy Spatial Cloaking (Laplace Noise)
-curl -X POST http://localhost:8080/api/v1/obfuscation/fuzz \
-  -H "Content-Type: application/json" \
-  -d '{
-    "location": { "lat": 37.7749, "lng": -122.4194 },
-    "radius_meters": 200.0,
-    "epsilon": 0.5
-  }'
-```
-
-### 10. 🛰️ NavIC (IRNSS) & GAGAN SBAS Regional Positioning
-```bash
-# Process NavIC dual-frequency fix with GAGAN sub-meter correction
-curl -X POST http://localhost:8080/api/v1/navic/fix \
-  -H "Content-Type: application/json" \
-  -d '{
-    "raw_latitude": 28.6139,
-    "raw_longitude": 77.2090,
-    "raw_altitude": 216.0,
-    "enable_gagan": true
-  }'
-
-# Query NavIC IRNSS satellite constellation health
-curl "http://localhost:8080/api/v1/navic/constellation"
-```
-
-### 11. 🛣️ FASTag Toll Calculation & National Expressways
-```bash
-# Estimate NHAI FASTag toll across route corridor
-curl -X POST http://localhost:8080/api/v1/tolls/calculate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "route_coordinates": [
-      { "lat": 28.4595, "lng": 77.0266 },
-      { "lat": 28.4067, "lng": 76.9854 }
-    ],
-    "vehicle_type": "CAR_JEEP_VAN",
-    "is_return_trip": false
-  }'
-```
-
-### 12. 📮 Indian PIN Code & Landmark-Centric Address Parsing
-```bash
-# Lookup 6-digit Indian PIN Code
-curl "http://localhost:8080/api/v1/pincode/560034"
-
-# Parse complex Indian landmark address
-curl -X POST http://localhost:8080/api/v1/pincode/parse-address \
-  -H "Content-Type: application/json" \
-  -d '{
-    "address": "Flat 402, Near Hanuman Temple, Opposite Metro Pillar 128, Hauz Khas, New Delhi 110016"
-  }'
-```
-
-### 13. ⚠️ Indian Road Hazards (Speed Breakers & Monsoon Flooding)
-```bash
-# Query ahead speed breakers and waterlogging zones
-curl "http://localhost:8080/api/v1/hazards/ahead?lat=28.6145&lng=77.2095&lookahead_meters=500"
-```
-
-### 14. 🗣️ Multilingual Indian Voice Prompts (10 Languages)
-```bash
-# Generate localized voice prompt (Hindi, Bengali, Tamil, Telugu, etc.)
-curl -X POST http://localhost:8080/api/v1/vernacular/prompt \
-  -H "Content-Type: application/json" \
-  -d '{
-    "action": "TURN_LEFT",
-    "distance_meters": 200,
-    "street_name": "MG Road",
-    "language": "hi-IN"
-  }'
-```
-
-### 15. 📊 Observability & Prometheus Metrics
-```bash
-curl "http://localhost:8080/metrics?format=prometheus"
+npm run build
 ```
 
 ---
 
-## 🧪 Quality Assurance & Test Matrix
+## 📁 Production Feature-Based Modular Architecture
 
-| Test Suite | Coverage Area | Status |
-|---|---|---|
-| `pkg/cache` | L1 In-memory LRU cache, TTL eviction & hits/misses | **PASS** |
-| `pkg/middleware` | Token bucket rate limiting (150 rps, 300 burst) | **PASS** |
-| `internal/routes` | Contraction Hierarchies (CH), A*, Transit | **PASS** |
-| `internal/traffic`| GPS telemetry sliding window & dynamic ETA | **PASS** |
-| `internal/offline`| Bounding box tar.gz bundler & SHA256 integrity | **PASS** |
-| `internal/boundaries`| Sovereign red borders & search inverted masking | **PASS** |
-| `internal/v2x` | SPaT telemetry & GLOSA green-wave advisory | **PASS** |
-| `internal/lanelevel`| RTK GNSS carrier-phase correction & lane cues | **PASS** |
-| `internal/obfuscation`| GCJ-02/BD-09 shift & Laplace spatial cloaking | **PASS** |
-| `internal/hdmap` | AV perception ingest & map consensus loop | **PASS** |
-| `internal/maps` | Dynamic Vector MVT tiles & Marker clustering | **PASS** |
-| `internal/geoextras`| Topographic elevation & TimeZone offset | **PASS** |
-| `internal/environment`| Air Quality Index (AQI) & Solar potential | **PASS** |
+The backend utilizes an enterprise **Domain-Driven, Feature-Based Modular Architecture** where each capability is an autonomous, self-contained module encapsulating its own controllers, services, Mongoose models, Express routes, Socket.IO handlers, and TypeScript contracts. Common infrastructural cross-cutting concerns reside within the `src/core` foundation layer, and legacy technical layers (`controllers/`, `services/`, etc.) maintain 100% backward-compatible re-export facades.
+
+```
+src/
+├── core/                                   # 🧱 Cross-Cutting Infrastructure Layer
+│   ├── config/                             # Zod-validated environment, Mongo, Redis, Logger
+│   ├── constants/                          # System & WebSocket event identifiers
+│   ├── middlewares/                        # Error, 404, validation middleware
+│   ├── types/                              # Core GeoJSON, OSRM contracts
+│   ├── utils/                              # Turf.js geospatial math, API response formatters
+│   └── index.ts                            # Central core barrel export
+│
+├── modules/                                # 📦 Self-Contained Domain Feature Modules
+│   ├── health/                             # System liveness, readiness, uptime probes
+│   ├── routes/                             # OSRM turn-by-turn, Redis cache, TSP matrix, trip matching
+│   ├── places/                             # 2dsphere POI queries, $near, polygon bounding, text search
+│   ├── navigation/                         # Live Turn-by-Turn engine, step advancement, dynamic reroute
+│   ├── tracking/                           # Real-time driver/courier GPS ingestion, Redis GEOSEARCH
+│   ├── positioning/                        # RTK centimeter precision, EKF sensor fusion, Dead Reckoning, BLE
+│   ├── lane-routing/                       # HD Lane guidance, Bus lane restrictions, Veteran driver shortcuts
+│   ├── unified-engine/                     # Unified underlying engine pipeline, Proactive energy & parking
+│   ├── ai-data-mining/                     # ST-DBSCAN trajectory mining, Golden Record POI fusion, Road change
+│   ├── sr-navigation/                      # Spatial Reality HUD, sub-meter lateral offset, 3D junction cards
+│   ├── automotive/                         # Apple CarPlay / Android Auto templates, AAOS VHAL, CAN bus eco
+│   ├── rider-mode/                         # Motorcycle roll angle dynamics, crosswind safety, e-Call crash
+│   ├── parking/                            # Indoor parking navigation, A* floor pathfinding, Find My Car
+│   ├── car-navigation/                     # Multi-strategy car routing, speed radars, EV energy consumption
+│   ├── public-transit/                     # Multimodal transit routing, platform exit guide, live departures
+│   ├── ar-walk-cycle/                      # AR 3D chevrons, accessible pedestrian paths, bike lane elevation
+│   ├── ai-copilot/                         # Conversational LLM copilot, Vision hazard OCR, departure optimizer
+│   ├── spatial-visualization/              # 3D Digital Twin, Vector tiles, 360 Street View (>95% Indian Urban), 4D Space & High-Precision Indoor
+│   ├── super-app/                          # All-in-One Ride-Hailing, POI Lifestyle Booking, Offline Maps & Delta Sync
+│   └── index.ts                            # Master barrel export for all domain modules
+│
+├── routes/                                 # Global router mounting modular endpoints (with legacy facades)
+├── sockets/                                # Global Socket.IO gateway registering modular handlers
+├── app.ts                                  # Express application bootstrap
+└── server.ts                               # Production HTTP & WebSocket server entrypoint
+```
 
 ---
 
-## 📄 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## 📜 License
+MIT

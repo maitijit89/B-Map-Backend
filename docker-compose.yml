@@ -1,92 +1,61 @@
 version: '3.8'
 
 services:
-  # -------------------------------------------------------------
-  # 1. B-Map Go Backend API
-  # -------------------------------------------------------------
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: b_map_api
-    restart: unless-stopped
-    ports:
-      - "${APP_PORT:-8080}:8080"
-    environment:
-      - APP_ENV=${APP_ENV:-development}
-      - APP_PORT=8080
-      - APP_NAME=B-Map-Backend
-      - JWT_SECRET=${JWT_SECRET:-super_secret_jwt_key_b_map_2026}
-      - JWT_EXPIRY_HOURS=${JWT_EXPIRY_HOURS:-72}
-      - MONGODB_URI=mongodb://mongo:27017/b_map_db
-      - DB_HOST=mongo
-      - DB_PORT=27017
-      - DB_NAME=${DB_NAME:-b_map_db}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-      - REDIS_DB=${REDIS_DB:-0}
-      - OTP_EXPIRY_MINUTES=${OTP_EXPIRY_MINUTES:-5}
-      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
-      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
-      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
-      - CLOUDINARY_FOLDER=${CLOUDINARY_FOLDER:-b_map_uploads}
-    depends_on:
-      mongo:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - bmap_network
-
-  # -------------------------------------------------------------
-  # 2. MongoDB with 2dsphere Geospatial Indexing
-  # -------------------------------------------------------------
-  mongo:
+  # MongoDB Geospatial Database (with 2dsphere indexing)
+  mongodb:
     image: mongo:7.0
-    container_name: b_map_mongo
-    restart: unless-stopped
+    container_name: bmap_mongodb
+    restart: always
     ports:
-      - "${DB_PORT:-27017}:27017"
+      - '27017:27017'
+    environment:
+      MONGO_INITDB_DATABASE: b_map_navigation
     volumes:
-      - mongo_data:/data/db
+      - mongodb_data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ['CMD', 'mongosh', '--eval', 'db.adminCommand("ping")']
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - bmap_network
 
-  # -------------------------------------------------------------
-  # 3. Redis Cache & OTP Store
-  # -------------------------------------------------------------
+  # Redis Cache & Real-Time Geo Layer (GEOADD, GEOSEARCH, route cache)
   redis:
     image: redis:7-alpine
-    container_name: b_map_redis
-    restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
+    container_name: bmap_redis
+    restart: always
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - '6379:6379'
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - bmap_network
 
-# ---------------------------------------------------------------
-# Persistent Volumes & Network Definitions
-# ---------------------------------------------------------------
+  # B-Map Navigation Express & Socket.IO API Backend
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bmap_api
+    restart: always
+    ports:
+      - '4000:4000'
+    environment:
+      PORT: 4000
+      NODE_ENV: production
+      API_PREFIX: /api/v1
+      MONGODB_URI: mongodb://mongodb:27017/b_map_navigation
+      REDIS_URL: redis://redis:6379
+      OSRM_BASE_URL: https://router.project-osrm.org
+      CORS_ORIGIN: '*'
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
-  mongo_data:
-    driver: local
+  mongodb_data:
   redis_data:
-    driver: local
-
-networks:
-  bmap_network:
-    driver: bridge

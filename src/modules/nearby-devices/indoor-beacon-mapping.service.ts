@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { logger } from '../../core/config/logger';
 import { getRedisClient, isRedisConnected } from '../../core/config/redis';
 import { Coordinate } from '../../core/types/geo.types';
+import { escapeRegExp } from '../../core/utils/security.utils';
 import { IndoorBeaconModel } from './indoor-beacon.model';
 import {
   BluetoothClientPermissions,
@@ -535,11 +536,11 @@ export class IndoorBeaconMappingService {
         const query: any = {};
         if (scanned.beaconId) query.beaconId = scanned.beaconId;
         else if (scanned.uuid && scanned.major !== undefined && scanned.minor !== undefined) {
-          query.uuid = new RegExp(`^${scanned.uuid}$`, 'i');
+          query.uuid = new RegExp(`^${escapeRegExp(scanned.uuid)}$`, 'i');
           query.major = scanned.major;
           query.minor = scanned.minor;
         } else if (scanned.macAddress) {
-          query.macAddress = new RegExp(`^${scanned.macAddress}$`, 'i');
+          query.macAddress = new RegExp(`^${escapeRegExp(scanned.macAddress)}$`, 'i');
         }
 
         if (Object.keys(query).length > 0) {

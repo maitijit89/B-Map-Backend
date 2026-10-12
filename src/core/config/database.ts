@@ -1,9 +1,17 @@
+import dns from 'dns';
 import mongoose from 'mongoose';
 import { env } from './env.config';
 import { logger } from './logger';
 
 export const connectDatabase = async (): Promise<void> => {
   try {
+    // Configure reliable DNS servers to resolve MongoDB Atlas SRV records (querySrv ECONNREFUSED fix)
+    try {
+      dns.setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
+    } catch {
+      // Ignore if environment prevents custom DNS servers
+    }
+
     mongoose.set('strictQuery', true);
 
     await mongoose.connect(env.MONGODB_URI, {

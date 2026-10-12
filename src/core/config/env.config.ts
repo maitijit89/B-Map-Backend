@@ -16,23 +16,23 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default('*'),
 
   // JWT Configuration
-  JWT_SECRET: z.string().default('dUzuLuJ8uszVSe+kvXv6/AjAtN08uXCN9aiJuIvdrBo='),
+  JWT_SECRET: z.string().default('bmap-development-jwt-secret-key-32-characters-minimum'),
   JWT_EXPIRY_HOURS: z.string().default('72').transform((val) => parseInt(val, 10)),
 
   // Admin Configuration
-  ADMIN_EMAIL: z.string().default('maitidebjit2@gmail.com'),
+  ADMIN_EMAIL: z.string().default('admin@bmap.io'),
 
   // MongoDB Geospatial Database
   MONGODB_URI: z.string().default('mongodb://localhost:27017/b_map_navigation'),
-  DB_HOST: z.string().default('cluster0.s6zrwkc.mongodb.net'),
+  DB_HOST: z.string().default('localhost'),
   DB_PORT: z.string().default('27017').transform((val) => parseInt(val, 10)),
-  DB_USER: z.string().default('maitidebjit2_db_user'),
-  DB_PASSWORD: z.string().default('1yqGJxCmp6KzeyMc'),
+  DB_USER: z.string().default(''),
+  DB_PASSWORD: z.string().default(''),
   DB_NAME: z.string().default('b_map_db'),
 
   // Redis Cache (Upstash Cloud / Local)
   REDIS_URL: z.string().default('redis://localhost:6379'),
-  REDIS_HOST: z.string().default('national-bug-258874.upstash.io'),
+  REDIS_HOST: z.string().default('localhost'),
   REDIS_PORT: z.string().default('6379').transform((val) => parseInt(val, 10)),
   REDIS_PASSWORD: z.string().optional(),
   REDIS_DB: z.string().default('0').transform((val) => parseInt(val, 10)),
@@ -41,22 +41,22 @@ const envSchema = z.object({
   OTP_EXPIRY_MINUTES: z.string().default('5').transform((val) => parseInt(val, 10)),
 
   // Cloudinary Storage
-  CLOUDINARY_CLOUD_NAME: z.string().default('jon6vask'),
-  CLOUDINARY_API_KEY: z.string().default('439324579931125'),
-  CLOUDINARY_API_SECRET: z.string().default('9346Mxh4TmJd-anhDqFVPqDKCgg'),
+  CLOUDINARY_CLOUD_NAME: z.string().default(''),
+  CLOUDINARY_API_KEY: z.string().default(''),
+  CLOUDINARY_API_SECRET: z.string().default(''),
   CLOUDINARY_FOLDER: z.string().default('b_map_uploads'),
 
   // Google Maps Platform
-  GOOGLE_MAPS_API_KEY: z.string().default('AIzaSyC5xaYmrltiPZaNNzAwc62ULZoSXFe0IPc'),
-  GOOGLE_PLACES_API_KEY: z.string().default('AIzaSyC5xaYmrltiPZaNNzAwc62ULZoSXFe0IPc'),
-  GOOGLE_MAPS_API_SECRET: z.string().default('ojqqznoex52Tp0KTbD8D4xbFGtk='),
+  GOOGLE_MAPS_API_KEY: z.string().default(''),
+  GOOGLE_PLACES_API_KEY: z.string().default(''),
+  GOOGLE_MAPS_API_SECRET: z.string().default(''),
 
   // SMTP Configuration (Gmail OTP Delivery)
   SMTP_HOST: z.string().default('smtp.gmail.com'),
   SMTP_PORT: z.string().default('587').transform((val) => parseInt(val, 10)),
-  SMTP_USERNAME: z.string().default('maitidebjit2@gmail.com'),
-  SMTP_PASSWORD: z.string().default('zrlq mahe eyeq lkhh'),
-  SMTP_FROM_EMAIL: z.string().default('maitidebjit2@gmail.com'),
+  SMTP_USERNAME: z.string().default(''),
+  SMTP_PASSWORD: z.string().default(''),
+  SMTP_FROM_EMAIL: z.string().default('noreply@bmap.io'),
   SMTP_FROM_NAME: z.string().default('B Map'),
 
   // Keep-Alive Heartbeat

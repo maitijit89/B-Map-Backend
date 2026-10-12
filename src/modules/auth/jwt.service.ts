@@ -39,6 +39,7 @@ export class JwtService {
       const decoded = jwt.verify(token, this.secret, {
         issuer: env.APP_NAME,
         audience: 'b-map-client',
+        algorithms: ['HS256'],
       }) as JwtUserPayload;
 
       return decoded;

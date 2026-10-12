@@ -24,6 +24,28 @@ import nearbyDevicesRoutes from '../modules/nearby-devices/nearby-devices.routes
 import trackingRoutes from '../modules/tracking/tracking.routes';
 import unifiedEngineRoutes from '../modules/unified-engine/unified-engine.routes';
 
+// Restored domain & infrastructure modules
+import navicRoutes from '../modules/navic/navic.routes';
+import tollRoutes from '../modules/tolls/tolls.routes';
+import pincodeRoutes from '../modules/pincode/pincode.routes';
+import digipinRoutes from '../modules/digipin/digipin.routes';
+import emergencyRoutes from '../modules/emergency/emergency.routes';
+import environmentRoutes from '../modules/environment/environment.routes';
+import weatherRoutes from '../modules/weather/weather.routes';
+import hazardRoutes from '../modules/hazards/hazards.routes';
+import vernacularRoutes from '../modules/vernacular/vernacular.routes';
+import v2xRoutes from '../modules/v2x/v2x.routes';
+import obfuscationRoutes from '../modules/obfuscation/obfuscation.routes';
+import boundaryRoutes from '../modules/boundaries/boundaries.routes';
+import evChargingRoutes from '../modules/evcharging/evcharging.routes';
+import fareRoutes from '../modules/fares/fares.routes';
+import roadsRoutes from '../modules/roads/roads.routes';
+import { mapsRouter, tilesRouter } from '../modules/maps-tiles/maps-tiles.routes';
+import fleetRoutes from '../modules/fleet/fleet.routes';
+import timezoneRoutes from '../modules/timezone/timezone.routes';
+import ratingRoutes from '../modules/ratings/ratings.routes';
+import adminRoutes from '../modules/admin/admin.routes';
+
 const router = Router();
 
 // Health check
@@ -66,5 +88,28 @@ router.use('/spatial-vis', spatialVisualizationRoutes);
 
 // Unified Lifestyle & Commercial Super-App Ecosystem
 router.use('/super-app', superAppRoutes);
+
+// Indian Sovereign Navigation & Specialized Geospatial Modules
+router.use('/navic', navicRoutes);
+router.use('/tolls', tollRoutes);
+router.use('/pincode', pincodeRoutes);
+router.use('/digipin', digipinRoutes);
+router.use('/emergency', emergencyRoutes);
+router.use('/environment', environmentRoutes);
+router.use('/weather', weatherRoutes);
+router.use('/hazards', hazardRoutes);
+router.use('/vernacular', vernacularRoutes);
+router.use('/v2x', v2xRoutes);
+router.use('/obfuscation', obfuscationRoutes);
+router.use('/boundaries', boundaryRoutes);
+router.use('/ev', evChargingRoutes);
+router.use('/fares', fareRoutes);
+router.use('/roads', roadsRoutes);
+router.use('/maps', mapsRouter);
+router.use('/tiles', tilesRouter);
+router.use('/fleet', fleetRoutes);
+router.use('/timezone', timezoneRoutes);
+router.use('/ratings', ratingRoutes);
+router.use('/admin', adminRoutes);
 
 export default router;

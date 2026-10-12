@@ -1,5 +1,6 @@
 import { IPlace, Place } from './place.model';
 import { Coordinate } from '../../core/types/geo.types';
+import { escapeRegExp } from '../../core/utils/security.utils';
 
 export interface CreatePlaceInput {
   name: string;
@@ -108,11 +109,12 @@ export class PlaceService {
    * Search places by text keyword and category.
    */
   async searchPlaces(keyword: string, category?: string, limit: number = 20): Promise<IPlace[]> {
+    const sanitizedKeyword = escapeRegExp(keyword.trim());
     const filter: Record<string, any> = {
       $or: [
-        { name: { $regex: keyword, $options: 'i' } },
-        { description: { $regex: keyword, $options: 'i' } },
-        { tags: { $in: [new RegExp(keyword, 'i')] } },
+        { name: { $regex: sanitizedKeyword, $options: 'i' } },
+        { description: { $regex: sanitizedKeyword, $options: 'i' } },
+        { tags: { $in: [new RegExp(sanitizedKeyword, 'i')] } },
       ],
     };
 

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authRateLimiter } from '../../core/middlewares/rate-limit.middleware';
 import { validateRequest } from '../../core/middlewares/validate.middleware';
 import { authController } from './auth.controller';
 import {
@@ -11,6 +12,9 @@ import {
 import { authenticateUser } from './auth.middleware';
 
 const router = Router();
+
+// Apply strict rate limiting to authentication routes to mitigate brute force & SMTP floods
+router.use(authRateLimiter);
 
 // ==========================================
 // 1. REGISTRATION & EMAIL OTP VERIFICATION

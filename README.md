@@ -236,6 +236,130 @@ Base URL: `http://localhost:4000/api/v1`
 ### 17. Health Check (`/health`)
 - **`GET /health`**: Returns real-time connectivity status of MongoDB, Redis, and OSRM.
 
+### 18. Indian Sovereign NavIC & Satellite Positioning (`/navic`)
+- **`POST /navic/fix`**: Process NavIC (IRNSS) dual-frequency (L5 + S-band) and GAGAN augmented GNSS fix.
+- **`GET /navic/constellation`**: Real-time orbital status and SNR telemetry of NavIC (IRNSS-1A through 1J) and GAGAN satellites.
+
+### 19. FASTag Electronic Toll Collection (`/tolls`)
+- **`POST /tolls/calculate`**: Route-based electronic toll calculation with return trip logic and two-wheeler exemption.
+- **`GET /tolls/nearby`**: Query nearby NHAI/State expressway toll plazas with single/return/monthly tariffs.
+
+### 20. PINCode Postal Registry & Indian Address Parser (`/pincode`)
+- **`GET /pincode/:pincode`**: Official 6-digit Indian PIN code lookup with post office, district, state, and coordinates.
+- **`POST /pincode/parse-address`**: Entity extraction parsing unformatted Indian address strings into structured components.
+- **`GET /pincode/reverse`**: Reverse geocoding latitude/longitude coordinates to nearest postal PIN code.
+
+### 21. DIGIPIN National Digital Address Micro-Grid (`/digipin`)
+- **`GET /digipin/encode`**: Encode latitude/longitude into standard 4m x 4m National DIGIPIN micro-grid code.
+- **`GET /digipin/decode/:code`**: Decode DIGIPIN code into geographical centroid coordinates and bounding box.
+
+### 22. Emergency SOS Dispatch & Facility Locator (`/emergency`)
+- **`POST /emergency/sos`**: Trigger emergency SOS alert with automated dispatch to national helplines (112, NHAI 1033).
+- **`GET /emergency/facilities/nearby`**: Locate nearby trauma centers, highway patrol units, police stations, and towing services.
+
+### 23. Environmental Intelligence: AQI, Solar & Pollen (`/environment`)
+- **`GET /environment/air-quality`**: Real-time CPCB Air Quality Index (AQI), PM2.5, PM10, and health advisories.
+- **`GET /environment/solar`**: Rooftop solar photovoltaic potential, annual sunshine hours, and carbon offset.
+- **`GET /environment/pollen`**: Tree, grass, and weed pollen index levels with allergy summaries.
+
+### 24. Highway Weather & IMD Radar Overrides (`/weather`)
+- **`GET /weather/highway`**: Expressway weather conditions with winter fog advisories and IMD color alert levels.
+- **`POST /weather/override`**: Inject manual weather overrides (e.g. dense fog, heavy rain) for highway stretches.
+- **`GET /weather/overrides`**: List active manual weather overrides.
+- **`DELETE /weather/override/:name`**: Remove manual weather override by highway name.
+
+### 25. Crowdsourced Road Hazards & Potholes (`/hazards`)
+- **`GET /hazards/ahead`**: Lookahead query for unmarked speed breakers, potholes, waterlogging, and stray cattle.
+- **`POST /hazards/report`**: Crowdsource hazard reports with severity grading and voice advisory triggers.
+
+### 26. Vernacular Audio Voice Prompts (`/vernacular`)
+- **`POST /vernacular/prompt`**: Generate localized turn-by-turn audio prompts in 10+ Indian languages (Hindi, Bengali, Tamil, Telugu, Kannada, Marathi, Gujarati, Malayalam, Punjabi, Indian English).
+- **`GET /vernacular/languages`**: List supported Indian vernacular languages with native script metadata.
+
+### 27. V2X SPaT & GLOSA Speed Advisory (`/v2x`)
+- **`GET /v2x/signals/nearby`**: Query connected municipal smart traffic lights with live SPaT status.
+- **`GET /v2x/signals/:id`**: Query specific signal phase timing, current phase, and countdown seconds.
+- **`POST /v2x/glosa/advisory`**: Calculate Green Light Optimal Speed Advisory (GLOSA) to ride the green wave without stopping.
+
+### 28. Differential Privacy & Coordinate Obfuscation (`/obfuscation`)
+- **`POST /obfuscation/transform`**: Coordinate datum transformations between WGS84, GCJ02, and BD09.
+- **`POST /obfuscation/fuzz`**: Planar Geo-Indistinguishability Laplace noise injection for privacy-preserving telemetry.
+
+### 29. Survey of India (SOI) Territorial Boundaries (`/boundaries`)
+- **`GET /boundaries/territorial`**: Official SOI-mandated territorial boundary LineString for National Geospatial Policy compliance.
+- **`GET /boundaries/region-highlight`**: Sovereign boundary polygon highlight with inverted world dimming mask.
+
+### 30. Electric Vehicle (EV) Charging Network (`/ev`)
+- **`GET /ev/stations`**: Locate nearby EV fast-chargers filtered by connector type (CCS2, Type 2, Ather Grid, Bharat AC001).
+- **`GET /ev/stations/:id`**: Real-time port availability, charging speeds (kW), pricing, and amenities.
+
+### 31. Municipal City Fares (`/fares`)
+- **`POST /fares/estimate`**: Official RTO metered auto-rickshaw, kaali-peeli taxi, and cab fare estimation with night surcharges.
+
+### 32. Roads API (`/roads`)
+- **`POST /roads/snap-to-roads`**: Snap raw GPS trajectory points to the road geometry with interpolation.
+- **`GET /roads/speed-limits`**: Query posted speed limits for road segments.
+
+### 33. Dynamic Maps & Vector Tiles (`/maps` & `/tiles`)
+- **`GET /maps/style.json`**: MapLibre/Mapbox-compatible vector tile style specification across themes.
+- **`GET /maps/static`**: Server-rendered lightweight SVG static map generator with path and markers.
+- **`GET /maps/clusters`**: Server-side geospatial POI clustering with zoom-dependent expansion.
+- **`GET /tiles/:z/:x/:y`**: Dynamic vector tile serving in GeoJSON/MVT format.
+
+### 34. Fleet Telemetry & Ride Dispatch (`/fleet`)
+- **`POST /fleet/location`**: Real-time driver telemetry ingestion with heading and speed.
+- **`GET /fleet/nearby`**: Discover online drivers within geographical radius.
+- **`POST /fleet/trips/request`**: Request and dispatch commercial fleet trips with automated fare estimation.
+
+### 35. Geospatial Timezone Engine (`/timezone`)
+- **`GET /timezone`**: High-performance coordinate-to-timezone resolution (IST Asia/Kolkata, GMT, etc.).
+
+### 36. User Ratings & Feedback Feed (`/ratings`)
+- **`POST /ratings`**: Submit 1-5 star user rating and review comments.
+- **`GET /ratings/my-rating`**: Retrieve current user's rating profile.
+- **`GET /ratings/stats`**: Aggregated rating distribution and average score.
+- **`GET /ratings`**: Public feed of ratings and reviews.
+
+### 37. Admin Command Center & Control Portal (`/admin`)
+- **`GET /admin/dashboard`**: Interactive dark-mode glassmorphic Web Portal for monitoring and administering the entire B-Map ecosystem. (Also accessible via `/admin` redirect).
+- **`GET /admin/overview`**: Consolidated executive metrics (users, active sessions, ratings, advisories, Redis/Mongo status).
+- **`GET /admin/analytics/users`**: Active user and daily/weekly sign-up trends.
+- **`GET /admin/analytics/feature-usage`**: Feature telemetry usage metrics across routing, tolls, NavIC, weather, and SOS.
+- **`GET /admin/users`**: Searchable, paginated user directory with role and verification filters.
+- **`POST /admin/users`**: Direct administrative user creation with pre-verified status and role options.
+- **`GET /admin/users/:id`**: Detailed profile for a specific user.
+- **`PATCH /admin/users/:id`**: Update user profile, promote to `admin`, or modify verification status.
+- **`DELETE /admin/users/:id`**: Delete a user profile (with root administrator deletion safeguards).
+- **`GET /admin/users/stats`**: Summary counts of total, verified, unverified, and administrative users.
+- **`GET /admin/users/active`**: Active online users list.
+- **`GET /admin/system/health`**: Comprehensive health telemetry covering MongoDB, Redis, OSRM base URL, CPU, memory, and Socket.IO connections.
+- **`GET /admin/system/cache`**: Redis cache statistics and key counts.
+- **`POST /admin/system/cache/flush`**: Invalidate cached routing keys (`routes`) or clear all cache (`all`).
+- **`GET /admin/system/config`**: Dynamic sovereign feature flags (NavIC, AI Copilot, Lane Guidance, Maintenance Mode).
+- **`PATCH /admin/system/config`**: Update dynamic system configuration and feature flags without restarting server.
+- **`GET /admin/traffic/overrides`**: List active road segment traffic congestion and speed multiplier overrides.
+- **`POST /admin/traffic/override`**: Inject real-time road segment traffic speed multipliers and congestion flags.
+- **`DELETE /admin/traffic/override/:id`**: Remove traffic override.
+- **`GET /admin/weather/overrides`**: List active expressway weather and winter fog advisories.
+- **`POST /admin/weather/override`**: Inject manual weather overrides (e.g. dense fog, heavy rain) for highway stretches.
+- **`DELETE /admin/weather/override/:name`**: Remove manual weather override by highway name.
+- **`GET /admin/hazards`**: List reported road hazards (speed breakers, potholes, waterlogging).
+- **`POST /admin/hazards`**: Broadcast official road hazard alert.
+- **`PATCH /admin/hazards/:id/verify`**: Confirm and verify crowdsourced road hazard reports.
+- **`DELETE /admin/hazards/:id`**: Remove / resolve road hazard.
+- **`GET /admin/tolls`**: List all registered toll plazas with highway and operator filter.
+- **`POST /admin/tolls`**: Register new toll plaza in the electronic toll registry.
+- **`PATCH /admin/tolls/:id`**: Update toll rates (single, return, monthly) and FASTag operational status.
+- **`DELETE /admin/tolls/:id`**: Remove toll plaza from registry.
+- **`GET /admin/places`**: Paginated search across master Points of Interest (POIs).
+- **`POST /admin/places`**: Create official POI with GeoJSON coordinates.
+- **`DELETE /admin/places/:id`**: Remove POI.
+- **`GET /admin/emergency/incidents`**: Real-time log of Highway Emergency SOS alerts.
+- **`PATCH /admin/emergency/incidents/:id`**: Update emergency incident status (`ACKNOWLEDGED`, `DISPATCHED`, `RESOLVED`).
+- **`GET /admin/ratings`**: Moderation feed of user ratings and reviews.
+- **`DELETE /admin/ratings/:id`**: Remove inappropriate or spam user review.
+- **`GET /admin/audit-logs`**: Compliance audit trail recording administrative actions, timestamps, and actor details.
+
 ---
 
 ## 🧠 Comprehensive AI & Large Language Model (LLM) Suite
@@ -524,8 +648,28 @@ src/
 │   ├── public-transit/                     # Multimodal transit routing, platform exit guide, live departures
 │   ├── ar-walk-cycle/                      # AR 3D chevrons, accessible pedestrian paths, bike lane elevation
 │   ├── ai-copilot/                         # Conversational LLM copilot, Vision hazard OCR, departure optimizer
-│   ├── spatial-visualization/              # 3D Digital Twin, Vector tiles, 360 Street View (>95% Indian Urban), 4D Space & High-Precision Indoor
+│   ├── spatial-visualization/              # 3D Digital Twin, Vector tiles, 360 Street View (>95% Indian Urban)
 │   ├── super-app/                          # All-in-One Ride-Hailing, POI Lifestyle Booking, Offline Maps & Delta Sync
+│   ├── navic/                              # NavIC / IRNSS L5+S dual-frequency GNSS fix & GAGAN augmentation
+│   ├── tolls/                              # FASTag electronic toll calculation & nearby plaza tariffs
+│   ├── pincode/                            # 6-digit Indian PIN code lookup & address entity parser
+│   ├── digipin/                            # National 4m x 4m micro-grid DIGIPIN encoder/decoder
+│   ├── emergency/                          # SOS emergency dispatch (112, 1033) & nearby trauma/patrol units
+│   ├── environment/                        # CPCB Air Quality Index (AQI), solar potential & pollen levels
+│   ├── weather/                            # Highway fog/rain conditions & IMD weather alert overrides
+│   ├── hazards/                            # Crowdsourced road hazards, unmarked speed breakers, potholes
+│   ├── vernacular/                         # Turn-by-turn audio voice prompts in 10+ Indian languages
+│   ├── v2x/                                # V2X SPaT signal phase timing & GLOSA green wave speed advisory
+│   ├── obfuscation/                        # Differential privacy (Laplace) & WGS84/GCJ02/BD09 datum transforms
+│   ├── boundaries/                         # Survey of India (SOI) territorial boundaries & region masking
+│   ├── evcharging/                         # EV charging network, connector availability (CCS2, Type 2, etc.)
+│   ├── fares/                              # Official municipal RTO metered fares (Auto, Kaali-Peeli, Cab)
+│   ├── roads/                              # Roads API snap-to-roads and speed limit lookups
+│   ├── maps-tiles/                         # MapLibre vector tile styles, static SVG map generator, clusters
+│   ├── fleet/                              # Commercial fleet telemetry & on-demand trip dispatch
+│   ├── timezone/                           # Geospatial coordinate to timezone resolver (Asia/Kolkata)
+│   ├── ratings/                            # User ratings and reviews moderation feed
+│   ├── admin/                              # Admin command center, live metrics, and operational overrides
 │   └── index.ts                            # Master barrel export for all domain modules
 │
 ├── routes/                                 # Global router mounting modular endpoints (with legacy facades)

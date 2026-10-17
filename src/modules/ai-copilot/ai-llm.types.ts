@@ -33,6 +33,9 @@ export interface AICopilotVehicleContext {
   destinationName?: string;
   remainingDistanceMeters?: number;
   batteryOrFuelPercent?: number;
+  fuelLevelPercent?: number;
+  headingDeg?: number;
+  etaMinutes?: number;
   weatherCondition?: string;
 }
 

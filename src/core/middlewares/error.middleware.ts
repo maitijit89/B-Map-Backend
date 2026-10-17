@@ -12,12 +12,17 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   });
 
   const statusCode = err.statusCode || (err.name === 'ValidationError' ? 400 : 500);
-  const message = err.message || 'Internal Server Error';
+  
+  // In production, mask raw 500 internal errors to prevent internal system or DB detail leaks
+  const safeMessage =
+    env.NODE_ENV === 'production' && statusCode >= 500
+      ? 'An internal server error occurred. Please try again later.'
+      : err.message || 'Internal Server Error';
 
   sendError(
     res,
     statusCode,
-    message,
+    safeMessage,
     env.NODE_ENV === 'development' ? { stack: err.stack } : undefined
   );
 };

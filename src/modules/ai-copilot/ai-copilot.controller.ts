@@ -158,6 +158,56 @@ export class AICopilotController {
       sendError(res, 500, err.message);
     }
   }
+
+  /**
+   * Diagnostic status of AI Backend (http://localhost:3000),
+   * WebSocket Gateway (ws://localhost:3000), and Gemma Model (http://127.0.0.1:5005)
+   */
+  async getAIStatus(_req: Request, res: Response): Promise<void> {
+    try {
+      const status = await aiCopilotService.getComprehensiveAIStatus();
+      sendSuccess({
+        res,
+        message: 'AI Ecosystem diagnostics retrieved',
+        data: status,
+      });
+    } catch (err: any) {
+      sendError(res, 500, err.message);
+    }
+  }
+
+  /**
+   * Status of Gemma 3 1B LLM model server
+   */
+  async getGemmaModelStatus(_req: Request, res: Response): Promise<void> {
+    try {
+      const modelHealth = await aiCopilotService.checkGemmaHealth();
+      sendSuccess({
+        res,
+        message: 'Gemma model status retrieved',
+        data: modelHealth,
+      });
+    } catch (err: any) {
+      sendError(res, 500, err.message);
+    }
+  }
+
+  /**
+   * Triggers startup of Gemma 3 LLM model server
+   */
+  async startGemmaModel(_req: Request, res: Response): Promise<void> {
+    try {
+      const result = await aiCopilotService.startGemmaModel();
+      sendSuccess({
+        res,
+        message: 'Gemma model start dispatched',
+        data: result,
+      });
+    } catch (err: any) {
+      sendError(res, 500, err.message);
+    }
+  }
 }
 
 export const aiCopilotController = new AICopilotController();
+

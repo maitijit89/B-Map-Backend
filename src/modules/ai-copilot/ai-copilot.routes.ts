@@ -17,4 +17,11 @@ router.post('/traffic/forecast', (req, res) => aiCopilotController.forecastTraff
 // POI Review Intelligence & Arrival Briefing
 router.get('/poi/intelligence', (req, res) => aiCopilotController.getPOIIntelligence(req, res));
 
+// AI Ecosystem Health & Diagnostics (Server URL: http://localhost:3000, WS: ws://localhost:3000, Gemma: http://127.0.0.1:5005)
+router.get('/health', (req, res) => aiCopilotController.getAIStatus(req, res));
+router.get('/status', (req, res) => aiCopilotController.getAIStatus(req, res));
+router.get('/model/status', (req, res) => aiCopilotController.getGemmaModelStatus(req, res));
+router.post('/model/start', (req, res) => aiCopilotController.startGemmaModel(req, res));
+
 export default router;
+

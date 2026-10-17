@@ -15,17 +15,18 @@ export const authenticateUser = (
   next: NextFunction
 ): void => {
   const authHeader = req.headers.authorization;
-  const queryToken = typeof req.query?.token === 'string' ? req.query.token : undefined;
-
   let token: string | undefined;
+
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.split(' ')[1];
-  } else if (queryToken) {
-    token = queryToken;
   }
 
   if (!token) {
-    sendError(res, 401, 'Unauthorized: Access token missing or invalid format. Please provide "Bearer <token>" in header or ?token=<token> in query.');
+    sendError(
+      res,
+      401,
+      'Unauthorized: Access token missing or invalid format. Please provide "Bearer <token>" in the Authorization header.'
+    );
     return;
   }
 

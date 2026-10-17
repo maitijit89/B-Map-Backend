@@ -8,3 +8,5 @@ export * from './ai-poi-intelligence.service';
 export * from './ai-copilot.controller';
 export { default as aiCopilotRoutes } from './ai-copilot.routes';
 export * from './ai-copilot.socket';
+export * from './ai-copilot-socket-bridge.service';
+

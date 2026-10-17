@@ -71,6 +71,14 @@ const envSchema = z.object({
   // Navigation Logic
   OFF_ROUTE_THRESHOLD_METERS: z.string().default('40').transform((val) => parseInt(val, 10)),
   REROUTE_COOLDOWN_SECONDS: z.string().default('5').transform((val) => parseInt(val, 10)),
+
+  // AI Microservice Service-to-Service Connection (b_map_ai)
+  AI_BACKEND_URL: z.string().default('http://localhost:3000'),
+  AI_BACKEND_WS_URL: z.string().default('ws://localhost:3000'),
+  AI_BACKEND_API_KEY: z.string().default('bmap_sec_token_9f81a7b6c5d4e321'),
+  AI_BACKEND_TIMEOUT_MS: z.string().default('12000').transform((v) => parseInt(v, 10)),
+  GEMMA_MODEL_URL: z.string().default('http://127.0.0.1:5005'),
+  AUTO_START_GEMMA: z.string().default('true').transform((val) => val === 'true'),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

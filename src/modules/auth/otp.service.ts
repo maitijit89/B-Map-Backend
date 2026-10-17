@@ -121,8 +121,14 @@ export class OtpService {
       throw new Error('Too many invalid attempts. For your security, this passcode has been invalidated.');
     }
 
-    // Verify OTP match
-    if (record.otp !== inputOtp.trim()) {
+    // Verify OTP match using constant-time comparison to eliminate side-channel timing attacks
+    const expectedBuffer = Buffer.from(record.otp);
+    const inputBuffer = Buffer.from(inputOtp.trim());
+    const isMatch =
+      expectedBuffer.length === inputBuffer.length &&
+      crypto.timingSafeEqual(expectedBuffer, inputBuffer);
+
+    if (!isMatch) {
       record.attempts += 1;
 
       // Update attempt count in Redis / Memory

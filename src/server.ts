@@ -1,11 +1,23 @@
 import http from 'http';
 import { createApp } from './app';
-import { connectDatabase, disconnectDatabase, env, logger, closeRedis, initRedis } from './core';
+import {
+  connectDatabase,
+  disconnectDatabase,
+  env,
+  logger,
+  closeRedis,
+  initRedis,
+  AntiTamperSentinel,
+} from './core';
 import { initSocketServer } from './sockets';
 import { keepaliveService } from './services/keepalive.service';
+import { aiCopilotService, aiCopilotSocketBridge } from './modules/ai-copilot';
 
 const startServer = async (): Promise<void> => {
   try {
+    // 0. Initialize Runtime Anti-Tamper, Anti-Debugging & Memory Defense
+    AntiTamperSentinel.initialize();
+
     // 1. Initialize Geospatial Database (MongoDB)
     await connectDatabase();
 
@@ -22,7 +34,7 @@ const startServer = async (): Promise<void> => {
     initSocketServer(httpServer);
 
     // 6. Listen on configured port
-    httpServer.listen(env.PORT, () => {
+    httpServer.listen(env.PORT, async () => {
       logger.info(`🚀 B-Map Navigation Server listening on port ${env.PORT}`);
       logger.info(`📍 REST API available at: http://localhost:${env.PORT}${env.API_PREFIX}`);
       logger.info(`🔌 Socket.IO endpoint ready on: ws://localhost:${env.PORT}`);
@@ -30,6 +42,9 @@ const startServer = async (): Promise<void> => {
 
       // Start anti-sleep keep-alive heartbeat if configured
       keepaliveService.start();
+
+      // Initialize AI Copilot microservice connection, WebSocket bridge & Gemma LLM engine
+      await aiCopilotService.initializeAIConnection();
     });
 
     // Graceful Shutdown
@@ -37,6 +52,8 @@ const startServer = async (): Promise<void> => {
       logger.info(`Received ${signal}. Starting graceful shutdown...`);
 
       keepaliveService.stop();
+      aiCopilotSocketBridge.disconnect();
+
 
       httpServer.close(async () => {
         logger.info('HTTP server closed.');

@@ -72,7 +72,9 @@ export const SOCKET_EVENTS = {
 
   // 6. Comprehensive AI & LLM Copilot
   COPILOT_MESSAGE_STREAM: 'copilot:message_stream',
+  COPILOT_PROCESSING_STATUS: 'copilot:processing_status',
   COPILOT_MESSAGE_RESPONSE: 'copilot:message_response',
+  COPILOT_ERROR: 'copilot:error',
 
   // 7. Advanced Visualization & Spatial Mapping
   SPATIAL_HEATMAP_STREAM: 'spatial:heatmap_stream',

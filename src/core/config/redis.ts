@@ -5,15 +5,33 @@ import { logger } from './logger';
 export let redisClient: Redis;
 let isRedisReady = false;
 
+// Debounce state to avoid flooding logs during transient network reconnects
+let lastErrorLogTimestamp = 0;
+let lastLoggedErrorMessage = '';
+
 export const initRedis = (): Redis => {
+  if (redisClient) {
+    return redisClient;
+  }
+
   const isTls = env.REDIS_URL.startsWith('rediss://');
 
   redisClient = new Redis(env.REDIS_URL, {
     keyPrefix: env.REDIS_KEY_PREFIX,
     tls: isTls ? { rejectUnauthorized: false } : undefined,
+    keepAlive: 10000, // TCP keep-alive to prevent cloud serverless connection drop
+    enableReadyCheck: true,
     retryStrategy: (times) => {
-      const delay = Math.min(times * 100, 3000);
+      // Exponential backoff between 1s and 5s
+      const delay = Math.min(1000 * Math.pow(1.4, Math.min(times, 6)), 5000);
       return delay;
+    },
+    reconnectOnError: (err) => {
+      const targetError = 'READONLY';
+      if (err.message.includes(targetError)) {
+        return true;
+      }
+      return false;
     },
     maxRetriesPerRequest: 3,
     lazyConnect: true,
@@ -25,12 +43,18 @@ export const initRedis = (): Redis => {
 
   redisClient.on('ready', () => {
     isRedisReady = true;
-    logger.info(`✅ Connected to Redis at ${env.REDIS_URL}`);
+    logger.info(`✅ Connected to Redis at ${env.REDIS_URL.replace(/:([^:@]+)@/, ':****@')}`);
   });
 
   redisClient.on('error', (err) => {
     isRedisReady = false;
-    logger.warn(`⚠️ Redis connection issue: ${err.message}`);
+    const now = Date.now();
+    // Throttle duplicate warning logs to once every 10 seconds
+    if (err.message !== lastLoggedErrorMessage || now - lastErrorLogTimestamp > 10000) {
+      lastErrorLogTimestamp = now;
+      lastLoggedErrorMessage = err.message;
+      logger.warn(`⚠️ Redis connection issue: ${err.message}`);
+    }
   });
 
   redisClient.on('close', () => {

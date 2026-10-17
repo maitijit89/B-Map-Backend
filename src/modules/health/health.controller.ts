@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import { env } from '../../core/config/env.config';
 import { isRedisConnected } from '../../core/config/redis';
 import { sendSuccess } from '../../core/utils/api-response';
+import { aiCopilotService } from '../ai-copilot/ai-copilot.service';
 
 export const getHealthStatus = async (_req: Request, res: Response): Promise<void> => {
   const mongoStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
@@ -20,6 +21,18 @@ export const getHealthStatus = async (_req: Request, res: Response): Promise<voi
     osrmStatus = 'offline_or_limited';
   }
 
+  // Query AI Ecosystem & Gemma LLM health status
+  const aiStatus = await aiCopilotService.getComprehensiveAIStatus().catch(() => ({
+    serverUrl: env.AI_BACKEND_URL,
+    websocketGateway: env.AI_BACKEND_WS_URL,
+    environment: env.APP_ENV,
+    gemmaModelUrl: env.GEMMA_MODEL_URL,
+    autoStartModel: env.AUTO_START_GEMMA,
+    aiBackend: { backend: 'offline', socketGateway: 'offline' },
+    gemmaModel: { status: 'offline', is_ready: false },
+    webSocketBridge: { isConnected: false },
+  }));
+
   const isHealthy = mongoStatus === 'connected' || env.NODE_ENV === 'development';
 
   sendSuccess({
@@ -35,9 +48,23 @@ export const getHealthStatus = async (_req: Request, res: Response): Promise<voi
           status: osrmStatus,
           baseUrl: env.OSRM_BASE_URL,
         },
+        aiMicroservice: {
+          serverUrl: env.AI_BACKEND_URL,
+          websocketGateway: env.AI_BACKEND_WS_URL,
+          status: aiStatus.aiBackend.backend,
+          socketGateway: aiStatus.aiBackend.socketGateway,
+          webSocketBridgeConnected: (aiStatus.webSocketBridge as any).isConnected,
+        },
+        gemmaModel: {
+          url: env.GEMMA_MODEL_URL,
+          status: (aiStatus.gemmaModel as any).status || 'offline',
+          isReady: (aiStatus.gemmaModel as any).is_ready || false,
+          autoStart: env.AUTO_START_GEMMA,
+        },
       },
       environment: env.NODE_ENV,
       uptimeSeconds: Math.floor(process.uptime()),
     },
   });
 };
+

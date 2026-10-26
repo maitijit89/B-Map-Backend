@@ -9,13 +9,22 @@ export const registerAutomotiveHandlers = (io: Server, socket: Socket) => {
       if (!data || !data.vehicleId || !data.packet) return;
 
       const ecoScore = automotiveEcosystemService.processCANTelemetry(data.vehicleId, data.packet);
-      socket.emit(SOCKET_EVENTS.AUTO_ECO_SCORE_BROADCAST, {
+      const payload = {
         vehicleId: data.vehicleId,
         ecoScore,
         timestamp: Date.now(),
-      });
+      };
+      socket.emit(SOCKET_EVENTS.AUTO_ECO_SCORE_BROADCAST, payload);
+      io.to(`auto:${data.vehicleId}`).emit(SOCKET_EVENTS.AUTO_ECO_SCORE_BROADCAST, payload);
     } catch (err: any) {
       socket.emit(SOCKET_EVENTS.ERROR, { message: `CAN stream error: ${err.message}` });
+    }
+  });
+
+  // Subscribe secondary screens (CarPlay / Android Auto / HUD) to vehicle room
+  socket.on('auto:subscribe', (data: { vehicleId: string }) => {
+    if (data?.vehicleId) {
+      socket.join(`auto:${data.vehicleId}`);
     }
   });
 
@@ -35,6 +44,9 @@ export const registerAutomotiveHandlers = (io: Server, socket: Socket) => {
       });
 
       socket.emit(SOCKET_EVENTS.AUTO_HUD_FRAME_STREAM, frame);
+      if (data.vehicleId) {
+        io.to(`auto:${data.vehicleId}`).emit(SOCKET_EVENTS.AUTO_HUD_FRAME_STREAM, frame);
+      }
     } catch (err: any) {
       socket.emit(SOCKET_EVENTS.ERROR, { message: `HUD frame stream error: ${err.message}` });
     }
@@ -44,7 +56,8 @@ export const registerAutomotiveHandlers = (io: Server, socket: Socket) => {
   socket.on(SOCKET_EVENTS.AUTO_COCKPIT_SYNC, (data: any) => {
     try {
       if (!data || !data.vehicleId) return;
-      // Broadcast to all screens paired with this vehicle
+      // Broadcast to all screens paired with this vehicle (room auto:<vehicleId>)
+      io.to(`auto:${data.vehicleId}`).emit(SOCKET_EVENTS.AUTO_COCKPIT_SYNC, data);
       socket.broadcast.emit(`${SOCKET_EVENTS.AUTO_COCKPIT_SYNC}:${data.vehicleId}`, data);
     } catch (err: any) {
       socket.emit(SOCKET_EVENTS.ERROR, { message: `Cockpit sync error: ${err.message}` });

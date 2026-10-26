@@ -34,3 +34,29 @@ export interface FuzzResponse {
   noise_radius_meters: number;
   privacy_mechanism: string;
 }
+
+export interface DefenseZone {
+  id: string;
+  name: string;
+  category: 'AIR_BASE' | 'NAVAL_BASE' | 'DRDO_TEST_RANGE' | 'MILITARY_CANTONMENT' | 'STRATEGIC_ASSET';
+  center: LatLng;
+  bufferRadiusMeters: number;
+}
+
+export interface DefenseMaskingRequest {
+  location?: LatLng;
+  latitude?: number;
+  longitude?: number;
+  minJitterMeters?: number;
+  maxJitterMeters?: number;
+}
+
+export interface DefenseMaskingResponse {
+  original_location: LatLng;
+  obfuscated_location: LatLng;
+  is_within_defense_zone: boolean;
+  zone_name?: string;
+  zone_category?: string;
+  jitter_distance_meters: number;
+  policy_compliance: string;
+}

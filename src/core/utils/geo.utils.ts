@@ -22,10 +22,40 @@ export const calculateBearing = (from: Coordinate, to: Coordinate): number => {
 };
 
 /**
+ * Computes Geodesic Cross-Track Error (XTD) using great-circle Haversine spherical geometry.
+ * Mathematical Formulation:
+ * XTD = arcsin(sin(d_13 / R) * sin(theta_13 - theta_12)) * R
+ * Where:
+ * - R = 6,371,000 meters (mean Earth spherical radius)
+ * - d_13 = great-circle distance from segment start P1 to vehicle position P3
+ * - theta_13 = forward azimuth bearing from P1 to P3
+ * - theta_12 = forward azimuth bearing from P1 to segment end P2
+ */
+export const calculateGeodesicXtdMeters = (
+  currentLoc: Coordinate, // P3 [lon, lat]
+  segmentStart: Coordinate, // P1 [lon, lat]
+  segmentEnd: Coordinate, // P2 [lon, lat]
+  earthRadiusMeters: number = 6371000
+): number => {
+  const d13 = calculateDistanceMeters(segmentStart, currentLoc);
+  if (d13 === 0) return 0;
+
+  const theta13 = (calculateBearing(segmentStart, currentLoc) * Math.PI) / 180;
+  const theta12 = (calculateBearing(segmentStart, segmentEnd) * Math.PI) / 180;
+
+  const sinRatio = Math.sin(d13 / earthRadiusMeters) * Math.sin(theta13 - theta12);
+  const clampedRatio = Math.max(-1.0, Math.min(1.0, sinRatio));
+  const xtd = Math.asin(clampedRatio) * earthRadiusMeters;
+
+  return Math.abs(Math.round(xtd * 10) / 10);
+};
+
+/**
  * Checks if a current GPS coordinate has deviated beyond a threshold from the planned route.
+ * Evaluates geodesic Cross-Track Error (XTD) with standard 40m threshold.
  * @param currentLoc [longitude, latitude]
  * @param routeGeometry GeoJsonLineString
- * @param thresholdMeters Maximum acceptable deviation before declaring off-route
+ * @param thresholdMeters Maximum acceptable deviation before declaring off-route (default: 40m)
  */
 export const checkOffRoute = (
   currentLoc: Coordinate,

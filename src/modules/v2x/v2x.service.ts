@@ -115,3 +115,4 @@ export class V2XService {
 }
 
 export const v2xService = new V2XService();
+export const v2xEngineService = v2xService;

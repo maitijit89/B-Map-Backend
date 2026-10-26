@@ -46,3 +46,5 @@ export * from './fleet';
 export * from './timezone';
 export * from './ratings';
 export * from './admin';
+export * from './traffic';
+export * from './app-version';

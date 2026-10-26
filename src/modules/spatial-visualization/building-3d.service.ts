@@ -138,7 +138,7 @@ export class Building3DService {
               ],
             },
           },
-        }).limit(100);
+        }).limit(100).lean();
 
       for (const doc of docs) {
         if (!results.some((r) => r.buildingId === doc.buildingId)) {

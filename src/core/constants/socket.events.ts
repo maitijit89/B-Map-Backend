@@ -4,11 +4,13 @@ export const SOCKET_EVENTS = {
   DISCONNECT: 'disconnect',
   ERROR: 'error',
 
-  // Real-time location tracking (Drivers/Users/Fleet)
+  // Real-time location tracking & 1Hz-5Hz breadcrumb streaming (Drivers/Users/Fleet)
   LOCATION_UPDATE: 'location:update',
   LOCATION_BROADCAST: 'location:broadcast',
   LOCATION_SUBSCRIBE: 'location:subscribe',
   LOCATION_UNSUBSCRIBE: 'location:unsubscribe',
+  TRACKING_BREADCRUMB_STREAM: 'tracking:breadcrumb_stream',
+  TRACKING_BREADCRUMB_BROADCAST: 'tracking:breadcrumb_broadcast',
 
   // Proximity & Fleet queries
   NEARBY_DRIVERS_REQUEST: 'nearby:drivers:request',
@@ -20,6 +22,7 @@ export const SOCKET_EVENTS = {
   NAV_UPDATE_PROGRESS: 'nav:update_progress',
   NAV_PROGRESS_STATE: 'nav:progress_state',
   NAV_OFF_ROUTE_ALERT: 'nav:off_route_alert',
+  NAV_SUB_SECOND_REROUTE: 'nav:sub_second_reroute',
   NAV_REROUTE_SUCCESS: 'nav:reroute_success',
   NAV_REROUTE_ERROR: 'nav:reroute_error',
   NAV_STEP_COMPLETED: 'nav:step_completed',
@@ -62,6 +65,7 @@ export const SOCKET_EVENTS = {
   // 4. Parking Space-Level Navigation
   PARKING_ENTRANCE_DETECT: 'parking:entrance_detect',
   PARKING_INDOOR_GUIDANCE: 'parking:indoor_guidance',
+  PARKING_BAY_STATUS: 'parking:bay_status',
   PARKING_BAY_STATUS_BROADCAST: 'parking:bay_status_broadcast',
 
   // 5. Multi-Mode Core Navigation
@@ -73,6 +77,7 @@ export const SOCKET_EVENTS = {
   // 6. Comprehensive AI & LLM Copilot
   COPILOT_MESSAGE_STREAM: 'copilot:message_stream',
   COPILOT_PROCESSING_STATUS: 'copilot:processing_status',
+  COPILOT_TOKEN_STREAM: 'copilot:token_stream',
   COPILOT_MESSAGE_RESPONSE: 'copilot:message_response',
   COPILOT_ERROR: 'copilot:error',
 
@@ -98,4 +103,15 @@ export const SOCKET_EVENTS = {
   SUPER_APP_RIDE_SOS_ALERT: 'superapp:ride_sos_alert',
   SUPER_APP_LIFESTYLE_BOOKING_UPDATE: 'superapp:lifestyle_booking_update',
   SUPER_APP_OFFLINE_SYNC_PROGRESS: 'superapp:offline_sync_progress',
+
+  // 10. Real-Time Traffic & ETA Calculation Layer
+  TRAFFIC_TELEMETRY_STREAM: 'traffic:telemetry_stream',
+  TRAFFIC_SEGMENT_UPDATE: 'traffic:segment_update',
+  TRAFFIC_ETA_UPDATE: 'traffic:eta_update',
+  TRAFFIC_ANOMALY_FILTERED: 'traffic:anomaly_filtered',
+  TRAFFIC_CONGESTION_ALERT: 'traffic:congestion_alert',
+
+  // 11. Client & Frontend App Version Control Layer
+  APP_VERSION_UPDATE_AVAILABLE: 'app:version_update',
+  APP_VERSION_CHECK: 'app:version_check',
 } as const;

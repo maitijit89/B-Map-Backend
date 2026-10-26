@@ -320,3 +320,4 @@ export class ARWalkCycleService {
 }
 
 export const arWalkCycleService = new ARWalkCycleService();
+export const arWalkCycleEngineService = arWalkCycleService;

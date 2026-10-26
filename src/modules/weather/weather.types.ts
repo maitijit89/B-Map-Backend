@@ -31,6 +31,10 @@ export interface HighwayWeatherReport {
   safety_advisory: string;
   reported_at: string;
   is_manual_override?: boolean;
+  isRerouteRecommended?: boolean;
+  rerouteReason?: 'ZERO_VISIBILITY_WINTER_FOG' | 'MONSOON_HIGHWAY_FLOODING' | 'CYCLONIC_STORM_SURGE' | 'NONE';
+  speedReductionPercent?: number;
+  safeSpeedLimitKmh?: number;
 }
 
 export interface ManualWeatherOverride {

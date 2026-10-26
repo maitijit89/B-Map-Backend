@@ -15,6 +15,7 @@ import { veteranDriverLayerService } from '../lane-routing/veteran-driver-layer.
 import { osrmService } from '../../services/osrm.service';
 import { positioningEngineService } from '../positioning/positioning-engine.service';
 import { dynamicRecommendationService } from './dynamic-recommendation.service';
+import { offRouteEngineService } from '../navigation/off-route-engine.service';
 
 export class UnifiedUnderlyingEngineService {
   private activeSessions = new Map<string, UnifiedSessionContext>();
@@ -98,13 +99,22 @@ export class UnifiedUnderlyingEngineService {
     // STEP 1: High-Precision Positioning & Sensor Fusion
     const fusedPosition = await positioningEngineService.processSensorPacket(tick.sensorPacket);
 
-    // STEP 2: Progress & Off-Route Verification
+    // STEP 2: Progress & Off-Route Verification via OffRouteEngine
     const routeGeometry = context.activeRoute.geometry as GeoJsonLineString;
-    const offRouteResult = checkOffRoute(fusedPosition.coordinates, routeGeometry, 40);
+    const rerouteEval = await offRouteEngineService.evaluateAndProcessProgress({
+      sessionId: context.sessionId,
+      currentLocation: fusedPosition.coordinates,
+      destination: context.destination,
+      routeGeometry,
+      heading: fusedPosition.headingDegrees,
+      speedMps: fusedPosition.speedMps,
+    });
 
     let isRerouted = false;
-    if (offRouteResult.isOffRoute) {
-      logger.warn(`⚠️ Unified Engine: Off route detected (${offRouteResult.distanceFromRouteMeters}m). Rerouting...`);
+    if (rerouteEval.shouldReroute) {
+      logger.warn(
+        `⚠️ Unified Engine: Off route detected (${rerouteEval.rerouteReason}: ${rerouteEval.distanceFromRouteMeters}m). Rerouting with Veteran layer...`
+      );
       try {
         const reroutePlan = await veteranDriverLayerService.planVeteranEnhancedRoute({
           origin: fusedPosition.coordinates,
@@ -114,7 +124,12 @@ export class UnifiedUnderlyingEngineService {
         context.activeRoute = reroutePlan.route;
         isRerouted = true;
       } catch (err: any) {
-        logger.error(`Unified Reroute failed: ${err.message}`);
+        if (rerouteEval.newRoute) {
+          context.activeRoute = rerouteEval.newRoute;
+          isRerouted = true;
+        } else {
+          logger.error(`Unified Reroute failed: ${err.message}`);
+        }
       }
     }
 

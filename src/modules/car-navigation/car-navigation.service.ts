@@ -24,11 +24,53 @@ export class CarNavigationService {
    * Seeds demo traffic bottlenecks and speed cameras
    */
   private seedDefaultTrafficAndCameras() {
-    // 1. Traffic Segments
+    // 1. Sovereign Indian Highway & Urban Traffic Segments
     const segments: TrafficSegment[] = [
       {
+        segmentId: 'traf_nh48_gurgaon',
+        roadName: 'NH-48 Delhi-Gurugram Expressway (Cyber City to IFFCO)',
+        congestionLevel: 'congested',
+        speedLimitKmh: 70,
+        currentSpeedKmh: 24,
+        speedMultiplier: 0.34,
+        lengthMeters: 2800,
+        delaySeconds: 280,
+        geometry: [
+          [77.085, 28.495],
+          [77.072, 28.472],
+        ],
+      },
+      {
+        segmentId: 'traf_weh_mumbai',
+        roadName: 'Western Express Highway (BKC Flyover Merge)',
+        congestionLevel: 'slow',
+        speedLimitKmh: 60,
+        currentSpeedKmh: 31,
+        speedMultiplier: 0.52,
+        lengthMeters: 1900,
+        delaySeconds: 165,
+        geometry: [
+          [72.852, 19.068],
+          [72.848, 19.052],
+        ],
+      },
+      {
+        segmentId: 'traf_outer_ring_blr',
+        roadName: 'Outer Ring Road (Marathahalli - Bellandur Tech Corridor)',
+        congestionLevel: 'congested',
+        speedLimitKmh: 50,
+        currentSpeedKmh: 14,
+        speedMultiplier: 0.28,
+        lengthMeters: 2400,
+        delaySeconds: 320,
+        geometry: [
+          [77.695, 12.935],
+          [77.682, 12.924],
+        ],
+      },
+      {
         segmentId: 'traf_kudamm_mid',
-        roadName: 'Kurfürstendamm Mid-Section',
+        roadName: 'Central Arterial Corridor',
         congestionLevel: 'slow',
         speedLimitKmh: 50,
         currentSpeedKmh: 32,
@@ -36,22 +78,8 @@ export class CarNavigationService {
         lengthMeters: 1200,
         delaySeconds: 85,
         geometry: [
-          [13.32, 52.502],
-          [13.332, 52.503],
-        ],
-      },
-      {
-        segmentId: 'traf_friedrichstr_jam',
-        roadName: 'Friedrichstraße Commercial Corridor',
-        congestionLevel: 'congested',
-        speedLimitKmh: 30,
-        currentSpeedKmh: 11,
-        speedMultiplier: 0.36,
-        lengthMeters: 800,
-        delaySeconds: 140,
-        geometry: [
-          [13.389, 52.515],
-          [13.391, 52.52],
+          [77.2177, 28.6304],
+          [77.228, 28.633],
         ],
       },
     ];
@@ -60,31 +88,31 @@ export class CarNavigationService {
       this.inMemoryTraffic.set(s.segmentId, s);
     }
 
-    // 2. Speed Cameras
+    // 2. Sovereign Speed & Red Light Enforcement Cameras
     const cameras: SpeedCameraAlert[] = [
       {
-        cameraId: 'cam_potsdamer_radar',
+        cameraId: 'cam_nh48_delhi_radar',
         type: 'fixed_radar',
-        location: [13.376, 52.509],
-        speedLimitKmh: 50,
+        location: [77.102, 28.528],
+        speedLimitKmh: 70,
         distanceAheadMeters: 450,
-        warningMessage: 'Fixed speed radar camera in 450m. Speed limit 50 km/h.',
+        warningMessage: 'Delhi Police Automated Radar Camera in 450m (70 km/h limit).',
       },
       {
-        cameraId: 'cam_leipziger_redlight',
-        type: 'red_light',
-        location: [13.385, 52.511],
-        speedLimitKmh: 50,
-        distanceAheadMeters: 280,
-        warningMessage: 'Red light & speed enforcement camera ahead at intersection.',
-      },
-      {
-        cameraId: 'cam_a100_section_avg',
+        cameraId: 'cam_yamuna_avg_speed',
         type: 'section_average_speed',
-        location: [13.31, 52.49],
-        speedLimitKmh: 80,
+        location: [77.535, 28.18],
+        speedLimitKmh: 100,
         distanceAheadMeters: 600,
-        warningMessage: 'Average speed section control zone starting in 600m (80 km/h).',
+        warningMessage: 'Yamuna Expressway Average Speed Zone in 600m (100 km/h limit).',
+      },
+      {
+        cameraId: 'cam_bengaluru_airport_redlight',
+        type: 'red_light',
+        location: [77.605, 13.085],
+        speedLimitKmh: 80,
+        distanceAheadMeters: 300,
+        warningMessage: 'BTP Automated Red Light & Speed Camera ahead at Hebbal junction.',
       },
     ];
 
@@ -309,3 +337,4 @@ export class CarNavigationService {
 }
 
 export const carNavigationService = new CarNavigationService();
+export const carNavigationEngineService = carNavigationService;

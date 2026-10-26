@@ -180,18 +180,31 @@ Where weights $w_i = \frac{1}{d_i^2}$ heavily prioritize beacons with strong sig
 
 ---
 
-## 7. Dynamic Congestion Re-Weighting
+## 7. Dynamic Congestion Re-Weighting & DBSCAN Tea-Stall Filtering
 
-### 7.1 Road Segment Weight Modification
-Base edge traversal time in OSRM graph is re-weighted based on real-time telematics flow:
+### 7.1 Directed Road Graph & BPR Dynamic Travel Time Re-Weighting
+Edge weights in the road network are strictly modeled and stored in **travel time minutes** (never static distance):
 
-$$w_e = t_{\text{free}} \cdot \left[ 1 + \alpha \cdot \left( \frac{v_{\text{free}} - v_{\text{actual}}}{v_{\text{free}}} \right)^\beta \right]$$
+$$W_{\text{minutes}} = \left(\frac{L_{\text{km}}}{V_{\text{effective}}}\right) \times 60$$
+
+Under dynamic traffic congestion, the edge travel time $T$ scales according to the calibrated Bureau of Public Roads (BPR) function:
+
+$$T = T_{\text{free}} \times \left[1 + \alpha \cdot \left(\frac{V}{C}\right)^\beta\right]$$
 
 Where:
-- $t_{\text{free}}$ = nominal edge traversal duration under uncongested conditions.
-- $v_{\text{free}}$ = posted speed limit or free-flow speed.
-- $v_{\text{actual}}$ = average vehicle speed observed via telematics over the last 5 minutes.
-- $\alpha = 0.65, \beta = 2.0$ = empirical congestion inflation constants.
+- $T_{\text{free}}$ = nominal edge traversal time (in minutes) under free-flow conditions.
+- $V / C$ = Volume-to-Capacity ratio (traffic density relative to segment capacity).
+- $\alpha = 0.65, \beta = 2.0$ = calibrated empirical Indian traffic constants.
+
+### 7.2 DBSCAN Anomaly Rejection ("Tea-Stall Filter")
+To eliminate false-positive slowdowns (e.g. bikers stopping at a roadside chai stall, single parked delivery vans, or stationary pedestrians):
+- **Neighborhood Search Radius ($\varepsilon$)**: $45 \text{ meters}$.
+- **Minimum Core Cluster Density ($minPts$)**: $3 \text{ independent active devices}$.
+- **Velocity Gate**: $v < 15 \text{ km/h}$.
+- **Space Mean Speed (Harmonic Mean)**:
+$$v_{\text{harmonic}} = \frac{N}{\sum_{i=1}^N \frac{1}{\max(v_i, 1.0)}}$$
+
+**Rejection Rule**: If a vehicle's observed speed drops below $15\text{ km/h}$ or lateral offset $d_{\text{lateral}} > 3.2\text{m}$, but fewer than $minPts = 3$ surrounding devices confirm congestion, the reading is tagged as `TEA_STALL_PAUSE` / `SINGLE_DEVICE_ROADSIDE_STOP` and quarantined from edge weight re-calculation. Genuine congestion is confirmed only when $\ge 3$ moving devices corroborate the bottleneck.
 
 ---
 
@@ -207,3 +220,123 @@ $$\tilde{x} = x + r \cdot \cos(\theta)$$
 $$\tilde{y} = y + r \cdot \sin(\theta)$$
 
 This mathematically guarantees that an observer cannot resolve true coordinates closer than radius $r_{\text{min}} = 200 \text{ meters}$, while maintaining utility for regional navigation overviews.
+
+---
+
+## 9. Extended Kalman Filter (EKF) Kinematic State-Space Model
+
+### 9.1 Continuous-Time White Noise Acceleration (CWNA)
+To fuse noisy GNSS fixes ($[lon, lat]$) with reported telematics velocities, the motion model operates on a 6-dimensional state vector $\mathbf{x} = [x, y, v_x, v_y, a_x, a_y]^T$ on a local tangent plane:
+
+$$\mathbf{x}_{k} = \mathbf{F}(\Delta t) \cdot \mathbf{x}_{k-1} + \mathbf{w}_{k-1}$$
+
+Where the state transition matrix $\mathbf{F}(\Delta t)$ is:
+
+$$\mathbf{F}(\Delta t) = \begin{bmatrix}
+1 & 0 & \Delta t & 0 & \frac{1}{2}\Delta t^2 & 0 \\
+0 & 1 & 0 & \Delta t & 0 & \frac{1}{2}\Delta t^2 \\
+0 & 0 & 1 & 0 & \Delta t & 0 \\
+0 & 0 & 0 & 1 & 0 & \Delta t \\
+0 & 0 & 0 & 0 & 1 & 0 \\
+0 & 0 & 0 & 0 & 0 & 1
+\end{bmatrix}$$
+
+### 9.2 Kalman Gain & Measurement Update
+Given observation $\mathbf{z}_k = [x_{\text{meas}}, y_{\text{meas}}, v_{x,\text{meas}}, v_{y,\text{meas}}]^T$:
+$$\mathbf{y}_k = \mathbf{z}_k - \mathbf{H} \mathbf{x}_{k|k-1}$$
+$$\mathbf{S}_k = \mathbf{H} \mathbf{P}_{k|k-1} \mathbf{H}^T + \mathbf{R}_k$$
+$$\mathbf{K}_k = \mathbf{P}_{k|k-1} \mathbf{H}^T \mathbf{S}_k^{-1}$$
+$$\mathbf{x}_{k|k} = \mathbf{x}_{k|k-1} + \mathbf{K}_k \mathbf{y}_k$$
+$$\mathbf{P}_{k|k} = (\mathbf{I} - \mathbf{K}_k \mathbf{H}) \mathbf{P}_{k|k-1}$$
+
+### 9.3 Tunnel Dead-Reckoning Extrapolation (Strict 10s Window)
+During GNSS blackouts inside tunnels, dense multi-tier flyovers, or urban canyons:
+1. **Pure-Inertial Projection**: The filter projects state pure-inertially without GNSS observation:
+   $$\mathbf{x}_{k+1} = \mathbf{F}(\Delta t) \mathbf{x}_k$$
+2. **Covariance Uncertainty Monitoring**: The trace of the state error covariance matrix $\text{Tr}(\mathbf{P}) = \sum_{i=0}^5 P_{ii}$ is continuously monitored as an uncertainty divergence gauge.
+3. **Strict 10-Second Maximum Extrapolation Bound**:
+   $$t_{\text{blackout}} = \sum \Delta t_{\text{dr}} \le 10.0\text{ seconds}$$
+   If $t_{\text{blackout}} > 10.0\text{ s}$, `isMaxDeadReckoningWindowExceeded = true` is asserted, signaling navigation clients to halt dead-reckoning extrapolation and trigger weak-signal beacon/cellular fallback. Fresh GNSS fixes reset $t_{\text{blackout}} = 0$.
+
+---
+
+## 10. Lighthill-Whitham-Richards (LWR) Traffic Shockwave Dynamics
+
+### 10.1 Continuity & Greenshields Model
+Macroscopic traffic satisfies the conservation of vehicles:
+$$\frac{\partial k}{\partial t} + \frac{\partial q}{\partial x} = 0$$
+
+Using Greenshields' parabolic flow relation $q = k \cdot v_{\text{free}} \left(1 - \frac{k}{k_{\text{jam}}}\right)$:
+- Jam density: $k_{\text{jam}} \approx 135 \text{ veh/km/lane}$
+- Critical speed: $v_{\text{crit}} = \frac{v_{\text{free}}}{2}$
+- Corridor capacity: $q_{\max} = \frac{v_{\text{free}} \cdot k_{\text{jam}}}{4}$
+
+### 10.2 Shockwave Velocity & Spillback Time
+The shockwave velocity $w$ at the transition boundary between upstream arrival state $(k_A, q_A)$ and congested bottleneck state $(k_B, q_B)$ is:
+
+$$w_{\text{shock}} = \frac{q_B - q_A}{k_B - k_A}$$
+
+When $w_{\text{shock}} < 0$, a backward-forming shockwave propagates upstream against traffic flow. The estimated time until the queue spills back into the upstream intersection is:
+
+$$t_{\text{spillback}} = \frac{L_{\text{segment}}}{|w_{\text{shock}}|}$$
+
+---
+
+## 11. Multi-Criteria Physics-Based Vehicle Energy Equations
+
+### 11.1 Steady-State & Kinetic Power
+Tractive force $F_{\text{tractive}}$ balances aerodynamic drag, rolling resistance, and inertial stop-and-go acceleration:
+
+$$F_{\text{aero}} = \frac{1}{2} \cdot \rho_{\text{air}} \cdot C_d \cdot A \cdot v^2$$
+$$F_{\text{roll}} = C_{rr} \cdot m \cdot g$$
+$$E_{\text{steady}} = (F_{\text{aero}} + F_{\text{roll}}) \cdot d$$
+
+In stop-and-go congestion, kinetic dissipation multiplies mechanical energy by empirical stop-and-go factor $\lambda_{\text{congestion}} \in [1.18, 1.95]$:
+
+$$E_{\text{total}} = \frac{E_{\text{steady}} \cdot \lambda_{\text{congestion}}}{\eta_{\text{powertrain}}}$$
+
+Where $\eta_{\text{powertrain}}$ is $0.28 - 0.32$ for ICE engines and $0.85 - 0.90$ for Electric Vehicles (EV).
+
+---
+
+## 12. Zero-Trust Kinematic Anti-GPS Spoofing & Replay Defense
+
+### 12.1 Kinematic Acceleration & Teleportation Thresholds
+To defeat GPS spoofing and emulator bots, telematics fixes must satisfy physical constraints:
+1. **Implied Displacement Velocity**:
+   $$\frac{d(P_{t-1}, P_t)}{\Delta t} \le v_{\max} = 220\text{ km/h}$$
+2. **Maximum Surface Acceleration**:
+   $$a_{\text{kinematic}} = \frac{|v_t - v_{t-1}|}{\Delta t} \le 6.5\text{ m/s}^2 \quad (\approx 0.66g)$$
+3. **Sensor Micro-Entropy**:
+   $$\text{Var}(\text{Lon}) + \text{Var}(\text{Lat}) \ge 10^{-9} \quad (\text{rejects synthetic zero-noise emulators})$$
+
+### 12.2 Cryptographic Replay Immunity
+Every incoming telematics packet requires an HMAC-SHA256 signature and a single-use 128-bit cryptographic nonce $N$:
+$$\text{Signature} = \text{HMAC-SHA256}(K_{\text{secret}}, \text{timestamp} \parallel \text{nonce} \parallel \text{payload})$$
+Consumed nonces are cached within a sliding 45-second replay window; any duplicate nonce triggers immediate HTTP 401 with `NONCE_REPLAY_DETECTED`.
+
+### 12.3 Zero-Trust Security Table & Proof-of-Presence Attestation
+
+| Security Service / Guard | Cryptographic & Physical Thresholds | Threat Neutralized & Use Case |
+| :--- | :--- | :--- |
+| **`TelemetrySignerGuard`** | Header: `X-BMap-Signature = HMAC-SHA256(Key, Timestamp:Nonce:Payload)`<br/>Freshness: $\|T_{server} - T_{client}\| \le 45,000\text{ ms}$<br/>Nonce: 16+ byte token in sliding cache | Blocks man-in-the-middle payload tampering and packet replay attacks attempting to inject phantom traffic jams. |
+| **`AntiSpoofingGuard`** | Max acceleration: $a \le 6.5\text{ m/s}^2$ ($\sim 0.66g$)<br/>Max velocity: $v \le 220\text{ km/h}$<br/>Bearing concordance: $\Delta\theta \le 70^\circ$<br/>Spatial micro-entropy: $\boldsymbol{\sigma}^2 \ge 10^{-9}$ | Detects mock-location apps, impossible coordinate teleportation, gyro/displacement mismatches, and zero-jitter emulator streams. |
+| **`ProofOfPresenceService`** | HMAC-SHA256 signed certificate binding device ID, verified geofence radius, epoch timestamp, speed, and SHA-256 GNSS breadcrumb hash. | Provides tamper-evident physical presence attestation for barrier-less highway tolling, insurance telematics, and verified doorstep delivery. |
+
+---
+
+## 13. Socket.IO Real-Time Telematics Gateway (10 Event Domains)
+
+| Socket.IO Event Domain | Core Bidirectional Event Channels | Room Scoping & Target Consumer |
+| :--- | :--- | :--- |
+| **1. Live Driver Tracking** | `location:update`, `location:broadcast`, `location:subscribe` | Room `driver:<driverId>` (1Hz–5Hz fleet & ride tracking) |
+| **2. Active Turn-by-Turn Nav** | `nav:join`, `nav:update_progress`, `nav:off_route_alert`, `nav:reroute_success` | Room `nav:<sessionId>` (Instant off-route geometry push) |
+| **3. Weak-Signal Positioning** | `positioning:telemetry`, `positioning:fused_state` | EKF tunnel dead reckoning & urban canyon state sync |
+| **4. HD Lane Guidance** | `lane:guidance_stream`, `lane:guidance_broadcast`, `veteran:hazard_alert` | Multi-lane highway exit & lane-drift alerts |
+| **5. SR Mixed Reality HUD** | `sr:telemetry_stream`, `sr:hud_broadcast`, `sr:collision_warning` | Spatial Reality windshield HUD & ADAS alerts |
+| **6. Automotive CAN & IVI** | `auto:can_stream`, `auto:cockpit_sync`, `auto:eco_score_broadcast` | Room `auto:<vehicleId>` (CarPlay / Android Auto & OBD powertrain telemetry) |
+| **7. Rider Mode Two-Wheeler** | `rider:dynamics_stream`, `rider:lean_broadcast`, `rider:crash_alert` | Room `rider:<sessionId>` (Two-wheeler lean angle & SOS crash detection) |
+| **8. Indoor Bay Parking** | `parking:entrance_detect`, `parking:indoor_guidance`, `parking:bay_status` | Room `parking:<facilityId>` (BLE beacon gate handoff & live slot occupancy) |
+| **9. AI Voice Copilot (Gemma)** | `copilot:message_stream`, `copilot:processing_status`, `copilot:message_response` | Streaming natural language voice intent & TTS replies |
+| **10. Traffic & LWR Shockwave** | `traffic:telemetry_stream`, `traffic:segment_update`, `traffic:eta_update`, `traffic:anomaly_filtered` | Room `segment:<segmentId>` (Live BPR speeds & spillback warnings) |
+

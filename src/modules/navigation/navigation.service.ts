@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import mongoose from 'mongoose';
 import { env } from '../../core/config/env.config';
 import { logger } from '../../core/config/logger';
 import { NavigationSession } from './navigation-session.model';
@@ -13,6 +14,7 @@ import { OsrmRoute, OsrmRouteResponse } from '../../core/types/osrm.types';
 import { calculateDistanceMeters, checkOffRoute } from '../../core/utils/geo.utils';
 import { osrmService } from '../routes/osrm.service';
 import { routeCacheService } from '../routes/route-cache.service';
+import { offRouteEngineService } from './off-route-engine.service';
 
 export class NavigationService {
   // Active in-memory session registry for ultra-fast socket updates
@@ -90,38 +92,51 @@ export class NavigationService {
       updatedAt: new Date(),
     };
 
-    // Store in memory
+    // Store in memory with bounded lifecycle pruning
+    if (this.activeSessions.size > 1000) {
+      const staleThreshold = Date.now() - 4 * 60 * 60 * 1000;
+      for (const [id, s] of this.activeSessions.entries()) {
+        if (s.updatedAt.getTime() < staleThreshold) {
+          this.activeSessions.delete(id);
+        }
+      }
+    }
     this.activeSessions.set(sessionId, sessionData);
 
-    // Persist to MongoDB
-    await NavigationSession.create({
-      sessionId,
-      userId: params.userId,
-      profile,
-      status: 'active',
-      origin: { type: 'Point', coordinates: params.origin },
-      destination: { type: 'Point', coordinates: params.destination },
-      totalDistanceMeters: route.distance,
-      totalDurationSeconds: route.duration,
-      remainingDistanceMeters: route.distance,
-      remainingDurationSeconds: route.duration,
-      lastKnownLocation: { type: 'Point', coordinates: params.origin },
-      routeGeometry: geometry,
-      startedAt: new Date(),
-    });
+    // Persist to MongoDB if active connection exists
+    if (mongoose.connection && mongoose.connection.readyState === 1) {
+      try {
+        await NavigationSession.create({
+          sessionId,
+          userId: params.userId,
+          profile,
+          status: 'active',
+          origin: { type: 'Point', coordinates: params.origin },
+          destination: { type: 'Point', coordinates: params.destination },
+          totalDistanceMeters: route.distance,
+          totalDurationSeconds: route.duration,
+          remainingDistanceMeters: route.distance,
+          remainingDurationSeconds: route.duration,
+          lastKnownLocation: { type: 'Point', coordinates: params.origin },
+          routeGeometry: geometry,
+          startedAt: new Date(),
+        });
 
-    // Optionally save to RouteHistory
-    RouteHistory.create({
-      userId: params.userId,
-      profile,
-      origin: { type: 'Point', coordinates: params.origin },
-      destination: { type: 'Point', coordinates: params.destination },
-      distanceMeters: route.distance,
-      durationSeconds: route.duration,
-      geometry,
-      steps: route.legs.flatMap((leg) => leg.steps),
-      queryHash: cacheKey,
-    }).catch((err) => logger.warn(`Failed saving RouteHistory: ${err.message}`));
+        RouteHistory.create({
+          userId: params.userId,
+          profile,
+          origin: { type: 'Point', coordinates: params.origin },
+          destination: { type: 'Point', coordinates: params.destination },
+          distanceMeters: route.distance,
+          durationSeconds: route.duration,
+          geometry,
+          steps: route.legs.flatMap((leg) => leg.steps),
+          queryHash: cacheKey,
+        }).catch((err) => logger.warn(`Failed saving RouteHistory: ${err.message}`));
+      } catch (err: any) {
+        logger.warn(`Deferred MongoDB navigation session persistence: ${err.message}`);
+      }
+    }
 
     logger.info(`🧭 Navigation session started: ${sessionId} for user: ${params.userId}`);
     return sessionData;
@@ -172,10 +187,12 @@ export class NavigationService {
       session.remainingDistanceMeters = 0;
       session.remainingDurationSeconds = 0;
 
-      await NavigationSession.updateOne(
-        { sessionId: session.sessionId },
-        { status: 'completed', completedAt: new Date(), remainingDistanceMeters: 0, remainingDurationSeconds: 0 }
-      );
+      if (mongoose.connection && mongoose.connection.readyState === 1) {
+        NavigationSession.updateOne(
+          { sessionId: session.sessionId },
+          { status: 'completed', completedAt: new Date(), remainingDistanceMeters: 0, remainingDurationSeconds: 0 }
+        ).catch(() => {});
+      }
 
       return {
         sessionId: session.sessionId,
@@ -190,66 +207,48 @@ export class NavigationService {
       };
     }
 
-    // 2. Off-Route Detection using Turf.js
-    const offRouteCheck = checkOffRoute(
-      update.currentLocation,
+    // 2. Off-Route Detection & Kinematic Dynamic Rerouting Engine
+    const rerouteEval = await offRouteEngineService.evaluateAndProcessProgress({
+      sessionId: session.sessionId,
+      currentLocation: update.currentLocation,
+      destination: session.destination,
       routeGeometry,
-      env.OFF_ROUTE_THRESHOLD_METERS
-    );
+      profile: session.profile,
+      heading: update.heading,
+      speedMps: update.speed ? (update.speed * 1000) / 3600 : undefined,
+    });
 
     let rerouted = false;
     let updatedRoute: OsrmRoute | undefined;
 
-    // 3. Automatic Rerouting if deviated
-    if (offRouteCheck.isOffRoute) {
-      const now = Date.now();
-      const lastReroute = session.lastRerouteTimestamp || 0;
-      const cooldownMs = env.REROUTE_COOLDOWN_SECONDS * 1000;
+    if (rerouteEval.shouldReroute && rerouteEval.newRoute) {
+      session.currentRoute = rerouteEval.newRoute;
+      session.currentStepIndex = 0;
+      session.remainingDistanceMeters = session.currentRoute.distance;
+      session.remainingDurationSeconds = session.currentRoute.duration;
+      session.rerouteCount += 1;
+      session.lastRerouteTimestamp = Date.now();
 
-      if (now - lastReroute > cooldownMs) {
-        logger.warn(
-          `⚠️ Vehicle off route by ${offRouteCheck.distanceFromRouteMeters}m! Triggering dynamic reroute for ${session.sessionId}`
-        );
+      rerouted = true;
+      updatedRoute = session.currentRoute;
 
-        try {
-          const freshRouteResp = await osrmService.getRoute({
-            coordinates: [update.currentLocation, session.destination],
-            profile: session.profile,
-            steps: true,
-            overview: 'full',
-            geometries: 'geojson',
-          });
-
-          if (freshRouteResp.routes[0]) {
-            session.currentRoute = freshRouteResp.routes[0];
-            session.currentStepIndex = 0;
-            session.remainingDistanceMeters = session.currentRoute.distance;
-            session.remainingDurationSeconds = session.currentRoute.duration;
-            session.rerouteCount += 1;
-            session.lastRerouteTimestamp = now;
-
-            rerouted = true;
-            updatedRoute = session.currentRoute;
-
-            // Update MongoDB record
-            NavigationSession.updateOne(
-              { sessionId: session.sessionId },
-              {
-                $inc: { rerouteCount: 1 },
-                $set: {
-                  routeGeometry: session.currentRoute.geometry,
-                  totalDistanceMeters: session.currentRoute.distance,
-                  totalDurationSeconds: session.currentRoute.duration,
-                  lastKnownLocation: { type: 'Point', coordinates: update.currentLocation },
-                },
-              }
-            ).catch((err) => logger.warn(`Error updating reroute in DB: ${err.message}`));
+      // Update MongoDB record if active connection exists
+      if (mongoose.connection && mongoose.connection.readyState === 1) {
+        NavigationSession.updateOne(
+          { sessionId: session.sessionId },
+          {
+            $inc: { rerouteCount: 1 },
+            $set: {
+              routeGeometry: session.currentRoute.geometry,
+              totalDistanceMeters: session.currentRoute.distance,
+              totalDurationSeconds: session.currentRoute.duration,
+              lastKnownLocation: { type: 'Point', coordinates: update.currentLocation },
+            },
           }
-        } catch (err: any) {
-          logger.error(`Reroute calculation failed: ${err.message}`);
-        }
+        ).catch((err) => logger.warn(`Error updating reroute in DB: ${err.message}`));
       }
     }
+
 
     // 4. Calculate Step Advancement & Distance to next maneuver
     const allSteps = session.currentRoute.legs.flatMap((l) => l.steps);
@@ -294,8 +293,8 @@ export class NavigationService {
       distanceToNextStepMeters: session.distanceToNextStepMeters,
       currentStep,
       nextStep: session.nextStep,
-      isOffRoute: offRouteCheck.isOffRoute,
-      distanceFromRouteMeters: offRouteCheck.distanceFromRouteMeters,
+      isOffRoute: rerouteEval.isOffRoute,
+      distanceFromRouteMeters: rerouteEval.distanceFromRouteMeters,
       rerouted,
       updatedRoute,
     };
@@ -308,7 +307,7 @@ export class NavigationService {
     const memory = this.activeSessions.get(sessionId);
     if (memory) return memory;
 
-    const dbRecord = await NavigationSession.findOne({ sessionId });
+    const dbRecord = await NavigationSession.findOne({ sessionId }).lean();
     if (!dbRecord) return null;
 
     return {

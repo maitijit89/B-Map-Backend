@@ -11,9 +11,15 @@ export * from './middlewares/nosql-sanitize.middleware';
 export * from './middlewares/hpp.middleware';
 export * from './middlewares/anti-recon.middleware';
 export * from './security/anti-tamper';
+export * from './security/anti-spoofing.guard';
+export * from './security/telemetry-signer.guard';
+export * from './security/proof-of-presence';
+export * from './security/zero-trust-engine.service';
+export * from './algorithms/extended-kalman-filter';
 export * from './utils/api-response';
 export * from './utils/geo.utils';
 export * from './utils/security.utils';
 export * from './types/geo.types';
 export * from './types/osrm.types';
+export * from './engines';
 

@@ -28,7 +28,7 @@ async function testCredentialsIntegration() {
   assert(env.APP_PORT === 8080 && env.PORT === 8080, 'Port mapped to 8080', `APP_PORT: ${env.APP_PORT}, PORT: ${env.PORT}`);
   assert(env.APP_NAME === 'B Map', 'APP_NAME is "B Map"', env.APP_NAME);
   assert(env.APP_URL === 'http://localhost:8080', 'APP_URL is http://localhost:8080', env.APP_URL);
-  assert(env.APP_VERSION === '0.1.2', 'APP_VERSION is 0.1.2', env.APP_VERSION);
+  assert(env.APP_VERSION === '1.0.0', 'APP_VERSION is 1.0.0', env.APP_VERSION);
 
   // 2. JWT Configuration
   console.log('\n--- 2. JWT Configuration ---');

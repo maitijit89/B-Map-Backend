@@ -76,6 +76,17 @@ export const registerAICopilotHandlers = (io: Server, socket: Socket) => {
           vehicleContext: data.vehicleContext,
         });
 
+        // Emit incremental tokens for conversational HUD voice typing
+        const tokens = (aiResponse.assistantReply || '').split(' ');
+        for (let i = 0; i < tokens.length; i++) {
+          socket.emit(SOCKET_EVENTS.COPILOT_TOKEN_STREAM, {
+            conversationId,
+            token: tokens[i] + (i < tokens.length - 1 ? ' ' : ''),
+            tokenIndex: i,
+            isComplete: i === tokens.length - 1,
+          });
+        }
+
         socket.emit(SOCKET_EVENTS.COPILOT_MESSAGE_RESPONSE, aiResponse);
       }
     } catch (err: any) {

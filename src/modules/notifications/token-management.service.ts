@@ -120,7 +120,7 @@ export class TokenManagementService {
     // 1. Check MongoDB
     try {
       if (mongoose.connection?.readyState === 1) {
-        const docs = await DeviceToken.find({ userId, isActive: true });
+        const docs = await DeviceToken.find({ userId, isActive: true }).lean();
         for (const doc of docs) {
           if (!seenTokens.has(doc.token)) {
             seenTokens.add(doc.token);

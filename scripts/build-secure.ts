@@ -53,28 +53,24 @@ function obfuscateDistributionFiles(): void {
       target: 'node',
       compact: true,
       controlFlowFlattening: true,
-      controlFlowFlatteningThreshold: 0.85,
-      deadCodeInjection: true,
-      deadCodeInjectionThreshold: 0.35,
-      debugProtection: false, // Prevents interfering with APM while rendering code completely unreadable
+      controlFlowFlatteningThreshold: 0.4,
+      deadCodeInjection: false, // Disabling artificial dead code injection dramatically accelerates build time
+      debugProtection: false,
       disableConsoleOutput: false,
       identifierNamesGenerator: 'hexadecimal',
       log: false,
-      renameGlobals: false, // Ensure external Node.js modules and exports remain compatible
-      selfDefending: true, // Breaks decompilers and beautifiers if formatted or tampered
+      renameGlobals: false,
+      selfDefending: true,
       simplify: true,
-      splitStrings: true,
-      splitStringsChunkLength: 4,
+      splitStrings: false,
       stringArray: true,
-      stringArrayEncoding: ['rc4', 'base64'],
-      stringArrayThreshold: 1.0,
+      stringArrayEncoding: ['base64'],
+      stringArrayThreshold: 0.75,
       stringArrayShuffle: true,
-      stringArrayWrappersCount: 4,
-      stringArrayWrappersChainedCalls: true,
-      stringArrayWrappersParametersMaxCount: 4,
+      stringArrayWrappersCount: 1,
       stringArrayWrappersType: 'function',
       transformObjectKeys: true,
-      numbersToExpressions: true,
+      numbersToExpressions: false,
       sourceMap: false,
     });
 

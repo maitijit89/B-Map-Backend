@@ -105,4 +105,52 @@ export const registerNavigationHandlers = (io: Server, socket: Socket): void => 
       socket.emit(SOCKET_EVENTS.ERROR, { message: err.message });
     }
   });
+
+  /**
+   * Explicit Sub-Second Off-Route Rerouting Handler:
+   * Client device / automotive HUD requests instantaneous sub-second recalculation
+   * upon crossing cross-track deviation threshold (XTD > 40m).
+   */
+  socket.on(SOCKET_EVENTS.NAV_SUB_SECOND_REROUTE, async (data: { sessionId: string; currentLocation: [number, number] }) => {
+    const startTime = Date.now();
+    try {
+      if (!data?.sessionId || !isValidCoordinate(data.currentLocation)) {
+        socket.emit(SOCKET_EVENTS.ERROR, { message: 'Required: sessionId, currentLocation [lon, lat]' });
+        return;
+      }
+
+      const session = await navigationService.getSession(data.sessionId);
+      if (!session) {
+        socket.emit(SOCKET_EVENTS.ERROR, { message: `Session ${data.sessionId} not found` });
+        return;
+      }
+
+      const updateResult = await navigationService.processProgressUpdate({
+        sessionId: data.sessionId,
+        currentLocation: data.currentLocation,
+        timestamp: Date.now(),
+      });
+
+      const computationMs = Date.now() - startTime;
+      const room = `nav:${data.sessionId}`;
+
+      if (updateResult.updatedRoute) {
+        io.to(room).emit(SOCKET_EVENTS.NAV_REROUTE_SUCCESS, {
+          sessionId: data.sessionId,
+          newRoute: updateResult.updatedRoute,
+          distanceFromRouteMeters: updateResult.distanceFromRouteMeters,
+          computationMs,
+          timestamp: Date.now(),
+        });
+        logger.info(`⚡ [SUB-SECOND REROUTE] Computed & dispatched new route in ${computationMs}ms for session ${data.sessionId}`);
+      } else {
+        io.to(room).emit(SOCKET_EVENTS.NAV_PROGRESS_STATE, updateResult);
+      }
+    } catch (err: any) {
+      socket.emit(SOCKET_EVENTS.NAV_REROUTE_ERROR, {
+        sessionId: data?.sessionId,
+        message: err.message,
+      });
+    }
+  });
 };

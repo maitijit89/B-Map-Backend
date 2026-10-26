@@ -7,4 +7,11 @@ export interface DIGIPINResult {
   resolution: string;
   postal_circle: string;
   state: string;
+  bounding_box?: {
+    min_latitude: number;
+    max_latitude: number;
+    min_longitude: number;
+    max_longitude: number;
+  };
 }
+

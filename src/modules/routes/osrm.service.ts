@@ -9,6 +9,7 @@ import {
   OsrmTableResponse,
   OsrmTripResponse,
 } from '../../core/types/osrm.types';
+import { generateOfflineFallbackRoute } from '../../core/resilience/offline-fallback-seeds';
 
 export class OsrmService {
   private client: AxiosInstance;
@@ -60,11 +61,15 @@ export class OsrmService {
 
       return response.data;
     } catch (error: any) {
-      logger.error('Failed to fetch route from OSRM:', {
-        message: error.message,
-        response: error.response?.data,
-      });
-      throw new Error(error.response?.data?.message || error.message || 'Routing calculation failed');
+      logger.warn(
+        `⚠️ [DUAL-TIER RESILIENCE] Upstream OSRM unavailable (${error.message}). Serving pre-calibrated in-memory national corridor routing fallback ("offlineFallback": true)`
+      );
+      const fallback = generateOfflineFallbackRoute(
+        options.coordinates,
+        profile as 'driving' | 'bike' | 'foot'
+      );
+      (fallback as any).offlineFallback = true;
+      return fallback;
     }
   }
 

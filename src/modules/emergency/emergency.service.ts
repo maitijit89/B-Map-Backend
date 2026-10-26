@@ -137,3 +137,4 @@ export class EmergencyService {
 }
 
 export const emergencyService = new EmergencyService();
+export const emergencyDispatchEngineService = emergencyService;

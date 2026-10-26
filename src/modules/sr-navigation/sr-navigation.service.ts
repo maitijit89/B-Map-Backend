@@ -25,16 +25,16 @@ export class SRNavigationService {
    */
   private seedDefaultSRModels() {
     const demoSRArterial = {
-      segmentId: 'sr_kudamm_4lane',
-      roadName: 'Kurfürstendamm High-Definition Boulevard',
+      segmentId: 'sr_delhi_cp_inner',
+      roadName: 'Connaught Circus Outer Ring Corridor (Barakhamba to Janpath)',
       boundaries: [
         {
           boundaryIndex: 0,
           boundaryType: 'double_solid_yellow' as SRBoundaryType,
           color: 'yellow' as const,
           coordinates: [
-            [13.32, 52.502],
-            [13.325, 52.503],
+            [77.2180, 28.6320],
+            [77.2240, 28.6335],
           ],
         },
         {
@@ -42,8 +42,8 @@ export class SRNavigationService {
           boundaryType: 'dashed_white' as SRBoundaryType,
           color: 'white' as const,
           coordinates: [
-            [13.32002, 52.50202],
-            [13.32502, 52.50302],
+            [77.21802, 28.63202],
+            [77.22402, 28.63352],
           ],
         },
         {
@@ -51,8 +51,8 @@ export class SRNavigationService {
           boundaryType: 'dashed_white' as SRBoundaryType,
           color: 'white' as const,
           coordinates: [
-            [13.32004, 52.50204],
-            [13.32504, 52.50304],
+            [77.21804, 28.63204],
+            [77.22404, 28.63354],
           ],
         },
         {
@@ -60,8 +60,8 @@ export class SRNavigationService {
           boundaryType: 'solid_white' as SRBoundaryType,
           color: 'white' as const,
           coordinates: [
-            [13.32006, 52.50206],
-            [13.32506, 52.50306],
+            [77.21806, 28.63206],
+            [77.22406, 28.63356],
           ],
         },
       ],
@@ -69,37 +69,37 @@ export class SRNavigationService {
         {
           markingType: 'left_turn_arrow' as const,
           laneIndex: 0,
-          location: [13.323, 52.5026] as Coordinate,
+          location: [77.2210, 28.6328] as Coordinate,
           label: 'Turn Left Only',
         },
         {
           markingType: 'straight_arrow' as const,
           laneIndex: 1,
-          location: [13.323, 52.5026] as Coordinate,
+          location: [77.2210, 28.6328] as Coordinate,
           label: 'Straight',
         },
         {
           markingType: 'straight_arrow' as const,
           laneIndex: 2,
-          location: [13.323, 52.5026] as Coordinate,
+          location: [77.2210, 28.6328] as Coordinate,
           label: 'Straight',
         },
         {
           markingType: 'right_turn_arrow' as const,
           laneIndex: 3,
-          location: [13.323, 52.5026] as Coordinate,
+          location: [77.2210, 28.6328] as Coordinate,
           label: 'Turn Right Only',
         },
         {
           markingType: 'crosswalk' as const,
           laneIndex: 1,
-          location: [13.3248, 52.50295] as Coordinate,
+          location: [77.2238, 28.6334] as Coordinate,
           label: 'Pedestrian Crossing',
         },
       ],
       junctionCard: {
-        junctionId: 'junc_kudamm_cross',
-        junctionName: 'Kurfürstendamm & Uhlandstraße Flyover Fork',
+        junctionId: 'junc_barakhamba_radial',
+        junctionName: 'Barakhamba Road Radial 1 & Connaught Circus Interchange Fork',
         junctionType: 'complex_crossroad' as const,
         distanceMeters: 280,
         highlightedLaneIndices: [0],
@@ -108,31 +108,31 @@ export class SRNavigationService {
             laneIndex: 0,
             turnDirection: 'left' as LaneTurnDirection,
             isHighlighted: true,
-            overheadSignText: 'Uhlandstr. / Messe Berlin',
+            overheadSignText: 'Rajiv Chowk Metro / Palika Bazaar',
           },
           {
             laneIndex: 1,
             turnDirection: 'straight' as LaneTurnDirection,
             isHighlighted: false,
-            overheadSignText: 'City West / Zoo',
+            overheadSignText: 'Outer Circle / Shivaji Stadium',
           },
           {
             laneIndex: 2,
             turnDirection: 'straight' as LaneTurnDirection,
             isHighlighted: false,
-            overheadSignText: 'City West / Zoo',
+            overheadSignText: 'Mandi House / India Gate',
           },
           {
             laneIndex: 3,
             turnDirection: 'right' as LaneTurnDirection,
             isHighlighted: false,
-            overheadSignText: 'Fasanenstr.',
+            overheadSignText: 'Tolstoy Marg / Janpath',
           },
         ],
         overheadGantry: {
-          signText: 'EXIT 7B: Uhlandstr. / City Centre',
-          destinationCities: ['Messe Nord', 'Charlottenburg'],
-          routeShields: ['B2', 'B5'],
+          signText: 'RADIAL 1: Connaught Circus / New Delhi Railway Station',
+          destinationCities: ['New Delhi Railway Station', 'Barakhamba Road'],
+          routeShields: ['ND-1', 'CP-Inner'],
         },
         schematicSvgOrModelKey: 'svg_fork_4lane_split_left',
       },
@@ -196,20 +196,20 @@ export class SRNavigationService {
   }): Promise<SRNavigationHUDState> {
     const speed = params.speedKmh ?? 52;
     const speedLimit = params.speedLimitKmh ?? 50;
-    const road = this.inMemorySRRoads.get('sr_kudamm_4lane');
+    const road = this.inMemorySRRoads.get('sr_delhi_cp_inner') || Array.from(this.inMemorySRRoads.values())[0];
 
     const totalLanes = 4;
     const laneWidth = 3.75;
     let currentLane = params.currentLaneIndex ?? 1; // Default to lane 1 (straight)
 
-    // Sub-meter lateral offset calculation
-    const offsetFromCenter = params.lateralOffsetMeters ?? 0.15; // 15cm right of lane center
-    const distToLeft = Math.max(0, (laneWidth / 2) - offsetFromCenter);
-    const distToRight = Math.max(0, (laneWidth / 2) + offsetFromCenter);
+    // Sub-meter lateral offset calculation (positive = right of center, negative = left of center)
+    const offsetFromCenter = params.lateralOffsetMeters ?? 0.15;
+    const distToLeft = Math.max(0, (laneWidth / 2) + offsetFromCenter);
+    const distToRight = Math.max(0, (laneWidth / 2) - offsetFromCenter);
 
     // Lane Departure Warning (LDW) Detection
-    const isApproachingLeft = distToLeft < 0.45;
-    const isApproachingRight = distToRight < 0.45;
+    const isApproachingLeft = distToLeft < 0.50;
+    const isApproachingRight = distToRight < 0.50;
     const blinker = params.blinkerState || 'NONE';
 
     let isDeparting = false;
@@ -349,7 +349,7 @@ export class SRNavigationService {
 
     return {
       timestamp: Date.now(),
-      currentRoad: road ? road.roadName : 'Kurfürstendamm Arterial',
+      currentRoad: road ? road.roadName : 'Connaught Circus Outer Ring Corridor',
       speedKmh: speed,
       speedLimitKmh: speedLimit,
       lateralOffset: lateralState,
@@ -365,3 +365,5 @@ export class SRNavigationService {
 }
 
 export const srNavigationService = new SRNavigationService();
+export const srNavigationEngineService = srNavigationService;
+

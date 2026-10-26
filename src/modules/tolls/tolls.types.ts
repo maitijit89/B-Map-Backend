@@ -1,6 +1,18 @@
 import { LatLng } from '../../core/utils/response';
 
 export type VehicleClass =
+  | 'CLASS_4'
+  | 'CLASS_5'
+  | 'CLASS_6'
+  | 'CLASS_7'
+  | 'CLASS_8'
+  | 'CLASS_9'
+  | '4'
+  | '5'
+  | '6'
+  | '7'
+  | '8'
+  | '9'
   | 'CAR_JEEP_VAN'
   | 'LCV'
   | 'BUS_TRUCK_2AXLE'
@@ -24,6 +36,12 @@ export interface TollPlaza {
   monthlyPassINR: number;
   isFASTagActive: boolean;
   operator: 'NHAI' | 'MSRDC' | 'YEIDA' | string;
+  totalLanesCount?: number;
+  fastagLanesCount?: number;
+  dedicatedFastagLanes?: number[];
+  cashlessLaneGuidance?: string;
+  etcStatus?: 'OPERATIONAL' | 'DEGRADED' | 'MAINTENANCE';
+  barrierType?: 'AUTOMATIC_ANPR_BOOM_BARRIER' | 'RFID_SINGLE_PASS';
 }
 
 export interface TollCalculationRequest {
@@ -40,8 +58,10 @@ export interface TollCalculationResponse {
   totalTollINR: number;
   totalPlazasCount: number;
   vehicleType: string;
+  vehicleClassCode: 'CLASS_4' | 'CLASS_5' | 'CLASS_6' | 'CLASS_7' | 'CLASS_8' | 'CLASS_9' | 'TWO_WHEELER_EXEMPT';
   fastagSavingsINR: number;
   plazas: TollPlaza[];
   expresswaysCrossed: string[];
+  cashlessLaneGuidance: string[];
   note?: string;
 }

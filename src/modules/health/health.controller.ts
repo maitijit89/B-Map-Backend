@@ -6,14 +6,36 @@ import { isRedisConnected } from '../../core/config/redis';
 import { sendSuccess } from '../../core/utils/api-response';
 import { aiCopilotService } from '../ai-copilot/ai-copilot.service';
 
-export const getHealthStatus = async (_req: Request, res: Response): Promise<void> => {
+export const getHealthStatus = async (req: Request, res: Response): Promise<void> => {
+  const startTime = Date.now();
   const mongoStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
   const redisStatus = isRedisConnected() ? 'connected' : 'disconnected/fallback';
+
+  // Sub-50ms Kubernetes HPA Liveness / Readiness probe path
+  const isK8sProbe = req.query.probe === 'true' || req.query.fast === 'true' || req.headers['x-k8s-probe'] === 'true';
+  if (isK8sProbe) {
+    const isHealthy = mongoStatus === 'connected' || env.NODE_ENV === 'development';
+    sendSuccess({
+      res,
+      statusCode: isHealthy ? 200 : 503,
+      message: 'B-Map Kubernetes Probe Status',
+      data: {
+        status: isHealthy ? 'healthy' : 'degraded',
+        responseTimeMs: Date.now() - startTime,
+        k8sProbe: true,
+        services: {
+          mongodb: mongoStatus,
+          redis: redisStatus,
+        },
+      },
+    });
+    return;
+  }
 
   let osrmStatus = 'unreachable';
   try {
     const testUrl = `${env.OSRM_BASE_URL}/route/v1/driving/13.388860,52.517037;13.397634,52.529407?overview=false`;
-    const resp = await axios.get(testUrl, { timeout: 3000 });
+    const resp = await axios.get(testUrl, { timeout: 2000 });
     if (resp.status === 200 && resp.data.code === 'Ok') {
       osrmStatus = 'healthy';
     }

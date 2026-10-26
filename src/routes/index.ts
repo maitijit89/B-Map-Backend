@@ -45,6 +45,8 @@ import fleetRoutes from '../modules/fleet/fleet.routes';
 import timezoneRoutes from '../modules/timezone/timezone.routes';
 import ratingRoutes from '../modules/ratings/ratings.routes';
 import adminRoutes from '../modules/admin/admin.routes';
+import trafficRoutes from '../modules/traffic/traffic.routes';
+import appVersionRoutes from '../modules/app-version/app-version.routes';
 
 const router = Router();
 
@@ -60,14 +62,18 @@ router.use('/places', placeRoutes);
 router.use('/navigation', navigationRoutes);
 router.use('/tracking', trackingRoutes);
 router.use('/location', locationAccessRoutes);
+router.use('/location-access', locationAccessRoutes);
 router.use('/motion', motionFitnessRoutes);
+router.use('/motion-fitness', motionFitnessRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/nearby-devices', nearbyDevicesRoutes);
 router.use('/bluetooth', nearbyDevicesRoutes);
 router.use('/positioning', positioningRoutes);
 router.use('/lane-routing', laneRoutingRoutes);
 router.use('/unified', unifiedEngineRoutes);
+router.use('/unified-engine', unifiedEngineRoutes);
 router.use('/data-mining', aiDataMiningRoutes);
+router.use('/ai-data-mining', aiDataMiningRoutes);
 
 // Next-Gen Intelligent Driving & Lane-Level Navigation
 router.use('/sr-navigation', srNavigationRoutes);
@@ -77,7 +83,9 @@ router.use('/parking', parkingNavigationRoutes);
 
 // Multi-Mode Core Navigation & Routing
 router.use('/car-nav', carNavigationRoutes);
+router.use('/car-navigation', carNavigationRoutes);
 router.use('/transit', publicTransitRoutes);
+router.use('/public-transit', publicTransitRoutes);
 router.use('/ar-walk-cycle', arWalkCycleRoutes);
 
 // Comprehensive AI & Large Language Model (LLM) Features
@@ -85,6 +93,7 @@ router.use('/ai-copilot', aiCopilotRoutes);
 
 // Advanced Visualization & Spatial Mapping
 router.use('/spatial-vis', spatialVisualizationRoutes);
+router.use('/spatial-visualization', spatialVisualizationRoutes);
 
 // Unified Lifestyle & Commercial Super-App Ecosystem
 router.use('/super-app', superAppRoutes);
@@ -103,13 +112,18 @@ router.use('/v2x', v2xRoutes);
 router.use('/obfuscation', obfuscationRoutes);
 router.use('/boundaries', boundaryRoutes);
 router.use('/ev', evChargingRoutes);
+router.use('/evcharging', evChargingRoutes);
 router.use('/fares', fareRoutes);
 router.use('/roads', roadsRoutes);
 router.use('/maps', mapsRouter);
 router.use('/tiles', tilesRouter);
+router.use('/maps-tiles', mapsRouter);
 router.use('/fleet', fleetRoutes);
 router.use('/timezone', timezoneRoutes);
 router.use('/ratings', ratingRoutes);
 router.use('/admin', adminRoutes);
+router.use('/traffic', trafficRoutes);
+router.use('/app-version', appVersionRoutes);
+router.use('/version', appVersionRoutes);
 
 export default router;

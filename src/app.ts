@@ -1,3 +1,4 @@
+import compression from 'compression';
 import cors from 'cors';
 import express, { Application, Request, Response } from 'express';
 import helmet from 'helmet';
@@ -11,11 +12,16 @@ import {
   antiReconTrap,
   noSqlSanitizer,
   hppProtection,
+  telemetrySignerGuard,
+  antiSpoofingGuard,
 } from './core';
 import apiRouter from './routes';
 
 export const createApp = (): Application => {
   const app = express();
+
+  // Enable ETags for client-side caching of static/semi-static geospatial data
+  app.set('etag', 'strong');
 
   // 1. Anti-Reconnaissance & Vulnerability Scanner Trap (Blocks automated bots/probes)
   app.use(antiReconTrap);
@@ -68,6 +74,20 @@ export const createApp = (): Application => {
     })
   );
 
+  // 3.5 High-Performance Response Compression (Gzip/Deflate for GeoJSON, vectors & routes)
+  app.use(
+    compression({
+      threshold: 1024,
+      level: 6,
+      filter: (req, res) => {
+        if (req.headers['x-no-compression']) {
+          return false;
+        }
+        return compression.filter(req, res);
+      },
+    })
+  );
+
   // 4. Global Rate Limiter against volumetric DoS
   app.use(apiRateLimiter);
 
@@ -80,6 +100,12 @@ export const createApp = (): Application => {
 
   // 7. HTTP Parameter Pollution (HPP) Defense
   app.use(hppProtection());
+
+  // 9. Zero-Trust Telemetry Signer Guard (HMAC-SHA256 + 45s sliding replay window)
+  app.use(telemetrySignerGuard.createMiddleware());
+
+  // 10. Kinematic Anti-GPS Spoofing Guard (Physical acceleration, top speed, and micro-entropy verifier)
+  app.use(antiSpoofingGuard.createMiddleware());
 
   // 8. HTTP Access Logger
   const morganStream = {
@@ -97,7 +123,7 @@ export const createApp = (): Application => {
   app.get('/', (_req: Request, res: Response) => {
     res.json({
       name: 'B-Map Navigation Backend API',
-      version: env.NODE_ENV === 'production' ? '1.0' : '1.0.0',
+      version: env.APP_VERSION,
       status: 'operational',
       ...(env.NODE_ENV === 'development'
         ? {
@@ -118,8 +144,8 @@ export const createApp = (): Application => {
     });
   });
 
-  // Direct Admin Portal convenience route
-  app.get('/admin', (_req: Request, res: Response) => {
+  // Direct Admin Portal convenience routes
+  app.get(['/admin', '/admin/dashboard'], (_req: Request, res: Response) => {
     res.redirect(`${env.API_PREFIX}/admin/dashboard`);
   });
 

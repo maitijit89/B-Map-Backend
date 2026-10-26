@@ -150,3 +150,4 @@ export class EVService {
 }
 
 export const evService = new EVService();
+export const evChargingEngineService = evService;

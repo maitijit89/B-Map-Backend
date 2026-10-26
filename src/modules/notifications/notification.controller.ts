@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { sendError, sendSuccess } from '../../core/utils/api-response';
 import { geofenceTriggerService } from './geofence-trigger.service';
+import { geofenceEngineService } from './geofence-engine.service';
 import { pushDispatcherService } from './push-dispatcher.service';
 import { tokenManagementService } from './token-management.service';
 
@@ -161,6 +162,89 @@ export class NotificationController {
       sendError(res, 500, error.message);
     }
   }
+
+  /**
+   * POST /api/v1/notifications/geofence/register
+   * Registers a circular or polygonal geofence.
+   */
+  async registerGeofence(req: Request, res: Response): Promise<void> {
+    try {
+      const { geofenceId, name, type, center, radiusMeters, coordinates, dwellThresholdSeconds, metadata } = req.body;
+      if (!geofenceId || !name || !type) {
+        sendError(res, 400, 'geofenceId, name, and type ("CIRCULAR" | "POLYGON") are required');
+        return;
+      }
+
+      if (type === 'CIRCULAR' && (!center || !radiusMeters)) {
+        sendError(res, 400, 'Circular geofence requires center [lon, lat] and radiusMeters');
+        return;
+      }
+
+      if (type === 'POLYGON' && (!Array.isArray(coordinates) || coordinates.length < 3)) {
+        sendError(res, 400, 'Polygon geofence requires at least 3 [lon, lat] vertices in coordinates array');
+        return;
+      }
+
+      const registered = geofenceEngineService.registerGeofence(req.body);
+      sendSuccess({
+        res,
+        statusCode: 201,
+        message: `Geofence ${name} registered successfully`,
+        data: registered,
+      });
+    } catch (error: any) {
+      sendError(res, 400, error.message);
+    }
+  }
+
+  /**
+   * GET /api/v1/notifications/geofence/list
+   * Lists all active circular & polygonal geofences.
+   */
+  async listGeofences(req: Request, res: Response): Promise<void> {
+    const list = geofenceEngineService.listGeofences();
+    sendSuccess({
+      res,
+      statusCode: 200,
+      message: 'Active geofences retrieved',
+      data: list,
+    });
+  }
+
+  /**
+   * POST /api/v1/notifications/geofence/device-evaluate
+   * Evaluates a device position against all registered circular and polygon geofences,
+   * detecting ENTER, DWELL, and EXIT transitions.
+   */
+  async evaluateDeviceGeofences(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId, deviceId, coordinates } = req.body;
+      if (!userId || !deviceId || !coordinates || !Array.isArray(coordinates) || coordinates.length !== 2) {
+        sendError(res, 400, 'userId, deviceId, and coordinates [lon, lat] are required');
+        return;
+      }
+
+      const events = await geofenceEngineService.evaluateDeviceGeofences({
+        userId,
+        deviceId,
+        currentCoordinates: coordinates as [number, number],
+      });
+
+      sendSuccess({
+        res,
+        statusCode: 200,
+        message: 'Device geofence evaluation complete',
+        data: {
+          deviceId,
+          coordinates,
+          events,
+        },
+      });
+    } catch (error: any) {
+      sendError(res, 500, error.message);
+    }
+  }
 }
 
 export const notificationController = new NotificationController();
+

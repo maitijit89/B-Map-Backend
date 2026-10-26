@@ -150,3 +150,4 @@ export class FareService {
 }
 
 export const fareService = new FareService();
+export const fareEstimationEngineService = fareService;

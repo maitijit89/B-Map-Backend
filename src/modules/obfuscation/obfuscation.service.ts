@@ -1,6 +1,9 @@
-import { LatLng } from '../../core/utils/response';
+import { calculateDistance, LatLng } from '../../core/utils/response';
 import {
   CoordinateDatum,
+  DefenseMaskingRequest,
+  DefenseMaskingResponse,
+  DefenseZone,
   FuzzRequest,
   FuzzResponse,
   TransformRequest,
@@ -12,6 +15,43 @@ const ee = 0.00669342162296594323;
 const xPI = (Math.PI * 3000.0) / 180.0;
 
 export class ObfuscationService {
+  private readonly defenseZones: DefenseZone[] = [
+    {
+      id: 'def_ambala_afb',
+      name: 'Ambala Air Force Base (Western Air Command)',
+      category: 'AIR_BASE',
+      center: { latitude: 30.3685, longitude: 76.8173 },
+      bufferRadiusMeters: 3000,
+    },
+    {
+      id: 'def_delhi_cantonment',
+      name: 'Delhi Cantonment & Western Command Strategic Zone',
+      category: 'MILITARY_CANTONMENT',
+      center: { latitude: 28.5885, longitude: 77.1352 },
+      bufferRadiusMeters: 2500,
+    },
+    {
+      id: 'def_chandipur_itr',
+      name: 'Integrated Test Range (ITR) Chandipur (DRDO)',
+      category: 'DRDO_TEST_RANGE',
+      center: { latitude: 21.4398, longitude: 87.0135 },
+      bufferRadiusMeters: 4000,
+    },
+    {
+      id: 'def_karwar_naval',
+      name: 'INS Kadamba Naval Base (Project Seabird, Karwar)',
+      category: 'NAVAL_BASE',
+      center: { latitude: 14.7786, longitude: 74.1523 },
+      bufferRadiusMeters: 3500,
+    },
+    {
+      id: 'def_pokhran_range',
+      name: 'Pokhran Field Firing Range',
+      category: 'STRATEGIC_ASSET',
+      center: { latitude: 27.0425, longitude: 71.7582 },
+      bufferRadiusMeters: 5000,
+    },
+  ];
   public transformCoordinates(req: TransformRequest): TransformResponse {
     const lat = req.location?.latitude ?? req.latitude ?? 28.6129;
     const lng = req.location?.longitude ?? req.longitude ?? 77.2295;
@@ -45,23 +85,87 @@ export class ObfuscationService {
     const lat = req.location?.latitude ?? req.latitude ?? 28.6129;
     const lng = req.location?.longitude ?? req.longitude ?? 77.2295;
     const radius = req.radius_meters ?? req.radiusMeters ?? 150.0;
+    const epsilon = req.epsilon && req.epsilon > 0 ? req.epsilon : 1.0;
 
-    const angle = Math.random() * 2 * Math.PI;
-    const distM = Math.random() * radius;
+    // Planar Laplacian Differential Privacy per algorithm.md Section 8:
+    // Scale parameter b = radius / epsilon
+    const b = radius / epsilon;
+    const u1 = Math.max(1e-7, Math.min(1 - 1e-7, Math.random()));
+    const u2 = Math.max(1e-7, Math.min(1 - 1e-7, Math.random()));
 
-    const dLat = (distM * Math.cos(angle)) / 111320.0;
-    const dLng = (distM * Math.sin(angle)) / (111320.0 * Math.cos((lat * Math.PI) / 180.0));
+    // Inverse CDF of Laplace distribution: x = -b * sgn(u - 0.5) * ln(1 - 2|u - 0.5|)
+    const lx = -b * Math.sign(u1 - 0.5) * Math.log(1 - 2 * Math.abs(u1 - 0.5));
+    const ly = -b * Math.sign(u2 - 0.5) * Math.log(1 - 2 * Math.abs(u2 - 0.5));
+
+    const dLat = ly / 111320.0;
+    const dLng = lx / (111320.0 * Math.cos((lat * Math.PI) / 180.0));
 
     const fuzzed: LatLng = {
+      latitude: Math.round((lat + dLat) * 1e6) / 1e6,
+      longitude: Math.round((lng + dLng) * 1e6) / 1e6,
+    };
+
+    return {
+      original_location: { latitude: lat, longitude: lng },
+      fuzzed_location: fuzzed,
+      noise_radius_meters: Math.round(Math.sqrt(lx * lx + ly * ly) * 10) / 10,
+      privacy_mechanism: `Planar Geo-Indistinguishability (Epsilon=${epsilon} Laplace Noise)`,
+    };
+  }
+
+  public getDefenseZones(): DefenseZone[] {
+    return [...this.defenseZones];
+  }
+
+  public applyDefenseMasking(req: DefenseMaskingRequest): DefenseMaskingResponse {
+    const lat = req.location?.latitude ?? req.latitude ?? 28.5885;
+    const lng = req.location?.longitude ?? req.longitude ?? 77.1352;
+    const minJitter = req.minJitterMeters ?? 200.0;
+    const maxJitter = req.maxJitterMeters ?? 500.0;
+
+    // Fast bounding-box rejection before computing trigonometric Haversine distance
+    const matchedZone = this.defenseZones.find((zone) => {
+      // 0.06 degrees is approx ~6.6km, safely encompassing max bufferRadius (5000m)
+      if (
+        Math.abs(lat - zone.center.latitude) > 0.06 ||
+        Math.abs(lng - zone.center.longitude) > 0.06
+      ) {
+        return false;
+      }
+      const distM = calculateDistance(lat, lng, zone.center.latitude, zone.center.longitude);
+      return distM <= zone.bufferRadiusMeters;
+    });
+
+    if (!matchedZone) {
+      return {
+        original_location: { latitude: lat, longitude: lng },
+        obfuscated_location: { latitude: lat, longitude: lng },
+        is_within_defense_zone: false,
+        jitter_distance_meters: 0,
+        policy_compliance: 'National Geospatial Policy: Non-sensitive civilian perimeter.',
+      };
+    }
+
+    // Apply 200m–500m spatial coordinate jitter
+    const jitterDist = minJitter + Math.random() * (maxJitter - minJitter);
+    const angle = Math.random() * 2 * Math.PI;
+
+    const dLat = (jitterDist * Math.cos(angle)) / 111320.0;
+    const dLng = (jitterDist * Math.sin(angle)) / (111320.0 * Math.cos((lat * Math.PI) / 180.0));
+
+    const obfuscated: LatLng = {
       latitude: Math.round((lat + dLat) * 1e5) / 1e5,
       longitude: Math.round((lng + dLng) * 1e5) / 1e5,
     };
 
     return {
       original_location: { latitude: lat, longitude: lng },
-      fuzzed_location: fuzzed,
-      noise_radius_meters: radius,
-      privacy_mechanism: 'Planar Geo-Indistinguishability (Laplace Noise)',
+      obfuscated_location: obfuscated,
+      is_within_defense_zone: true,
+      zone_name: matchedZone.name,
+      zone_category: matchedZone.category,
+      jitter_distance_meters: Math.round(jitterDist * 10) / 10,
+      policy_compliance: 'National Geospatial Policy (NGP): Sensitive Defense Installation Spatial Jitter (200m-500m) & Polygon Masking Enforced.',
     };
   }
 

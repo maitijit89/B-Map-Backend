@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { osrmService } from './osrm.service';
 import { routeCacheService } from './route-cache.service';
+import { tspOptimizationEngineService } from './tsp-optimization-engine.service';
 import { Coordinate } from '../../core/types/geo.types';
 import { DirectionsQueryOptions } from '../../core/types/osrm.types';
 import { sendError, sendSuccess } from '../../core/utils/api-response';
@@ -82,24 +83,56 @@ export class RouteController {
    */
   async optimizeTrip(req: Request, res: Response): Promise<void> {
     try {
-      const { coordinates, profile, roundtrip, source, destination } = req.body;
+      const { coordinates, profile, roundtrip, source, destination, algorithm } = req.body;
 
       if (!Array.isArray(coordinates) || coordinates.length < 2) {
         sendError(res, 400, 'Coordinates must be an array of at least 2 [longitude, latitude] pairs');
         return;
       }
 
-      const result = await osrmService.optimizeTrip(coordinates, profile, {
-        roundtrip,
-        source,
-        destination,
-      });
+      // If client specifically requests 2-Opt or offline fallback
+      if (algorithm === '2-opt' || algorithm === 'two-opt' || algorithm === 'nearest-neighbor') {
+        const tspResult = tspOptimizationEngineService.optimizeTour(coordinates, {
+          roundtrip: roundtrip === true,
+          fixOrigin: source === 'first' || source === undefined,
+          fixDestination: destination === 'last',
+        });
 
-      sendSuccess({
-        res,
-        message: 'Trip optimized successfully',
-        data: result,
-      });
+        sendSuccess({
+          res,
+          message: 'Multi-stop itinerary optimized via 2-Opt Edge-Exchange Engine',
+          data: tspResult,
+        });
+        return;
+      }
+
+      try {
+        const result = await osrmService.optimizeTrip(coordinates, profile, {
+          roundtrip,
+          source,
+          destination,
+        });
+
+        sendSuccess({
+          res,
+          message: 'Trip optimized successfully via OSRM',
+          data: result,
+        });
+      } catch (osrmErr: any) {
+        // Resilient fallback to internal 2-Opt TSP Engine if OSRM is unavailable
+        const fallbackResult = tspOptimizationEngineService.optimizeTour(coordinates, {
+          roundtrip: roundtrip === true,
+          fixOrigin: source === 'first' || source === undefined,
+          fixDestination: destination === 'last',
+        });
+
+        sendSuccess({
+          res,
+          message: 'Trip optimized successfully via Fallback 2-Opt Engine (OSRM offline)',
+          data: fallbackResult,
+          meta: { fallbackActive: true },
+        });
+      }
     } catch (error: any) {
       sendError(res, 400, error.message);
     }

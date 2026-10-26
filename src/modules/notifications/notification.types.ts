@@ -24,7 +24,42 @@ export type GeofenceMilestoneType =
   | 'GEOFENCE_PROXIMITY_500M'
   | 'GEOFENCE_ARRIVAL_100M'
   | 'GEOFENCE_ENTER'
+  | 'GEOFENCE_DWELL'
   | 'GEOFENCE_EXIT';
+
+export type GeofenceGeometryType = 'CIRCULAR' | 'POLYGON';
+
+export interface CircularGeofenceDefinition {
+  geofenceId: string;
+  name: string;
+  type: 'CIRCULAR';
+  center: [number, number]; // [lon, lat]
+  radiusMeters: number;
+  dwellThresholdSeconds?: number;
+  metadata?: Record<string, any>;
+}
+
+export interface PolygonGeofenceDefinition {
+  geofenceId: string;
+  name: string;
+  type: 'POLYGON';
+  coordinates: [number, number][]; // Array of [lon, lat] vertices forming closed polygon
+  dwellThresholdSeconds?: number;
+  metadata?: Record<string, any>;
+}
+
+export type CustomGeofenceDefinition = CircularGeofenceDefinition | PolygonGeofenceDefinition;
+
+export interface GeofenceEvaluationEvent {
+  geofenceId: string;
+  name: string;
+  eventType: 'ENTER' | 'DWELL' | 'EXIT' | 'INSIDE' | 'OUTSIDE';
+  distanceToCenterMeters?: number;
+  dwellTimeSeconds?: number;
+  triggeredPush: boolean;
+  timestamp: number;
+}
+
 
 export interface PushNotificationPayload {
   recipientUserId: string;

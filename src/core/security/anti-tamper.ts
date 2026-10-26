@@ -69,6 +69,26 @@ export class AntiTamperSentinel {
     } catch {
       // Ignore if environment already restricts global eval modifications
     }
+
+    try {
+      const originalFunction = globalThis.Function;
+      const secureFunction = function (this: any, ...args: any[]) {
+        const stack = new Error().stack || '';
+        const isInternalLibrary = stack.includes('node_modules');
+        if (args.length > 0 && !isInternalLibrary) {
+          throw new Error('Security Violation: Dynamic Function() constructor execution is disabled by AntiTamperSentinel.');
+        }
+        return (originalFunction as any).apply(this, args);
+      };
+      secureFunction.prototype = originalFunction.prototype;
+      Object.defineProperty(globalThis, 'Function', {
+        value: secureFunction,
+        writable: false,
+        configurable: false,
+      });
+    } catch {
+      // Ignore if environment already restricts global Function modifications
+    }
   }
 
   /**

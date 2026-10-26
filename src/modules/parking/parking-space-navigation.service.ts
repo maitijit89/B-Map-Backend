@@ -30,29 +30,29 @@ export class ParkingSpaceNavigationService {
    * Seeds demo multi-floor underground facility and bays
    */
   private seedDefaultFacilityAndBays() {
-    const facilityId = 'fac_berlin_potsdamer_hub';
+    const facilityId = 'fac_select_citywalk_delhi';
     const facility: ParkingFacility = {
       facilityId,
-      name: 'Potsdamer Platz Underground Mobility & EV Hub',
-      address: 'Potsdamer Platz 1, 10785 Berlin',
-      location: [13.3769, 52.5096],
+      name: 'Select Citywalk Underground Mobility & Multi-Floor EV Hub',
+      address: 'A-3, District Centre, Saket, New Delhi, Delhi 110017',
+      location: [77.2195, 28.5284],
       entranceGates: [
         {
-          gateId: 'gate_north_entry',
-          name: 'Gate 1 North Barrier (Linkstraße)',
-          barrierCoordinates: [13.3765, 52.5098],
+          gateId: 'gate_saket_entry',
+          name: 'Gate 1 Press Enclave Road Barrier',
+          barrierCoordinates: [77.2192, 28.5286],
         },
         {
-          gateId: 'gate_south_entry',
-          name: 'Gate 2 South Barrier (Reichpietschufer)',
-          barrierCoordinates: [13.3773, 52.5091],
+          gateId: 'gate_mandir_entry',
+          name: 'Gate 2 Mandir Marg Barrier',
+          barrierCoordinates: [77.2198, 28.5281],
         },
       ],
       exitGates: [
         {
-          gateId: 'gate_east_exit',
-          name: 'Gate 3 East Exit (Potsdamer Str.)',
-          barrierCoordinates: [13.3775, 52.5097],
+          gateId: 'gate_saket_exit',
+          name: 'Gate 3 Saket District Centre Exit',
+          barrierCoordinates: [77.2201, 28.5287],
         },
       ],
       floors: [
@@ -63,10 +63,10 @@ export class ParkingSpaceNavigationService {
           totalSpaces: 80,
           availableSpaces: 35,
           aisleGraphNodes: [
-            { id: 'node_b1_entry', coordinates: [13.3766, 52.5097], type: 'ramp' },
-            { id: 'node_b1_aisle_a', coordinates: [13.3768, 52.5097], type: 'intersection' },
-            { id: 'node_b1_ramp_to_b2', coordinates: [13.377, 52.5096], type: 'ramp' },
-            { id: 'node_b1_elevator', coordinates: [13.3769, 52.5098], type: 'elevator' },
+            { id: 'node_b1_entry', coordinates: [77.2193, 28.5285], type: 'ramp' },
+            { id: 'node_b1_aisle_a', coordinates: [77.2195, 28.5285], type: 'intersection' },
+            { id: 'node_b1_ramp_to_b2', coordinates: [77.2197, 28.5284], type: 'ramp' },
+            { id: 'node_b1_elevator', coordinates: [77.2196, 28.5286], type: 'elevator' },
           ],
           aisleGraphEdges: [
             { fromNode: 'node_b1_entry', toNode: 'node_b1_aisle_a', distanceMeters: 30, isOneWay: false },
@@ -81,12 +81,12 @@ export class ParkingSpaceNavigationService {
           totalSpaces: 120,
           availableSpaces: 65,
           aisleGraphNodes: [
-            { id: 'node_b2_ramp_arrival', coordinates: [13.377, 52.5095], type: 'ramp' },
-            { id: 'node_b2_aisle_a', coordinates: [13.3768, 52.5095], type: 'intersection' },
-            { id: 'node_b2_aisle_b', coordinates: [13.3765, 52.5095], type: 'intersection' },
-            { id: 'node_b2_bay_a101', coordinates: [13.37682, 52.50952], type: 'bay_access' },
-            { id: 'node_b2_bay_a102', coordinates: [13.37684, 52.50953], type: 'bay_access' },
-            { id: 'node_b2_elevator', coordinates: [13.3769, 52.5097], type: 'elevator' },
+            { id: 'node_b2_ramp_arrival', coordinates: [77.2197, 28.5283], type: 'ramp' },
+            { id: 'node_b2_aisle_a', coordinates: [77.2195, 28.5283], type: 'intersection' },
+            { id: 'node_b2_aisle_b', coordinates: [77.2192, 28.5283], type: 'intersection' },
+            { id: 'node_b2_bay_a101', coordinates: [77.21952, 28.52832], type: 'bay_access' },
+            { id: 'node_b2_bay_a102', coordinates: [77.21954, 28.52833], type: 'bay_access' },
+            { id: 'node_b2_elevator', coordinates: [77.2196, 28.5285], type: 'elevator' },
           ],
           aisleGraphEdges: [
             { fromNode: 'node_b2_ramp_arrival', toNode: 'node_b2_aisle_a', distanceMeters: 20, isOneWay: false },
@@ -96,7 +96,7 @@ export class ParkingSpaceNavigationService {
           ],
         },
       ],
-      hourlyRate: 3.5,
+      hourlyRate: 40.0,
     };
 
     this.facilities.set(facilityId, facility);
@@ -110,7 +110,7 @@ export class ParkingSpaceNavigationService {
         floorName: 'B2',
         zone: 'Zone A (Green)',
         spaceNumber: 'B2-A101',
-        coordinates: [13.37682, 52.50952],
+        coordinates: [77.21952, 28.52832],
         dimensions: { lengthMeters: 5.2, widthMeters: 2.6 },
         bayType: 'ev_charging',
         status: 'vacant',
@@ -126,7 +126,7 @@ export class ParkingSpaceNavigationService {
         floorName: 'B2',
         zone: 'Zone A (Green)',
         spaceNumber: 'B2-A102',
-        coordinates: [13.37684, 52.50953],
+        coordinates: [77.21954, 28.52833],
         dimensions: { lengthMeters: 5.0, widthMeters: 2.5 },
         bayType: 'standard',
         status: 'vacant',
@@ -141,7 +141,7 @@ export class ParkingSpaceNavigationService {
         floorName: 'B2',
         zone: 'Zone A (Green)',
         spaceNumber: 'B2-A103',
-        coordinates: [13.37686, 52.50954],
+        coordinates: [77.21956, 28.52834],
         dimensions: { lengthMeters: 5.5, widthMeters: 3.2 },
         bayType: 'accessible_disabled',
         status: 'vacant',
@@ -156,7 +156,7 @@ export class ParkingSpaceNavigationService {
         floorName: 'B2',
         zone: 'Zone M (Motorcycle)',
         spaceNumber: 'B2-M01',
-        coordinates: [13.3767, 52.5095],
+        coordinates: [77.2194, 28.5283],
         dimensions: { lengthMeters: 3.0, widthMeters: 1.5 },
         bayType: 'motorcycle',
         status: 'vacant',
@@ -257,7 +257,7 @@ export class ParkingSpaceNavigationService {
         distanceMeters: 25,
         turnDirection: 'straight',
         targetFloorLevel: -1,
-        geometry: [gate.barrierCoordinates, [13.3766, 52.5097]],
+        geometry: [gate.barrierCoordinates, [77.2193, 28.5285]],
       },
       {
         stepIndex: 2,
@@ -266,8 +266,8 @@ export class ParkingSpaceNavigationService {
         turnDirection: 'straight',
         targetFloorLevel: -1,
         geometry: [
-          [13.3766, 52.5097],
-          [13.3768, 52.5097],
+          [77.2193, 28.5285],
+          [77.2195, 28.5285],
         ],
       },
       {
@@ -277,8 +277,8 @@ export class ParkingSpaceNavigationService {
         turnDirection: 'ramp_down',
         targetFloorLevel: -2,
         geometry: [
-          [13.3768, 52.5097],
-          [13.377, 52.5095],
+          [77.2195, 28.5285],
+          [77.2197, 28.5283],
         ],
       },
       {
@@ -288,8 +288,8 @@ export class ParkingSpaceNavigationService {
         turnDirection: 'slight_left',
         targetFloorLevel: -2,
         geometry: [
-          [13.377, 52.5095],
-          [13.3768, 52.5095],
+          [77.2197, 28.5283],
+          [77.2195, 28.5283],
         ],
       },
       {
@@ -300,7 +300,7 @@ export class ParkingSpaceNavigationService {
         distanceMeters: 8,
         turnDirection: 'destination',
         targetFloorLevel: -2,
-        geometry: [[13.3768, 52.5095], bay.coordinates],
+        geometry: [[77.2195, 28.5283], bay.coordinates],
       },
     ];
 
@@ -459,9 +459,44 @@ export class ParkingSpaceNavigationService {
   /**
    * Gets facility by ID
    */
-  getFacility(facilityId: string) {
+  getFacility(facilityId: string): ParkingFacility | undefined {
     return this.facilities.get(facilityId);
+  }
+
+  /**
+   * Returns all parking bays belonging to a specific facility.
+   */
+  getBaysForFacility(facilityId: string): ParkingBay[] {
+    const list: ParkingBay[] = [];
+    for (const bay of this.bays.values()) {
+      if (bay.facilityId === facilityId) {
+        list.push(bay);
+      }
+    }
+    return list;
+  }
+
+  /**
+   * Updates real-time occupancy status from IoT ultrasonic/camera sensors for a bay.
+   */
+  updateBaySensorStatus(
+    bayId: string,
+    status: BayStatus,
+    vehicleLicensePlate?: string
+  ): ParkingBay {
+    const bay = this.bays.get(bayId);
+    if (!bay) {
+      throw new Error(`Parking bay not found: ${bayId}`);
+    }
+    bay.status = status;
+    if (vehicleLicensePlate) {
+      bay.assignedVehicleLicensePlate = vehicleLicensePlate;
+    } else if (status === 'vacant') {
+      delete bay.assignedVehicleLicensePlate;
+    }
+    return bay;
   }
 }
 
 export const parkingSpaceNavigationService = new ParkingSpaceNavigationService();
+export const parkingNavigationEngineService = parkingSpaceNavigationService;

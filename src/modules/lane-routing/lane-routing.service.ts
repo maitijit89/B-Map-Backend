@@ -23,66 +23,84 @@ export class LaneRoutingService {
    * Seeds demo/standard lane configurations (e.g. 4-lane urban arterial and 6-lane highway)
    */
   private seedDefaultSegments() {
-    // 4-Lane Primary Road approaching intersection (Left turn, Straight, Straight, Right turn)
+    // 1. Sovereign Indian Corridor: Delhi Ring Road approaching AIIMS Flyover
+    const delhiRingRoad: LaneSegment = {
+      segmentId: 'seg_ringroad_aiims',
+      roadName: 'Mahatma Gandhi Ring Road Corridor',
+      roadClass: 'primary',
+      totalLanes: 4,
+      lengthMeters: 550,
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [77.208, 28.566],
+          [77.214, 28.568],
+        ],
+      },
+      lanes: [
+        { laneIndex: 0, turnDirection: 'left', laneType: 'normal', widthMeters: 3.5, speedLimitKmh: 60 },
+        { laneIndex: 1, turnDirection: 'straight', laneType: 'normal', widthMeters: 3.5, speedLimitKmh: 60 },
+        { laneIndex: 2, turnDirection: 'straight', laneType: 'normal', widthMeters: 3.5, speedLimitKmh: 60 },
+        {
+          laneIndex: 3,
+          turnDirection: 'right',
+          laneType: 'bus_only',
+          widthMeters: 3.5,
+          speedLimitKmh: 60,
+          restrictions: [
+            { startHour: 8, endHour: 11, daysOfWeek: [1, 2, 3, 4, 5], allowedVehicleTypes: ['bus', 'taxi'] },
+            { startHour: 17, endHour: 20, daysOfWeek: [1, 2, 3, 4, 5], allowedVehicleTypes: ['bus', 'taxi'] },
+          ],
+        },
+      ],
+    };
+
+    // 2. Sovereign Indian Corridor: Bengaluru Silk Board Outer Ring Road
+    const blrOuterRingRoad: LaneSegment = {
+      segmentId: 'seg_ecity_silkboard',
+      roadName: 'Outer Ring Road (Silk Board - HSR Layout)',
+      roadClass: 'motorway',
+      totalLanes: 4,
+      lengthMeters: 650,
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [77.622, 12.916],
+          [77.628, 12.918],
+        ],
+      },
+      lanes: [
+        { laneIndex: 0, turnDirection: 'left', laneType: 'normal', widthMeters: 3.5, speedLimitKmh: 50 },
+        { laneIndex: 1, turnDirection: 'straight', laneType: 'normal', widthMeters: 3.5, speedLimitKmh: 50 },
+        { laneIndex: 2, turnDirection: 'straight', laneType: 'normal', widthMeters: 3.5, speedLimitKmh: 50 },
+        { laneIndex: 3, turnDirection: 'right', laneType: 'normal', widthMeters: 3.5, speedLimitKmh: 50 },
+      ],
+    };
+
+    // 3. Fallback demo arterial
     const demoArterial: LaneSegment = {
       segmentId: 'seg_kudamm_intersection',
-      roadName: 'Kurfürstendamm Arterial',
+      roadName: 'Central Arterial Corridor',
       roadClass: 'primary',
       totalLanes: 4,
       lengthMeters: 450,
       geometry: {
         type: 'LineString',
         coordinates: [
-          [13.32, 52.502],
-          [13.325, 52.503],
+          [77.2177, 28.6304],
+          [77.222, 28.632],
         ],
       },
       lanes: [
-        {
-          laneIndex: 0,
-          turnDirection: 'left',
-          laneType: 'normal',
-          widthMeters: 3.5,
-          speedLimitKmh: 50,
-        },
-        {
-          laneIndex: 1,
-          turnDirection: 'straight',
-          laneType: 'normal',
-          widthMeters: 3.5,
-          speedLimitKmh: 50,
-        },
-        {
-          laneIndex: 2,
-          turnDirection: 'straight',
-          laneType: 'normal',
-          widthMeters: 3.5,
-          speedLimitKmh: 50,
-        },
-        {
-          laneIndex: 3,
-          turnDirection: 'right',
-          laneType: 'bus_only',
-          widthMeters: 3.5,
-          speedLimitKmh: 50,
-          restrictions: [
-            {
-              startHour: 7,
-              endHour: 9,
-              daysOfWeek: [1, 2, 3, 4, 5],
-              allowedVehicleTypes: ['bus', 'taxi'],
-            },
-            {
-              startHour: 16,
-              endHour: 19,
-              daysOfWeek: [1, 2, 3, 4, 5],
-              allowedVehicleTypes: ['bus', 'taxi'],
-            },
-          ],
-        },
+        { laneIndex: 0, turnDirection: 'left', laneType: 'normal', widthMeters: 3.5, speedLimitKmh: 50 },
+        { laneIndex: 1, turnDirection: 'straight', laneType: 'normal', widthMeters: 3.5, speedLimitKmh: 50 },
+        { laneIndex: 2, turnDirection: 'straight', laneType: 'normal', widthMeters: 3.5, speedLimitKmh: 50 },
+        { laneIndex: 3, turnDirection: 'right', laneType: 'normal', widthMeters: 3.5, speedLimitKmh: 50 },
       ],
     };
 
+    this.inMemorySegments.set(delhiRingRoad.segmentId, delhiRingRoad);
+    this.inMemorySegments.set(blrOuterRingRoad.segmentId, blrOuterRingRoad);
     this.inMemorySegments.set(demoArterial.segmentId, demoArterial);
   }
 
@@ -299,3 +317,4 @@ export class LaneRoutingService {
 }
 
 export const laneRoutingService = new LaneRoutingService();
+export const laneGuidanceEngineService = laneRoutingService;

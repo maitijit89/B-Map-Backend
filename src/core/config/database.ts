@@ -60,9 +60,14 @@ const registerConnectionListeners = (): void => {
 export const connectDatabase = async (): Promise<void> => {
   mongoose.set('strictQuery', true);
 
-  const connectOptions = {
-    autoIndex: true, // Automatically build 2dsphere and unique indexes
+  const connectOptions: mongoose.ConnectOptions = {
+    autoIndex: env.NODE_ENV !== 'production', // Build indexes in dev/test, disable in production for high throughput
+    maxPoolSize: 50, // Optimal connection pooling for concurrent navigation & telemetry queries
+    minPoolSize: 10, // Pre-warm connections to eliminate cold-start latency
+    socketTimeoutMS: 45000,
+    connectTimeoutMS: 10000,
     serverSelectionTimeoutMS: 5000,
+    family: 4, // Force IPv4 first to avoid dual-stack DNS delays
   };
 
   try {

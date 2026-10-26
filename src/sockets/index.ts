@@ -19,6 +19,7 @@ import { registerTrackingHandlers } from '../modules/tracking/tracking.socket';
 import { registerUnifiedEngineHandlers } from '../modules/unified-engine/unified-engine.socket';
 import { registerLocationAccessSocketHandlers } from '../modules/location-access/location-access.socket';
 import { registerMotionFitnessSocketHandlers } from '../modules/motion-fitness/motion-fitness.socket';
+import { registerTrafficSocketHandlers } from '../modules/traffic/traffic.socket';
 
 let ioInstance: Server | null = null;
 
@@ -29,6 +30,18 @@ export const initSocketServer = (httpServer: HttpServer): Server => {
       methods: ['GET', 'POST'],
       credentials: true,
     },
+    transports: ['websocket', 'polling'], // Prioritize native WebSocket over HTTP polling
+    perMessageDeflate: {
+      threshold: 1024, // Compress real-time coordinate & GeoJSON packets > 1KB
+      zlibDeflateOptions: {
+        chunkSize: 16 * 1024,
+      },
+      zlibInflateOptions: {
+        windowBits: 14,
+      },
+    },
+    httpCompression: true,
+    maxHttpBufferSize: 1e6, // 1MB buffer ceiling against memory-exhaustion floods
     pingTimeout: 20000,
     pingInterval: 25000,
   });
@@ -64,6 +77,9 @@ export const initSocketServer = (httpServer: HttpServer): Server => {
 
     // Unified Super-App Ecosystem (Rides, Lifestyle, Offline) handlers
     registerSuperAppHandlers(io, socket);
+
+    // Real-Time Traffic & ETA Calculation Layer
+    registerTrafficSocketHandlers(io, socket);
 
     socket.on('disconnect', (reason: string) => {
       logger.info(`🔌 Socket disconnected: ${socket.id} (reason: ${reason})`);

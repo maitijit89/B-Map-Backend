@@ -314,3 +314,4 @@ export class AutomotiveEcosystemService {
 }
 
 export const automotiveEcosystemService = new AutomotiveEcosystemService();
+export const automotiveEcosystemEngineService = automotiveEcosystemService;

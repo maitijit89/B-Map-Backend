@@ -27,8 +27,11 @@ const startServer = async (): Promise<void> => {
     // 3. Initialize Express Application
     const app = createApp();
 
-    // 4. Create HTTP Server
+    // 4. Create HTTP Server with optimized connection keep-alive timeouts
     const httpServer = http.createServer(app);
+    httpServer.keepAliveTimeout = 65000; // Exceeds 60s reverse proxy timeouts
+    httpServer.headersTimeout = 66000; // Must be strictly greater than keepAliveTimeout
+    httpServer.maxRequestsPerSocket = 1000;
 
     // 5. Initialize Socket.IO Real-Time Engine
     initSocketServer(httpServer);
@@ -54,6 +57,15 @@ const startServer = async (): Promise<void> => {
       keepaliveService.stop();
       aiCopilotSocketBridge.disconnect();
 
+      try {
+        const { getIO } = await import('./sockets');
+        const io = getIO();
+        logger.info('Draining active Socket.IO connections...');
+        io.disconnectSockets(true);
+        io.close();
+      } catch (err: any) {
+        logger.debug(`Socket draining note: ${err.message}`);
+      }
 
       httpServer.close(async () => {
         logger.info('HTTP server closed.');

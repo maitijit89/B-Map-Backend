@@ -373,3 +373,4 @@ export class RiderModeService {
 }
 
 export const riderModeService = new RiderModeService();
+export const riderModeEngineService = riderModeService;

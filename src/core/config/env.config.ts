@@ -11,7 +11,7 @@ const envSchema = z.object({
   PORT: z.string().default(process.env.APP_PORT || '8080').transform((val) => parseInt(val, 10)),
   APP_NAME: z.string().default('B Map'),
   APP_URL: z.string().default('http://localhost:8080'),
-  APP_VERSION: z.string().default('0.1.2'),
+  APP_VERSION: z.string().default('1.0.0'),
   API_PREFIX: z.string().default('/api/v1'),
   CORS_ORIGIN: z.string().default('*'),
 

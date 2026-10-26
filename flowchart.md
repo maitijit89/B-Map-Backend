@@ -1,7 +1,7 @@
 # 🔄 B-Map Platform Complete System Flowcharts
 
 > **Visual Architectural Workflows, State Machines & Event Sequence Diagrams**  
-> *Target System:* B-Map Navigation Backend | *Diagrams:* Interactive Mermaid Graphs
+> *Target System:* B-Map Navigation & Telematics Backend | *Version:* 2.0.0 | *Diagrams:* Interactive Mermaid Graphs
 
 ---
 
@@ -19,7 +19,7 @@ flowchart TD
     QueryOSRM --> StoreCache[Store Route in Redis with 1h TTL]
     StoreCache --> ReturnRoute
 
-    ReturnRoute --> StartSession[Client Calls POST /navigation/start]
+    ReturnRoute --> StartSession[Client Calls POST /api/v1/navigation/start]
     StartSession --> OpenSocket[Client Joins Socket.IO Room: nav:sessionId]
 
     OpenSocket --> StreamGPS[Client Streams GPS Fix at 1Hz]
@@ -37,89 +37,290 @@ flowchart TD
     SuppressJitter --> StreamGPS
 
     CheckCooldown -->|Yes: Trigger Reroute| RecalculateOSRM[Calculate New Route from Current GPS]
-    RecalculateOSRM --> SocketPush[Emit 'reroute_push' via Socket.IO]
+    RecalculateOSRM --> SocketPush[Emit 'nav:reroute_success' via Socket.IO]
     SocketPush --> UpdateClientHUD[Client Replaces Active Polyline & Recalculates Steps]
     UpdateClientHUD --> StreamGPS
 ```
 
 ---
 
-## 2. Passwordless User Registration & Email OTP State Machine
+## 2. Real-Time Telematics Ingestion, Anti-Spoofing, EKF & Traffic Re-Weighting Flowchart
 
-This state machine details how users register with their Name, Age, Email, and Phone Number, and how the OTP verification prevents replay and brute-force attacks.
+This flowchart details the complete lifecycle of a velocity vector from raw vehicle transmission through cryptographic verification, kinematic physics checks, 6-state Kalman filtering, spatial road segment snapping, DBSCAN tea-stall outlier rejection, BPR dynamic edge weight updates (in travel time minutes), and real-time Socket.IO broadcasting.
+
+```mermaid
+flowchart TD
+    Start([Vehicle / Mobile Streams Telemetry]) --> CapturePayload[Capture: lon, lat, speedKmh, headingDeg, accuracy, timestamp]
+    CapturePayload --> AddHeaders[Inject Headers: X-BMap-Signature, X-BMap-Timestamp, X-BMap-Nonce]
+    AddHeaders --> Transmit[POST /api/v1/traffic/telemetry or Socket.IO 'traffic:telemetry_stream']
+
+    Transmit --> Ingress[Ingress Security Gateway & Anti-Recon Trap]
+    Ingress --> RateLimit{Rate Limit Check: apiRateLimiter 300/1m}
+    RateLimit -->|Exceeded| Drop429[Return HTTP 429 Too Many Requests]
+    RateLimit -->|Pass| VerifySigner{TelemetrySignerGuard: Verify HMAC-SHA256}
+
+    VerifySigner -->|Bad Signature| Drop401[Return HTTP 401 Unauthorized]
+    VerifySigner -->|Freshness dt > 45s| DropExpired[Return HTTP 401 Stale Timestamp Error]
+    VerifySigner -->|Nonce Seen| DropReplay[Return HTTP 403 Nonce Replay Detected]
+    VerifySigner -->|Valid Signature & Fresh| AntiSpoofCheck{AntiSpoofingGuard: Verify Kinematics}
+
+    AntiSpoofCheck -->|Accel > 6.5 m/s²| RejectSpoof[Reject: IMPOSSIBLE_ACCELERATION]
+    AntiSpoofCheck -->|Speed > 220 km/h| RejectSpoof[Reject: TELEPORTATION_ANOMALY]
+    AntiSpoofCheck -->|Bearing Δ > 70°| RejectSpoof[Reject: BEARING_DISPLACEMENT_MISMATCH]
+    AntiSpoofCheck -->|Entropy < 1e-9| RejectSpoof[Reject: SYNTHETIC_ZERO_JITTER]
+    AntiSpoofCheck -->|Mock Provider True| RejectSpoof[Reject: MOCK_LOCATION_FLAG]
+
+    AntiSpoofCheck -->|Kinematics Verified| EKFUpdate[6-State Extended Kalman Filter CWNA Model]
+    EKFUpdate --> CovarianceGate{Covariance Trace Tr-P OK?}
+    CovarianceGate -->|High Uncertainty| ExtrapolateDR[Extrapolate Dead Reckoning max 10s]
+    CovarianceGate -->|Nominal Fix| SmoothState[State Corrected: Smoothed [lon, lat], Speed, Heading]
+
+    ExtrapolateDR --> SpatialSnap
+    SmoothState --> SpatialSnap[Spatial Road Snapping: Map Vector to Nearest RoadSegmentEdge]
+
+    SpatialSnap --> CheckSpeed{Is Device Speed < 15 km/h?}
+    CheckSpeed -->|No: Moving Normally| IngestNormal[Ingest into Segment Speed Sample Buffer]
+    CheckSpeed -->|Yes: Slow / Stopped| DBSCANCluster[Execute DBSCAN Spatial Clustering: eps=45m, minPts=3]
+
+    DBSCANCluster --> EvalCluster{Is Device Part of Cluster >= 3 Devices?}
+    EvalCluster -->|No: Isolated Device| RejectAnomaly[Reject False Positive: Roadside Tea Stall / Chai Shop Stop]
+    RejectAnomaly --> SocketAnomalyNotify[Emit Socket.IO 'traffic:anomaly_filtered']
+    EvalCluster -->|Yes: Clustered Congestion| IngestCongestion[Validate Congestion: Ingest into Segment Buffer]
+
+    IngestNormal --> RecalcBPR
+    IngestCongestion --> RecalcBPR[BPR Formulation: Recalculate Edge Travel Time in MINUTES]
+
+    RecalcBPR --> UpdateGraph[Update Directed Road Graph: Set edge.weightMinutes & effectiveSpeedKmh]
+    UpdateGraph --> RedisCache[Update Redis Key: bmap:traffic:segments]
+    UpdateGraph --> SocketBroadcast[Socket.IO Broadcasts 'traffic:segment_update' to Connected Clients]
+    SocketBroadcast --> EndFlow([Real-Time Congestion Reflected on Navigation HUDs])
+```
+
+---
+
+## 3. Macroscopic LWR Traffic Shockwave Dynamics & Upstream Spillback Flowchart
+
+This flowchart illustrates how the Lighthill-Whitham-Richards (LWR) fluid dynamics engine analyzes queue accumulation, computes shockwave boundary speeds, and emits preemptive upstream spillback alerts before traffic reaches a standstill.
+
+```mermaid
+flowchart TD
+    Trigger([Segment Speed Drop Detected on Edge E_target]) --> ReadAttributes[Fetch: Free Flow Speed v_free, Current Speed v_curr, LanesCount]
+    ReadAttributes --> FetchUpstream[Identify Upstream Inflow Edge E_upstream]
+
+    FetchUpstream --> CalcDensities[Compute Densities via Greenshields Model]
+    CalcDensities --> JamDensity[k_jam = 135 veh/km * lanes]
+    JamDensity --> CurrentDensity[k_2 = k_jam * 1 - v_curr / v_free]
+    JamDensity --> UpstreamDensity[k_1 = k_jam * 1 - v_upstream / v_free]
+
+    CurrentDensity --> CalcFlowRates[Calculate Flow Rates: q = k * v]
+    CalcFlowRates --> Capacity[q_capacity = v_free * k_jam / 4]
+    Capacity --> FlowRates[Compute q_1 Upstream Arrival vs q_2 Bottleneck Discharge]
+
+    FlowRates --> ShockwaveVelocity[Compute Shockwave Velocity: w = q_2 - q_1 / k_2 - k_1]
+
+    ShockwaveVelocity --> ClassifyWave{Evaluate Shockwave Speed w}
+    ClassifyWave -->|w < -5.0 km/h| BackWave[Direction: BACKWARD_FORMING Queue Growing Upstream]
+    ClassifyWave -->|w > +5.0 km/h| ForeWave[Direction: FORWARD_RECOVERY Queue Dissipating]
+    ClassifyWave -->|-5.0 <= w <= +5.0| StatWave[Direction: STATIONARY Bottleneck]
+
+    BackWave --> CalcQueueLength[Compute Queue Length L_queue = k_2 * segmentLength]
+    CalcQueueLength --> CalcSpillbackTime[Calculate Spillback Time: t_spillback = D_upstream / |w| * 60 minutes]
+
+    CalcSpillbackTime --> CheckSpillbackRisk{Is t_spillback <= 5.0 Minutes?}
+    CheckSpillbackRisk -->|No: Queue Far Off| LogShockwave[Log Shockwave Telematics Record]
+    CheckSpillbackRisk -->|Yes: Urgent Spillback Risk| TriggerSpillbackAlarm[Generate TRAFFIC_CONGESTION_ALERT]
+
+    TriggerSpillbackAlarm --> SocketSpillbackPush[Emit Socket.IO 'traffic:congestion_alert' to Upstream Vehicles]
+    SocketSpillbackPush --> PreemptiveReroute[Active Navigation Sessions Trigger Preemptive Reroute]
+    PreemptiveReroute --> DivertTraffic([Traffic Diverted to Parallel Arterial Corridors])
+```
+
+---
+
+## 4. Cryptographic Spatial Proof-of-Presence Attestation Flowchart
+
+This flowchart outlines the generation and third-party verification of tamper-evident spatial Proof-of-Presence certificates used for electronic highway tolling, logistics delivery verification, and usage-based insurance telematics.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Vehicle as Connected Vehicle / Mobile App
+    participant Gateway as B-Map API Gateway
+    participant POP as ProofOfPresenceService
+    participant Signer as HMAC-SHA256 Crypto Engine
+    participant Verifier as External Toll / Logistics Auditor
+
+    Vehicle->>Gateway: POST /api/v1/traffic/security/proof-of-presence<br/>Payload: { subjectId, locationName, targetCoord, geofenceRadiusMeters, observedCoord, speed, rawLogs }
+    Gateway->>POP: generateProofOfPresence(params)
+
+    POP->>POP: Calculate Geodesic Distance d = Turf.distance(observed, target)
+    alt Observed Location Outside Geofence (d > geofenceRadiusMeters)
+        POP-->>Gateway: Throw Exception: Device physically outside geofence
+        Gateway-->>Vehicle: HTTP 400 Bad Request: Geofence violation
+    else Observed Location Within Geofence (d <= geofenceRadiusMeters)
+        POP->>POP: Compute SHA-256 Digest of raw GNSS measurements
+        POP->>POP: Assemble PresenceAttestationPayload (attestationId, subjectId, target, observed, speed, expiresAt = now + 30m)
+        POP->>Signer: Sign JSON Payload with secretKey using HMAC-SHA256
+        Signer-->>POP: Return Hex Signature String
+        POP-->>Gateway: Assemble SignedPresenceAttestation Certificate
+        Gateway-->>Vehicle: HTTP 201 Created: Signed Presence Certificate
+    end
+
+    Note over Vehicle,Verifier: Certificate Carried by Driver / Uploaded to Fleet Ledger
+
+    Verifier->>Gateway: POST /api/v1/traffic/security/proof-of-presence/verify<br/>Payload: { attestationCertificate }
+    Gateway->>POP: verifyProofOfPresence(certificate)
+    POP->>POP: Check Expiration Freshness (now <= expiresAt)
+    POP->>Signer: Recompute HMAC-SHA256 over attestationCertificate.payload
+    alt Signature Matches & Not Expired
+        POP-->>Gateway: Return { isValid: true, subjectId, locationName, timestamp }
+        Gateway-->>Verifier: HTTP 200 OK: Attestation Cryptographically Verified
+    else Signature Mismatch or Expired
+        POP-->>Gateway: Return { isValid: false, reason: 'SIGNATURE_MISMATCH' | 'EXPIRED' }
+        Gateway-->>Verifier: HTTP 400 Bad Request: Fraudulent or Expired Proof
+    end
+```
+
+---
+
+## 5. Multi-Criteria Physics-Based Eco-Routing Decision Flowchart
+
+This flowchart shows how B-Map computes energy consumption based on aerodynamic drag, rolling resistance, inertial stop-and-go penalties, and vehicle powertrain mechanics to synthesize eco-friendly navigation routes.
+
+```mermaid
+flowchart TD
+    User([User Requests Navigation Route]) --> VehicleSelection[User Selects Vehicle Profile: ICE Petrol, ICE Diesel, or Electric Vehicle]
+    VehicleSelection --> QueryAlternatives[Query OSRM: Fetch Primary Fastest Route + Alternative Routes]
+
+    QueryAlternatives --> SegmentLoop[Iterate through Road Segments on Each Route Candidate]
+
+    SegmentLoop --> FetchPhysicsParams[Fetch: Segment Length, Effective Speed, Elevation Gradient, Stop-and-Go Frequency]
+
+    FetchPhysicsParams --> CalcRolling[Compute Rolling Resistance: P_roll = Crr * mass * g * v]
+    FetchPhysicsParams --> CalcAero[Compute Aerodynamic Drag: P_aero = 0.5 * rho * Cd * Area * v^3]
+    FetchPhysicsParams --> CalcInertial[Compute Inertial Acceleration Losses from Congestion Shockwaves]
+
+    CalcRolling --> SumTractive[Tractive Power: P_tractive = P_roll + P_aero + P_inertial]
+    CalcAero --> SumTractive
+    CalcInertial --> SumTractive
+
+    SumTractive --> PowertrainCheck{Propulsion Type}
+
+    PowertrainCheck -->|ICE Petrol| PetrolCalc[Apply Efficiency eta = 0.30 + Idle Rate 0.8 L/h]
+    PowertrainCheck -->|ICE Diesel| DieselCalc[Apply Efficiency eta = 0.34 + Idle Rate 0.6 L/h]
+    PowertrainCheck -->|EV Battery| EVCalc[Apply Efficiency eta = 0.88 + 70% Regenerative Braking Credit]
+
+    PetrolCalc --> CalcCO2Petrol[Compute CO2: Liters * 2,310 g/L]
+    DieselCalc --> CalcCO2Diesel[Compute CO2: Liters * 2,680 g/L]
+    EVCalc --> CalcCO2EV[Compute CO2: kWh * Grid Emission Factor 708 g/kWh]
+
+    CalcCO2Petrol --> AggregateRoute
+    CalcCO2Diesel --> AggregateRoute
+    CalcCO2EV --> AggregateRoute
+
+    AggregateRoute[Aggregate Route Metrics: Total Duration, Distance, Energy kWh/Fuel Liters, Total CO2 kg]
+    AggregateRoute --> CompareRoutes[Compare Route Candidates: FASTEST vs. BALANCED vs. ECO_FRIENDLY]
+    CompareRoutes --> DisplayHUD([Client HUD Displays Energy Savings % & CO2 Reductions])
+```
+
+---
+
+## 6. Passwordless User Registration & Email OTP State Machine
+
+This state machine illustrates how B-Map securely registers and authenticates users via cryptographic 6-digit email OTPs, enforcing resend cooldowns, brute-force lockouts, and algorithm-pinned JWT issuance.
 
 ```mermaid
 stateDiagram-v2
     [*] --> Unregistered: User Submits Name, Age, Email, Phone
-    Unregistered --> ValidatingInput: Validate Zod Schema (age 1-120, email format)
+    Unregistered --> ValidatingInput: Zod Schema Check (name 2-100, age 1-120, email RFC 5322)
 
-    ValidatingInput --> RejectedInput: Invalid Input (HTTP 400)
+    ValidatingInput --> RejectedInput: Schema Validation Fails (HTTP 400)
     RejectedInput --> [*]
 
-    ValidatingInput --> GeneratingOTP: Valid Input
-    GeneratingOTP --> SendingEmail: CSPRNG Generates 6-Digit Code
-    SendingEmail --> OTPSentState: Gmail TLS SMTP Dispatches Code (HTTP 201)
+    ValidatingInput --> GeneratingOTP: Schema Validation Passes
+    GeneratingOTP --> SendingEmail: CSPRNG Generates 6-Digit Code: crypto.randomInt(100000, 1000000)
+    SendingEmail --> OTPSentState: Gmail TLS SMTP Dispatches Code & Saves to Redis (TTL 300s)
 
     state OTPSentState {
-        [*] --> WaitingForUser
-        WaitingForUser --> CheckCooldown: User Requests Resend
-        CheckCooldown --> ResendBlocked: < 30s elapsed (HTTP 400)
-        CheckCooldown --> ResendAllowed: >= 30s elapsed -> New OTP Sent
+        [*] --> AwaitingSubmission
+        AwaitingSubmission --> CheckCooldown: User Clicks Resend OTP
+        CheckCooldown --> ResendBlocked: Elapsed < 30s -> HTTP 400 Cooldown Active
+        CheckCooldown --> ResendAllowed: Elapsed >= 30s -> Generate New OTP & Reset 300s TTL
 
-        WaitingForUser --> VerifyingCode: User Submits 6-Digit Code
-        VerifyingCode --> CodeExpired: Time > 5 minutes (HTTP 400)
-        VerifyingCode --> IncorrectCode: Code Mismatch
-        IncorrectCode --> LockoutCheck: Increment attempts count
+        AwaitingSubmission --> VerifyingCode: User Submits 6-Digit Code
+        VerifyingCode --> CodeExpired: Time > 300s (5m TTL Expired in Redis)
+        VerifyingCode --> CodeMismatch: Incorrect Digits
+        CodeMismatch --> IncrementFailures: Increment failedAttempts counter in Redis
 
-        LockoutCheck --> AttemptsExceeded: Attempts >= 3 -> Invalidate OTP (HTTP 400)
-        LockoutCheck --> RetryPermitted: Attempts < 3 -> Prompt remaining attempts
+        IncrementFailures --> LockoutTriggered: failedAttempts >= 3 -> Permanently Invalidate OTP (HTTP 400)
+        IncrementFailures --> RetryAllowed: failedAttempts < 3 -> Prompt Remaining Attempts (HTTP 400)
 
-        VerifyingCode --> CodeCorrect: Code Matches
+        VerifyingCode --> CodeCorrect: Digits Match Exactly
+        CodeCorrect --> DeleteOTP: Atomically Delete OTP Key from Redis (Single-Use Replay Defense)
     }
 
-    AttemptsExceeded --> [*]
-    CodeCorrect --> SessionActive: Activate User in DB & Issue HS256 JWT
-    SessionActive --> [*]
+    LockoutTriggered --> [*]
+    DeleteOTP --> SessionActive: Create/Activate User Record in MongoDB & Issue HS256 JWT
+    SessionActive --> [*]: Return HTTP 200 with JWT Access Token
 ```
 
 ---
 
-## 3. NavIC / Multi-Sensor Positioning & Fallback Hierarchy
+## 7. NavIC / Multi-Sensor Positioning & Sovereign GIS Resolution Flowchart
 
-This diagram maps how raw satellite and telematics signals are synthesized through ISRO NavIC dual-frequency corrections and local sensor fusion.
+This flowchart demonstrates the ingestion of satellite and national GIS data, from ISRO NavIC dual-frequency ionospheric cancellation through 4m×4m DigiPIN resolution, NHAI FASTag electronic toll estimation, IMD highway weather integration, and 12-language vernacular voice translation.
 
 ```mermaid
 flowchart TD
-    Sensors([Inbound Positioning Telemetry]) --> SplitStreams{Identify Signal Types}
+    Sensors([Multi-Constellation Satellite & Hardware Telemetry]) --> SplitCarrier{Identify Carrier Frequencies}
 
-    SplitStreams -->|NavIC Satellite| IngestNavIC[Ingest NavIC L5: 1176.45MHz & S-Band: 2492.028MHz]
-    SplitStreams -->|GPS Satellite| IngestGPS[Ingest Standard GPS L1 Signals]
-    SplitStreams -->|Indoor Beacons| IngestBLE[Ingest Bluetooth BLE Beacon RSSI Packets]
-    SplitStreams -->|Inertial IMU| IngestIMU[Ingest Accelerometer & Gyroscope Data]
+    SplitCarrier -->|NavIC L5: 1176.45 MHz| IngestL5[Ingest NavIC L5 Carrier Signal]
+    SplitCarrier -->|NavIC S-Band: 2492.028 MHz| IngestS[Ingest NavIC S-Band Carrier Signal]
+    SplitCarrier -->|GPS L1 C/A: 1575.42 MHz| IngestGPS[Ingest Standard Civilian GPS L1]
+    SplitCarrier -->|BLE Beacons| IngestBLE[Ingest Indoor RSSI Signal Packets]
 
-    IngestNavIC --> DualFreqCancel[Compute Ionosphere-Free Linear Combination P_IF]
-    DualFreqCancel --> ComputeDOP[Evaluate Dilution of Precision HDOP & Satellite Count]
+    IngestL5 --> IonoCancel[Compute Dual-Frequency Ionosphere-Free Linear Combination P_IF]
+    IngestS --> IonoCancel
 
-    ComputeDOP --> CheckNavICQuality{HDOP < 1.8 & Sats >= 4?}
+    IonoCancel --> EvaluateDOP[Analyze Dilution of Precision: HDOP, PDOP, GDOP]
+    IngestGPS --> EvaluateDOP
+    IngestBLE --> BLETrilaterate[Log-Distance Weighted RSSI Multilateration]
 
-    CheckNavICQuality -->|Yes: High Precision| NavICFix[Primary Fix: ISRO NavIC Sub-Meter Fix]
-    CheckNavICQuality -->|No: Degraded Satellites| FallbackGPS[Secondary Fix: GPS + EGNOS Augmentation]
+    EvaluateDOP --> CheckNavICConfidence{Is HDOP < 1.8 & NavIC Sats >= 4?}
+    CheckNavICConfidence -->|Yes| PrimaryNavIC[Primary Sub-Meter Sovereign NavIC Fix]
+    CheckNavICConfidence -->|No| SecondaryGPS[Secondary GPS + GAGAN Augmentation Fix]
 
-    IngestBLE --> BLETrilateration[Log-Distance RSSI Weighted Multilateration]
-    BLETrilateration --> CheckIndoor{Strong BLE Signal?}
-    CheckIndoor -->|Yes| IndoorFix[Indoor Facility & Floor Level Fix]
+    PrimaryNavIC --> Fusion[Extended Kalman Filter Multi-Sensor Fusion]
+    SecondaryGPS --> Fusion
+    BLETrilaterate --> Fusion
 
-    NavICFix --> SensorFusion[Extended Kalman Filter / Dead Reckoning Fusion]
-    FallbackGPS --> SensorFusion
-    IndoorFix --> SensorFusion
-    IngestIMU --> SensorFusion
+    Fusion --> SovereignGISDispatch[High-Precision Coordinate Output [lon, lat]]
 
-    SensorFusion --> HighAccuracyFix([High-Accuracy Snapped Position Output])
+    SovereignGISDispatch --> DigiPINEngine[DigiPIN Engine: 10-Char Hierarchical Grid Subdivision]
+    DigiPINEngine --> DigiPINCode[Generate 4m x 4m National Address Code: e.g. 28J4-K8M2-9P]
+
+    SovereignGISDispatch --> FASTagEngine[FASTag Engine: Match Route with NHAI Toll Plazas]
+    FASTagEngine --> TollCalculation[Calculate Toll Rates across Vehicle Classes 4 to 9]
+
+    SovereignGISDispatch --> IMDWeatherEngine[IMD Weather Engine: Query Highway Fog & Flood Advisories]
+    IMDWeatherEngine --> WeatherAlerts[Generate Weather Warnings: GREEN, YELLOW, ORANGE, RED]
+
+    SovereignGISDispatch --> DefenseEngine[Defense Obfuscation: Check Restricted Military Boundaries]
+    DefenseEngine --> ObfuscateCoords[Apply 200m-500m Jitter to Sensitive Installations]
+
+    SovereignGISDispatch --> VernacularEngine[Vernacular TTS Engine: Select User Language]
+    VernacularEngine --> TranslateVoice[Translate Maneuvers across 12 Indian Languages: hi, ta, te, bn, mr, gu, kn, ml, pa, or, as, en]
+
+    DigiPINCode --> NavigationCockpit([Unified Sovereign Indian Navigation Cockpit])
+    TollCalculation --> NavigationCockpit
+    WeatherAlerts --> NavigationCockpit
+    ObfuscateCoords --> NavigationCockpit
+    TranslateVoice --> NavigationCockpit
 ```
 
 ---
 
-## 4. Real-Time Telematics & Socket.IO Room Broadcast Architecture
+## 8. Real-Time Telematics & Socket.IO Room Broadcast Architecture
 
 This diagram shows how high-frequency driver locations are ingested into Redis and broadcast to passenger and fleet monitoring clients.
 
@@ -151,36 +352,7 @@ sequenceDiagram
 
 ---
 
-## 5. DigiPIN 4m × 4m National Hierarchical Grid Encoding Flow
-
-This diagram shows how any geographic coordinate in India is resolved into an official 10-character alphanumeric digital address.
-
-```mermaid
-flowchart TD
-    StartCoords([Input Latitude & Longitude]) --> CheckBounds{Within India Bounding Box? Lat: 6-38N, Lon: 68-100E}
-
-    CheckBounds -->|No| OutOfBounds[Return Bounding Box Error]
-    CheckBounds -->|Yes| Normalize[Normalize to Unit Matrix [0, 1]]
-
-    Normalize --> InitGrid[Initialize Tier = 1, Output = '']
-
-    InitGrid --> LoopTier{Tier <= 10?}
-
-    LoopTier -->|Yes| Subdivide[Subdivide Active Cell into 32 Sub-Quadrants]
-    Subdivide --> MapIndices[Map Relative Coordinates to Row r & Column c]
-    MapIndices --> LookupAlphabet[Character = DigiPIN_Alphabet 2-9, A-Z excl. 0,1,O,I]
-    LookupAlphabet --> AppendChar[Output += Character]
-    AppendChar --> RefineBox[Contract Bounding Box to Selected Cell]
-    RefineBox --> IncrementTier[Tier = Tier + 1]
-    IncrementTier --> LoopTier
-
-    LoopTier -->|No: Tier = 10 reached| FinalDigiPIN[Format 10-Character String: e.g. 28J4-K8M2-9P]
-    FinalDigiPIN --> ReturnResult([Return 4m x 4m Precise Cell & Centroid])
-```
-
----
-
-## 6. Emergency SOS Distress Trigger & Proximity Dispatch Flow
+## 9. Emergency SOS Distress Trigger & Proximity Dispatch Flow
 
 This flowchart illustrates the critical life-safety flow when a motorist or pedestrian triggers an emergency SOS alert.
 
@@ -211,37 +383,7 @@ flowchart TD
 
 ---
 
-## 7. Administrative Traffic & Weather Override Broadcast Pipeline
-
-This diagram shows how administrators inject manual hazard advisories or severe weather warnings that instantly update navigation routes.
-
-```mermaid
-flowchart TD
-    Admin[Admin on Web Dashboard: /admin/dashboard] --> ChooseOverride{Select Override Action}
-
-    ChooseOverride -->|Traffic Congestion| TrafficForm[Fill Corridor Name, Speed Limit, Reason]
-    ChooseOverride -->|Severe Weather| WeatherForm[Select Highway, Alert Level: RED/ORANGE, IMD Advisory]
-
-    TrafficForm --> SubmitTraffic[POST /api/v1/admin/traffic/override]
-    WeatherForm --> SubmitWeather[POST /api/v1/admin/weather/override]
-
-    SubmitTraffic --> AuthCheck{Verify JWT & Role: Admin}
-    SubmitWeather --> AuthCheck
-
-    AuthCheck -->|Unauthorized| Reject[Return HTTP 403 Forbidden]
-    AuthCheck -->|Authorized| SaveDB[(Update MongoDB & SystemConfig)]
-
-    SaveDB --> FlushCache[Flush Impacted Redis Route Cache Keys]
-    FlushCache --> LogAudit[(Record Immutable Cryptographic Admin Audit Log)]
-
-    LogAudit --> SocketBroadcast[Socket.IO Emits 'highway_advisory_alert' Globally]
-    SocketBroadcast --> ActiveDrivers[All Vehicles on Corridor Receive Voice & HUD Alert]
-    ActiveDrivers --> AutoReroute[Background Reroute Evaluated to Bypass Obstacle]
-```
-
----
-
-## 8. High-Availability Storage & In-Memory Offline Fallback Flow
+## 10. High-Availability Storage & In-Memory Offline Fallback Flow
 
 This flowchart illustrates the fault-tolerant in-memory fallback pattern that protects the platform against database outages and DNS resolution errors.
 

@@ -79,6 +79,7 @@ export interface ParkingBay {
   };
   distanceToNearestElevatorMeters: number;
   nearestAisleNodeId: string;
+  assignedVehicleLicensePlate?: string;
 }
 
 export interface IndoorNavigationStep {

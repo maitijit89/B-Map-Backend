@@ -272,7 +272,7 @@ export class AdminService {
         };
 
         const [users, total] = await Promise.all([
-          User.find(filter).sort(sortObj).skip(skip).limit(limitNum).exec(),
+          User.find(filter).sort(sortObj).skip(skip).limit(limitNum).lean().exec(),
           User.countDocuments(filter),
         ]);
 
@@ -347,7 +347,7 @@ export class AdminService {
   public async getUserById(id: string): Promise<AdminUserItem | null> {
     if (this.isDbConnected()) {
       try {
-        const user = await User.findById(id).exec();
+        const user = await User.findById(id).lean().exec();
         if (user) {
           return {
             id: user._id.toString(),
@@ -1051,7 +1051,7 @@ export class AdminService {
         }
 
         const [places, total] = await Promise.all([
-          Place.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limitNum).exec(),
+          Place.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limitNum).lean().exec(),
           Place.countDocuments(filter),
         ]);
 
@@ -1219,6 +1219,7 @@ export class AdminService {
         const docs = await AdminAuditLog.find(filter)
           .sort({ createdAt: -1 })
           .limit(limit)
+          .lean()
           .exec();
 
         if (docs.length > 0) {

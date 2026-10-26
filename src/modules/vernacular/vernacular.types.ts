@@ -8,6 +8,8 @@ export type SupportedIndianLanguage =
   | 'gu-IN'
   | 'ml-IN'
   | 'pa-IN'
+  | 'or-IN'
+  | 'as-IN'
   | 'en-IN'
   | 'hi'
   | 'bn'
@@ -18,6 +20,8 @@ export type SupportedIndianLanguage =
   | 'gu'
   | 'ml'
   | 'pa'
+  | 'or'
+  | 'as'
   | 'en';
 
 export interface ManeuverInstructionRequest {

@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { logger } from '../../core/config/logger';
 import { getRedisClient, isRedisConnected } from '../../core/config/redis';
 import { TrackingLog } from './tracking-log.model';
@@ -189,6 +190,9 @@ export class GeoTrackingService {
    * Asynchronously persists location breadcrumb to MongoDB for audit & route replay.
    */
   private async persistToMongo(payload: LocationPayload): Promise<void> {
+    if (!mongoose.connection || mongoose.connection.readyState !== 1) {
+      return;
+    }
     await TrackingLog.create({
       userId: payload.userId,
       role: payload.role || 'driver',

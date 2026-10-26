@@ -867,3 +867,4 @@ export class IndoorBeaconMappingService {
 }
 
 export const indoorBeaconMappingService = new IndoorBeaconMappingService();
+export const indoorBeaconEngineService = indoorBeaconMappingService;

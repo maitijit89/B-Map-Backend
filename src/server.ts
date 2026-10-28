@@ -12,6 +12,7 @@ import {
 import { initSocketServer } from './sockets';
 import { keepaliveService } from './services/keepalive.service';
 import { aiCopilotService, aiCopilotSocketBridge } from './modules/ai-copilot';
+import { telemetryWorkerService } from './modules/telemetry-ingestion';
 
 const startServer = async (): Promise<void> => {
   try {
@@ -46,6 +47,9 @@ const startServer = async (): Promise<void> => {
       // Start anti-sleep keep-alive heartbeat if configured
       keepaliveService.start();
 
+      // Start high-throughput asynchronous telemetry worker consumer
+      telemetryWorkerService.start();
+
       // Initialize AI Copilot microservice connection, WebSocket bridge & Gemma LLM engine
       await aiCopilotService.initializeAIConnection();
     });
@@ -55,6 +59,7 @@ const startServer = async (): Promise<void> => {
       logger.info(`Received ${signal}. Starting graceful shutdown...`);
 
       keepaliveService.stop();
+      await telemetryWorkerService.stop();
       aiCopilotSocketBridge.disconnect();
 
       try {

@@ -16,6 +16,7 @@
     "test:pillars": "tsx scripts/test-pillars-streaming.ts",
     "test:sovereign": "tsx scripts/test-sovereign-traffic-pipeline.ts",
     "test:ekf-socket": "tsx scripts/test-ekf-socket-offline-pipeline.ts",
+    "test:telemetry": "tsx scripts/test-telemetry-ingestion-pipeline.ts",
     "audit:security": "tsx scripts/verify-security-hardening.ts"
   },
   "repository": {

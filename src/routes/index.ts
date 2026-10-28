@@ -47,6 +47,7 @@ import ratingRoutes from '../modules/ratings/ratings.routes';
 import adminRoutes from '../modules/admin/admin.routes';
 import trafficRoutes from '../modules/traffic/traffic.routes';
 import appVersionRoutes from '../modules/app-version/app-version.routes';
+import { telemetryRoutes } from '../modules/telemetry-ingestion';
 
 const router = Router();
 
@@ -125,5 +126,7 @@ router.use('/admin', adminRoutes);
 router.use('/traffic', trafficRoutes);
 router.use('/app-version', appVersionRoutes);
 router.use('/version', appVersionRoutes);
+router.use('/telemetry', telemetryRoutes);
+router.use('/telemetry-ingest', telemetryRoutes);
 
 export default router;

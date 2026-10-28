@@ -91,9 +91,9 @@ export const createApp = (): Application => {
   // 4. Global Rate Limiter against volumetric DoS
   app.use(apiRateLimiter);
 
-  // 5. Request Parsing (Restricted to 1MB to prevent memory exhaustion DoS)
-  app.use(express.json({ limit: '1mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+  // 5. Request Parsing (Supports Gzip/Deflate decompression via inflate: true for high-density batches)
+  app.use(express.json({ limit: '10mb', inflate: true }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // 6. NoSQL Operator & MongoDB Query Injection Sanitization
   app.use(noSqlSanitizer);

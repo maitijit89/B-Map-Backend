@@ -48,3 +48,4 @@ export * from './ratings';
 export * from './admin';
 export * from './traffic';
 export * from './app-version';
+export * from './telemetry-ingestion';

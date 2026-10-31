@@ -1,4 +1,10 @@
 export * from './place.model';
+export * from './place-rating.types';
+export * from './place-rating.model';
+export * from './place-rating.service';
+export * from './visited-place-scaling.types';
+export * from './visited-place-scaling.model';
+export * from './visited-place-scaling.service';
 export * from './place.service';
 export * from './place.controller';
 export { default as placeRoutes } from './place.routes';

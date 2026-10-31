@@ -1,7 +1,10 @@
 import { Request, Response } from 'express';
 import { arWalkCycleService } from './ar-walk-cycle.service';
+import { arVisualSearchService } from './ar-visual-search.service';
+import { getARVisualSearchViewHtml } from './ar-visual-search.view';
 import { Coordinate } from '../../core/types/geo.types';
 import { sendError, sendSuccess } from '../../core/utils/api-response';
+import { env } from '../../core/config/env.config';
 
 export class ARWalkCycleController {
   /**
@@ -114,6 +117,57 @@ export class ARWalkCycleController {
       });
     } catch (err: any) {
       sendError(res, 500, err.message);
+    }
+  }
+
+  /**
+   * Multimodal AI Visual Localization:
+   * Accepts user photo upload, executes the visual landmark recognition algorithm,
+   * extracts signage OCR/architectural signatures, and returns verified location
+   * search results with AR navigation guidance & 3D HUD frame.
+   */
+  async searchByPhoto(req: Request, res: Response): Promise<void> {
+    try {
+      const { image, userLocation, userAltitudeMeters, searchRadiusMeters, cameraPose, hint } = req.body;
+      if (!image) {
+        sendError(res, 400, 'Image payload (base64 string, data URL, or image URL) is required');
+        return;
+      }
+
+      let parsedUserLocation: Coordinate | undefined;
+      if (Array.isArray(userLocation) && userLocation.length === 2) {
+        parsedUserLocation = [parseFloat(userLocation[0]), parseFloat(userLocation[1])];
+      }
+
+      const result = await arVisualSearchService.searchLocationByPhoto({
+        image,
+        userLocation: parsedUserLocation,
+        userAltitudeMeters: userAltitudeMeters ? parseFloat(userAltitudeMeters) : undefined,
+        searchRadiusMeters: searchRadiusMeters ? parseFloat(searchRadiusMeters) : undefined,
+        cameraPose,
+        hint,
+      });
+
+      sendSuccess({
+        res,
+        message: `AI visual landmark localization identified: ${result.topMatch.name}`,
+        data: result,
+      });
+    } catch (err: any) {
+      sendError(res, 500, err.message);
+    }
+  }
+
+  /**
+   * Serves the interactive glassmorphic Web UI for AR Visual Navigation & AI Search
+   */
+  async getVisualSearchView(_req: Request, res: Response): Promise<void> {
+    try {
+      const html = getARVisualSearchViewHtml(env.API_PREFIX);
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.send(html);
+    } catch (err: any) {
+      sendError(res, 500, `Failed to render AR Visual Navigation view: ${err.message}`);
     }
   }
 }

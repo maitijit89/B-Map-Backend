@@ -753,6 +753,101 @@ Text search across names, tags, and categories.
 ### `GET /api/v1/places/:id`
 Retrieves detailed POI metadata.
 
+### `GET /api/v1/places/top-rated/discover`
+Discovers top-rated places and POIs sorted by rating score and review count.
+- **Query Parameters**: `category=commercial_complex&limit=10`
+
+### `POST /api/v1/places/:placeId/ratings`
+Submits or updates a place rating and review.
+- Enforces one review per user per place (subsequent submissions update existing review).
+- Automatic **Geodesic Verified Visit Detection**: If user coordinate is within 250m of POI, or if `proofOfPresenceSignature` is present, sets `isVerifiedVisit = true`.
+- Automatically recalculates cached `Place.rating` and `Place.reviewCount`.
+- **Request Body**:
+```json
+{
+  "userId": "usr_kavita_01",
+  "userName": "Kavita Menon",
+  "score": 4.8,
+  "title": "Accessible, vibrant pedestrian mall",
+  "review": "Seamless wheelchair ramps and high-speed EV chargers.",
+  "aspects": {
+    "cleanliness": 5,
+    "accessibility": 5,
+    "hospitality": 4,
+    "valueForMoney": 4,
+    "amenities": 5
+  },
+  "visitType": "family",
+  "tags": ["wheelchair_friendly", "clean_restrooms"],
+  "userCoordinate": [77.0886, 28.4956]
+}
+```
+
+### `GET /api/v1/places/:placeId/ratings`
+Retrieves paginated reviews for a place with filtering and sorting.
+- **Query Parameters**:
+  - `page`: Page number (default: 1)
+  - `limit`: Items per page (default: 20)
+  - `sortBy`: `most_helpful` | `newest` | `oldest` | `highest` | `lowest`
+  - `minScore`: Minimum star score filter (e.g. `4`)
+  - `maxScore`: Maximum star score filter (e.g. `5`)
+  - `verifiedOnly`: `true` to filter strictly verified visits
+
+### `GET /api/v1/places/:placeId/ratings/summary`
+Returns comprehensive rating statistics, star distribution (1 to 5 stars), granular aspect score averages, recommendation percentage, and automated sentiment analysis.
+
+### `GET /api/v1/places/:placeId/ratings/my-review`
+Retrieves the authenticated user's existing review for this place.
+- **Query Parameters**: `userId=usr_kavita_01` (or extracted from JWT `Authorization: Bearer <token>`)
+
+### `POST /api/v1/places/:placeId/ratings/:ratingId/helpful`
+Toggles an upvote on a review as helpful. Subsequent calls by the same user toggle the vote off idempotently.
+
+### `POST /api/v1/places/:placeId/ratings/:ratingId/report`
+Reports an inappropriate or spam review for moderation. Upon reaching 3 reports, the review status transitions to `under_review` and is hidden from public view.
+
+### `DELETE /api/v1/places/:placeId/ratings/:ratingId`
+Deletes a review. Authorized for the review's original author or system administrators.
+
+### `POST /api/v1/places/user/visit`
+Records a user location ping or POI visit.
+- Updates place visit frequency and clusters coordinates into spatial stay-points ($\le 35\text{m}$).
+- Updates rolling average speed and cumulative dwell minutes.
+- **Request Body**:
+```json
+{
+  "userId": "usr_traveler_01",
+  "placeId": "poi_cyber_hub_01",
+  "placeName": "DLF CyberHub Gurugram",
+  "coordinates": [77.0885, 28.4955],
+  "speedKmH": 1.2,
+  "dwellMinutes": 45
+}
+```
+
+### `GET /api/v1/places/user/visited-places`
+Returns the user's visited places with dynamic visual scaling.
+- **Algorithm**: Most frequently visited places are scaled strictly larger via logarithmic saturation:
+  $$R_{\text{place}} = R_{\min} + (R_{\max} - R_{\min}) \cdot \left(\frac{\ln(1 + V)}{\ln(1 + V_{\text{cap}})}\right)^{0.85}$$
+- Returns `markerRadiusPx` ($12\text{px}$ to $44\text{px}$), `influenceRadiusMeters` ($15\text{m}$ to $120\text{m}$), and prominence tier (`compact`, `regular`, `frequent`, `landmark_hub`).
+- **Query Parameters**: `userId=usr_traveler_01&minRadiusPx=12&maxRadiusPx=44`
+
+### `GET /api/v1/places/user/visited-spots`
+Returns the user's visited spots scaled by the **"Slow Large" Algorithm**.
+- **Algorithm**: Spots with high visit frequency **AND** slow movement speeds (pedestrian, stationary, high dwell time) expand prominently on the map, whereas fast transit corridors (expressway speeds) are suppressed:
+  $$W_{\text{slow}}(v) = \frac{1}{1 + (v / 6.0)^{1.8}}$$
+  $$W_{\text{spot}} = \ln(1 + V) \cdot (0.35 + 0.65 \cdot W_{\text{slow}}) \cdot (0.70 + 0.30 \cdot D_{\text{dwell}})$$
+  $$R_{\text{spot}} = R_{\min} + (R_{\max} - R_{\min}) \cdot \left(\frac{W_{\text{spot}}}{W_{\text{cap}}}\right)^{0.80}$$
+- High-visit slow spots receive `isSlowLarge: true` and `growthClassification: "slow_large_expanded"`.
+- **Query Parameters**: `userId=usr_traveler_01`
+
+### `GET /api/v1/places/user/map-layer`
+Generates a complete MapLibre/Mapbox-ready GeoJSON payload containing both `placesLayer` (FeatureCollection with graduated circles) and `spotsLayer` (FeatureCollection with slow-large footprints and heat intensity).
+- **Query Parameters**: `userId=usr_traveler_01`
+
+### `POST /api/v1/places/user/calculate-scale`
+Stateless batch calculator for testing and client-side simulation of place and slow-spot dynamic scaling.
+
 ---
 
 ## 9. Active Navigation Sessions & Sub-Second Dynamic Rerouting (`/navigation`)
@@ -967,7 +1062,117 @@ Subway, commuter rail, tram, and feeder bus journeys with carriage boarding advi
 
 ## 23. Multi-Mode: Augmented Reality (AR) Walk & Cycle Navigation (`/ar-walk-cycle`)
 
-AR viewport world anchors, accessible pedestrian paths (no stairs, curb ramps), and bicycle elevation profiles.
+AR viewport world anchors, accessible pedestrian paths (no stairs, curb ramps), bicycle elevation profiles, and **Multimodal AI Visual Landmark Search from User Photos**.
+
+### 23.1 `POST /api/v1/ar-walk-cycle/visual-search`
+*(Alias: `POST /api/v1/navigation/ar-visual-search`)*  
+Accepts a photo uploaded by the user, runs the Multimodal AI Visual Localization algorithm (EXIF inspection, architectural signature matching, signboard OCR), pinpoints geographic coordinates, resolves the 4m×4m National DigiPIN, and generates real-time AR navigation guidance with 3D HUD screen projections.
+- **Access Level**: Public
+- **Request Body**:
+```json
+{
+  "image": "data:image/jpeg;base64,... (or image URL / raw base64)",
+  "hint": "india gate war memorial kartavya path",
+  "userLocation": [77.2185, 28.6328],
+  "cameraPose": {
+    "yawDegrees": 115,
+    "pitchDegrees": 0,
+    "fovHorizontalDegrees": 68
+  }
+}
+```
+- **Response (200 OK)**:
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "AI visual landmark localization identified: India Gate (All India War Memorial)",
+  "data": {
+    "analysisId": "ar_vis_1793427000_a1b2c3",
+    "timestamp": 1793427000000,
+    "querySummary": {
+      "imageSizeBytes": 452000,
+      "hasExifGps": false,
+      "userLocationProvided": true,
+      "appliedSearchRadiusMeters": 50000
+    },
+    "imageAnalysis": {
+      "detectedSceneType": "historic_landmark",
+      "extractedTextList": ["India Gate", "War Memorial"],
+      "detectedFeatures": [
+        {
+          "type": "signboard_ocr",
+          "label": "India Gate",
+          "confidence": 0.95,
+          "details": "Signboard OCR detected text label 'India Gate' in camera viewport"
+        },
+        {
+          "type": "architectural_style",
+          "label": "Triumphal Arch / Monumental Gateway",
+          "confidence": 0.92,
+          "details": "Recognized bilateral symmetrical sandstone arch structure with central vault"
+        }
+      ]
+    },
+    "topMatch": {
+      "locationId": "lm_india_gate_delhi",
+      "name": "India Gate (All India War Memorial)",
+      "category": "historic_monument",
+      "coordinates": [77.2295, 28.6129],
+      "address": "Kartavya Path, India Gate, New Delhi",
+      "city": "New Delhi",
+      "state": "Delhi",
+      "digipin": "LT-KH-LH-JE-L2",
+      "confidenceScore": 0.99,
+      "matchGrade": "EXACT_MATCH",
+      "visualEvidence": [
+        "Signboard OCR recognized 'india gate' matching landmark 'India Gate (All India War Memorial)'",
+        "Visual AI architecture analyzer identified 'Triumphal Arch / Monumental Gateway'",
+        "Geospatial search radius verified landmark is 2.4km from user"
+      ],
+      "distanceMeters": 2400,
+      "bearingDegrees": 115,
+      "clockDirection": "12 o'clock (straight ahead)",
+      "cardinalDirection": "South-East",
+      "estimatedWalkingMinutes": 32
+    },
+    "arGuidance": {
+      "targetName": "India Gate (All India War Memorial)",
+      "distanceText": "2.4 km",
+      "compassBearingDegrees": 115,
+      "clockDirection": "12 o'clock (straight ahead)",
+      "relativeDirectionText": "at your 12 o'clock (straight ahead) (South-East)",
+      "floatingBillboardsCount": 9,
+      "nextStepInstruction": "Head South-East (12 o'clock (straight ahead)). India Gate (All India War Memorial) is 2.4 km ahead.",
+      "arHUDFrame": {
+        "timestamp": 1793427000000,
+        "currentStepInstruction": "Walk towards India Gate (All India War Memorial) (12 o'clock (straight ahead))",
+        "distanceToNextTurnMeters": 45,
+        "projectedAnchors": [
+          {
+            "anchorId": "beacon_lm_india_gate_delhi",
+            "type": "destination_beacon",
+            "screenXPercent": 50,
+            "screenYPercent": 28,
+            "distanceMeters": 2400,
+            "scale": 0.35,
+            "isVisibleInView": true,
+            "label": "📍 INDIA GATE (ALL INDIA WAR MEMORIAL)"
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+### 23.2 `GET /api/v1/ar-walk-cycle/view` (Interactive AR Visual Navigation Web UI)
+*(Alias: `GET /api/v1/ar-walk-cycle/visual-search/view`)*  
+Serves a self-contained, responsive, dark-mode glassmorphic Web Application that allows users to drag-and-drop or snap location photos, choose 1-click sample landmarks (India Gate, DLF CyberHub, Rajiv Chowk, Gateway of India, Vidhana Soudha, Charminar), run the AI visual search algorithm, and inspect an interactive simulated AR camera HUD with 3D destination beacons, ground chevrons, and turn-by-turn guidance.
+- **Access Level**: Public
+- **Content-Type**: `text/html; charset=utf-8`
+
+### 23.3 Standard AR & Pedestrian Routing Endpoints
 - `POST /api/v1/ar-walk-cycle/ar/hud-frame`: Projects 3D world anchors onto camera coordinates (`screenX%`, `screenY%`, depth distance).
 - `POST /api/v1/ar-walk-cycle/walk/plan`: Accessible pedestrian walking routes.
 - `POST /api/v1/ar-walk-cycle/cycle/plan`: Bicycle routing with elevation profile, slope percentage, and calories burned.
@@ -1297,11 +1502,20 @@ Resolves geographic coordinates to official IANA timezone identifiers.
 
 ## 47. User Ratings, Feedback & Community Reviews (`/ratings`)
 
-User review submission, aggregate star statistics, and moderation.
-- `POST /api/v1/ratings`: Submits 1-5 star rating and review comments.
+User review submission, aggregate star statistics, and moderation. Also cross-mounts the complete POI Place Rating System for seamless API discoverability.
+- `POST /api/v1/ratings`: Submits 1-5 star app rating and review comments.
 - `GET /api/v1/ratings/my-rating`: Retrieves current user's rating history.
 - `GET /api/v1/ratings/stats`: Aggregated ratings breakdown and average score.
 - `GET /api/v1/ratings`: Public feed of verified reviews.
+
+### 47.1 Place / POI Rating Aliases (`/ratings/places`)
+- `POST /api/v1/ratings/places/:placeId`: Submit or update place rating and multi-aspect review.
+- `GET /api/v1/ratings/places/:placeId`: Paginated place reviews with score, verified visit, and sorting filters.
+- `GET /api/v1/ratings/places/:placeId/summary`: Aggregated place rating statistics, star distribution, aspect scores, and sentiment analysis.
+- `GET /api/v1/ratings/places/:placeId/my-review`: User's review for this place.
+- `POST /api/v1/ratings/places/:placeId/:ratingId/helpful`: Upvote / toggle helpful review vote.
+- `POST /api/v1/ratings/places/:placeId/:ratingId/report`: Report review for moderation flagging.
+- `DELETE /api/v1/ratings/places/:placeId/:ratingId`: Delete place review.
 
 ---
 

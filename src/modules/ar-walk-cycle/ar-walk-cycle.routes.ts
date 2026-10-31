@@ -15,4 +15,11 @@ router.post('/cycle/plan', (req, res) => arWalkCycleController.planCycleRoute(re
 // Bike infrastructure amenities
 router.get('/cycle/amenities', (req, res) => arWalkCycleController.getNearbyAmenities(req, res));
 
+// Multimodal AI Visual Localization from Photo & AR Navigation Search
+router.post('/visual-search', (req, res) => arWalkCycleController.searchByPhoto(req, res));
+
+// Interactive Glassmorphic Web UI for AR Visual Navigation
+router.get('/visual-search/view', (req, res) => arWalkCycleController.getVisualSearchView(req, res));
+router.get('/view', (req, res) => arWalkCycleController.getVisualSearchView(req, res));
+
 export default router;

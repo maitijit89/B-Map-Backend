@@ -17,6 +17,9 @@
     "test:sovereign": "tsx scripts/test-sovereign-traffic-pipeline.ts",
     "test:ekf-socket": "tsx scripts/test-ekf-socket-offline-pipeline.ts",
     "test:telemetry": "tsx scripts/test-telemetry-ingestion-pipeline.ts",
+    "test:ar-visual": "tsx scripts/test-ar-visual-navigation.ts",
+    "test:place-ratings": "tsx scripts/test-place-rating-system.ts",
+    "test:place-scaling": "tsx scripts/test-visited-place-scaling.ts",
     "audit:security": "tsx scripts/verify-security-hardening.ts"
   },
   "repository": {

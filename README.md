@@ -126,7 +126,7 @@ Base URL: `http://localhost:8080/api/v1` (or `http://localhost:4000/api/v1`)
 - **`GET /routes/matrix`**: Distance & duration matrix across multiple points.
   - Query: `coordinates=lon1,lat1;lon2,lat2;lon3,lat3`
 
-### 2. Places & POI Geospatial Search (`/places`)
+### 2. Places & POI Geospatial Search & Place Rating System (`/places`)
 - **`POST /places`**: Create a new Point of Interest.
   - Body: `{ "name": "Berlin Central Station", "category": "station", "coordinates": [13.369, 52.525], "tags": ["transit"] }`
 - **`GET /places/nearby`**: Geospatial `$near` search with distance sorting.
@@ -134,6 +134,19 @@ Base URL: `http://localhost:8080/api/v1` (or `http://localhost:4000/api/v1`)
 - **`POST /places/within-polygon`**: Geospatial search inside bounding polygon via `$geoWithin`.
 - **`GET /places/search`**: Keyword search with text regex indexing.
   - Query: `q=station&category=transit`
+- **`GET /places/top-rated/discover`**: Discover top-rated POIs sorted by rating score & review count.
+- **`POST /places/:placeId/ratings`**: Submit or update place rating and multi-aspect review (with 250m geodesic proximity verified-visit detection).
+- **`GET /places/:placeId/ratings`**: Paginated place reviews with sorting (`most_helpful`, `newest`, `highest`, `lowest`) and filters (`verifiedOnly`, `minScore`).
+- **`GET /places/:placeId/ratings/summary`**: Aggregated rating summary, star distribution (1-5), aspect scores (cleanliness, accessibility, etc.), and sentiment analysis.
+- **`GET /places/:placeId/ratings/my-review`**: Retrieve authenticated user's review for place.
+- **`POST /places/:placeId/ratings/:ratingId/helpful`**: Toggle helpful review upvote.
+- **`POST /places/:placeId/ratings/:ratingId/report`**: Report review for moderation.
+- **`DELETE /places/:placeId/ratings/:ratingId`**: Delete review (author or admin).
+- **`POST /places/user/visit`**: Ingest user location ping or POI visit with speed and dwell time.
+- **`GET /places/user/visited-places`**: Get user's visited places with dynamic visual scaling (most visited are larger).
+- **`GET /places/user/visited-spots`**: Get user's visited spots with the "slow large" scaling algorithm (spots with slow speed and high visits expand).
+- **`GET /places/user/map-layer`**: Export complete MapLibre/Mapbox GeoJSON FeatureCollections for places & spots.
+- **`POST /places/user/calculate-scale`**: Batch calculator for place and slow-spot dynamic scaling.
 - **`GET /places/:id`**: Place details.
 
 ### 3. Turn-by-Turn Navigation Sessions (`/navigation`)
@@ -219,6 +232,8 @@ Base URL: `http://localhost:8080/api/v1` (or `http://localhost:4000/api/v1`)
 - **`GET /transit/stations/nearby`**: Discover nearby transit stations and interchanges.
 
 ### 15. Multi-Mode: Augmented Reality (AR) Walk/Cycle Navigation (`/ar-walk-cycle`)
+- **`POST /ar-walk-cycle/visual-search`** *(Alias: `/navigation/ar-visual-search`)*: Multimodal AI visual localization from user photo uploads. Evaluates EXIF metadata, architectural styles, and signboard OCR to pinpoint coordinates, calculate 4m×4m DigiPIN, and generate AR 3D HUD navigation frames.
+- **`GET /ar-walk-cycle/view`** *(Alias: `/ar-walk-cycle/visual-search/view`)*: Interactive glassmorphic Web UI allowing users to upload or capture photos, test 1-click sample landmarks, and view real-time 3D AR camera overlays.
 - **`POST /ar-walk-cycle/ar/hud-frame`**: Real-time AR 3D world anchors projected onto device camera viewport coordinates (`screenX%`, `screenY%`, depth distance, perspective scale) with zebra crosswalk entrance alerts.
 - **`POST /ar-walk-cycle/walk/plan`**: Accessible pedestrian walking (wheelchair/stroller, no stairs, curb ramps) & weather-sheltered covered arcade routing.
 - **`POST /ar-walk-cycle/cycle/plan`**: Cycle routing with elevation profile (total ascent/descent, slope %), steep incline warnings, calories burned, and en-route bicycle amenities.
@@ -316,11 +331,18 @@ Base URL: `http://localhost:8080/api/v1` (or `http://localhost:4000/api/v1`)
 ### 35. Geospatial Timezone Engine (`/timezone`)
 - **`GET /timezone`**: High-performance coordinate-to-timezone resolution (IST Asia/Kolkata, GMT, etc.).
 
-### 36. User Ratings & Feedback Feed (`/ratings`)
-- **`POST /ratings`**: Submit 1-5 star user rating and review comments.
+### 36. User Ratings, Community Reviews & Place Ratings (`/ratings`)
+- **`POST /ratings`**: Submit 1-5 star user app rating and review comments.
 - **`GET /ratings/my-rating`**: Retrieve current user's rating profile.
 - **`GET /ratings/stats`**: Aggregated rating distribution and average score.
 - **`GET /ratings`**: Public feed of ratings and reviews.
+- **`POST /ratings/places/:placeId`**: Submit or update place rating and multi-aspect review.
+- **`GET /ratings/places/:placeId`**: Paginated place reviews with score, verified visit, and sorting filters.
+- **`GET /ratings/places/:placeId/summary`**: Aggregated place rating statistics, star distribution, aspect scores, and sentiment analysis.
+- **`GET /ratings/places/:placeId/my-review`**: Retrieve authenticated user's review for this place.
+- **`POST /ratings/places/:placeId/:ratingId/helpful`**: Toggle helpful review upvote.
+- **`POST /ratings/places/:placeId/:ratingId/report`**: Report review for moderation flagging.
+- **`DELETE /ratings/places/:placeId/:ratingId`**: Delete place review.
 
 ### 37. Admin Command Center & Control Portal (`/admin`)
 - **`GET /admin/dashboard`**: Interactive dark-mode glassmorphic Web Portal for monitoring and administering the entire B-Map ecosystem. (Also accessible via `/admin` redirect).

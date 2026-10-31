@@ -214,6 +214,36 @@ export class PlaceService {
   }
 
   /**
+   * Get top-rated places (POIs with highest score and review count).
+   * Falls back to offline POI seeds sorted by rating on database partition.
+   */
+  async getTopRatedPlaces(category?: string, limit: number = 20): Promise<IPlace[]> {
+    if (mongoose.connection && mongoose.connection.readyState === 1) {
+      try {
+        const filter: Record<string, any> = { rating: { $gt: 0 } };
+        if (category) filter.category = category.toLowerCase();
+        const docs = await Place.find(filter)
+          .sort({ rating: -1, reviewCount: -1 })
+          .limit(limit)
+          .lean()
+          .exec();
+        if (docs.length > 0) return docs as unknown as IPlace[];
+      } catch {}
+    }
+
+    // Offline fallback
+    const fallback = queryOfflineFallbackPOIs({
+      longitude: 77.2185,
+      latitude: 28.6328,
+      maxDistanceMeters: 200000,
+      category,
+      limit: 100,
+    });
+    const sorted = [...fallback].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    return sorted.slice(0, limit) as unknown as IPlace[];
+  }
+
+  /**
    * Get place by MongoDB ObjectId.
    */
   async getPlaceById(id: string): Promise<IPlace | null> {

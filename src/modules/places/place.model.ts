@@ -14,6 +14,7 @@ export interface IPlace extends Document {
   };
   location: GeoJsonPoint;
   rating?: number;
+  reviewCount?: number;
   tags?: string[];
   metadata?: Record<string, any>;
   createdAt: Date;
@@ -74,6 +75,10 @@ const placeSchema = new Schema<IPlace>(
       type: Number,
       min: 0,
       max: 5,
+      default: 0,
+    },
+    reviewCount: {
+      type: Number,
       default: 0,
     },
     tags: [

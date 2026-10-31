@@ -1,34 +1,131 @@
-# 📡 B-Map Platform Complete REST API Reference
+# 📡 B-Map Platform Complete REST & Real-Time API Reference
 
-> **Exhaustive Endpoint Directory, Schemas, Request Payloads & Response Contracts**  
-> *Base API URL:* `http://localhost:8080/api/v1` | *Protocol:* HTTP / HTTPS / WebSocket (Socket.IO)
+> **Authoritative Endpoint Directory, Schemas, Request Payloads, Response Contracts & WebSocket Specifications**  
+> *Base API URL:* `http://localhost:8080/api/v1` | *Protocol:* HTTP/1.1, HTTP/2 (with Gzip/Deflate) & WebSocket (Socket.IO v4)  
+> *Sovereign Version:* `1.0.0` | *Environment:* Development & Production
 
 ---
 
-## 1. Global Conventions & Headers
+## 📑 Directory of API Modules
 
-### Authentication Headers
-Endpoints requiring authentication must supply the JWT Bearer token:
+1. [Global Conventions, Headers & Standard Response Envelope](#1-global-conventions-headers--standard-response-envelope)
+2. [System Health Diagnostics & Sub-50ms Kubernetes Probes (`/health`)](#2-system-health-diagnostics--sub-50ms-kubernetes-probes-health)
+3. [Authentication, User Identity & Passwordless OTP (`/auth`)](#3-authentication-user-identity--passwordless-otp-auth)
+4. [High-Throughput Telemetry Ingestion, Fraud Detection & Async Queue (`/telemetry` & `/telemetry-ingest`)](#4-high-throughput-telemetry-ingestion-fraud-detection--async-queue-telemetry--telemetry-ingest)
+5. [Real-Time Crowdsourced Traffic, Dynamic ETAs & Anomaly Suppression (`/traffic`)](#5-real-time-crowdsourced-traffic-dynamic-etas--anomaly-suppression-traffic)
+6. [App Version Governance & Dynamic Frontend OTA Patching (`/app-version` & `/version`)](#6-app-version-governance--dynamic-frontend-ota-patching-app-version--version)
+7. [Core Routing Engine, Directions & TSP Multi-Stop Optimization (`/routes`)](#7-core-routing-engine-directions--tsp-multi-stop-optimization-routes)
+8. [Geospatial Places & POI Proximity Search (`/places`)](#8-geospatial-places--poi-proximity-search-places)
+9. [Active Navigation Sessions & Sub-Second Dynamic Rerouting (`/navigation`)](#9-active-navigation-sessions--sub-second-dynamic-rerouting-navigation)
+10. [Live Vehicle & Driver Tracking Primitives (`/tracking`)](#10-live-vehicle--driver-tracking-primitives-tracking)
+11. [Location Access, Ephemeral Tokenization & Permissions (`/location` & `/location-access`)](#11-location-access-ephemeral-tokenization--permissions-location--location-access)
+12. [Motion, Physical Fitness & Stationary Detection (`/motion` & `/motion-fitness`)](#12-motion-physical-fitness--stationary-detection-motion--motion-fitness)
+13. [Targeted Notifications, APNS/FCM & Spatial Geofencing (`/notifications`)](#13-targeted-notifications-apnsfcm--spatial-geofencing-notifications)
+14. [Nearby Peripherals, Bluetooth & Indoor BLE Beacon Registry (`/nearby-devices` & `/bluetooth`)](#14-nearby-peripherals-bluetooth--indoor-ble-beacon-registry-nearby-devices--bluetooth)
+15. [High-Precision Positioning, RTK Decimeter & Weak-Signal Fusion (`/positioning`)](#15-high-precision-positioning-rtk-decimeter--weak-signal-fusion-positioning)
+16. [HD Lane-Level Routing & "Veteran Driver" Layering (`/lane-routing`)](#16-hd-lane-level-routing--veteran-driver-layering-lane-routing)
+17. [Spatial Reality (SR) HUD Navigation & 3D Junction Cards (`/sr-navigation`)](#17-spatial-reality-sr-hud-navigation--3d-junction-cards-sr-navigation)
+18. [Automotive IVI, CAN-Bus & Apple CarPlay / Android Auto (`/automotive`)](#18-automotive-ivi-can-bus--apple-carplay--android-auto-automotive)
+19. [Rider Mode Motorcycle Dynamics & e-Call Crash Detection (`/rider-mode`)](#19-rider-mode-motorcycle-dynamics--e-call-crash-detection-rider-mode)
+20. [Multilevel Space-Level Indoor Parking Navigation (`/parking`)](#20-multilevel-space-level-indoor-parking-navigation-parking)
+21. [Multi-Mode: Intelligent Car Navigation & Speed Radars (`/car-nav` & `/car-navigation`)](#21-multi-mode-intelligent-car-navigation--speed-radars-car-nav--car-navigation)
+22. [Multi-Mode: Multimodal Public Transit Mastery (`/transit` & `/public-transit`)](#22-multi-mode-multimodal-public-transit-mastery-transit--public-transit)
+23. [Multi-Mode: Augmented Reality (AR) Walk & Cycle Navigation (`/ar-walk-cycle`)](#23-multi-mode-augmented-reality-ar-walk--cycle-navigation-ar-walk-cycle)
+24. [Conversational AI Voice Copilot & Gemma LLM Engine (`/ai-copilot`)](#24-conversational-ai-voice-copilot--gemma-llm-engine-ai-copilot)
+25. [AI-Powered Data Production & Big-Data Trajectory Mining (`/data-mining` & `/ai-data-mining`)](#25-ai-powered-data-production--big-data-trajectory-mining-data-mining--ai-data-mining)
+26. [Unified Underlying Navigation Lifecycle Engine (`/unified` & `/unified-engine`)](#26-unified-underlying-navigation-lifecycle-engine-unified--unified-engine)
+27. [4D Dynamic Space Rendering, 3D Digital Twins & 360° Street View (`/spatial-vis` & `/spatial-visualization`)](#27-4d-dynamic-space-rendering-3d-digital-twins--360-street-view-spatial-vis--spatial-visualization)
+28. [Unified Lifestyle & Commercial Super-App Ecosystem (`/super-app`)](#28-unified-lifestyle--commercial-super-app-ecosystem-super-app)
+29. [Sovereign Indian GIS: ISRO NavIC Dual-Band Processing (`/navic`)](#29-sovereign-indian-gis-isro-navic-dual-band-processing-navic)
+30. [Sovereign Indian GIS: NHAI FASTag Electronic Toll Tariffs (`/tolls`)](#30-sovereign-indian-gis-nhai-fastag-electronic-toll-tariffs-tolls)
+31. [Sovereign Indian GIS: 6-Digit Department of Posts PINcode Registry (`/pincode`)](#31-sovereign-indian-gis-6-digit-department-of-posts-pincode-registry-pincode)
+32. [Sovereign Indian GIS: 4m×4m National DigiPIN Micro-Grid Addressing (`/digipin`)](#32-sovereign-indian-gis-4m4m-national-digipin-micro-grid-addressing-digipin)
+33. [Sovereign Indian GIS: Emergency SOS & Highway Trauma Dispatch (`/emergency`)](#33-sovereign-indian-gis-emergency-sos--highway-trauma-dispatch-emergency)
+34. [Sovereign Indian GIS: IMD Severe Highway Weather & Fog Advisories (`/weather`)](#34-sovereign-indian-gis-imd-severe-highway-weather--fog-advisories-weather)
+35. [Sovereign Indian GIS: 12-Language Vernacular Audio Synthesis (`/vernacular`)](#35-sovereign-indian-gis-12-language-vernacular-audio-synthesis-vernacular)
+36. [Connected Vehicle V2X, SPaT & GLOSA Green Wave Advisory (`/v2x`)](#36-connected-vehicle-v2x-spat--glosa-green-wave-advisory-v2x)
+37. [Environmental Intelligence: CPCB AQI, Rooftop Solar & Pollen (`/environment`)](#37-environmental-intelligence-cpcb-aqi-rooftop-solar--pollen-environment)
+38. [Crowdsourced Road Hazards, Potholes & Speed Breakers (`/hazards`)](#38-crowdsourced-road-hazards-potholes--speed-breakers-hazards)
+39. [Differential Privacy & Defense Installation Obfuscation (`/obfuscation`)](#39-differential-privacy--defense-installation-obfuscation-obfuscation)
+40. [Survey of India (SOI) Territorial Boundaries & Masking (`/boundaries`)](#40-survey-of-india-soi-territorial-boundaries--masking-boundaries)
+41. [Electric Vehicle (EV) Fast Charging Hubs (`/ev` & `/evcharging`)](#41-electric-vehicle-ev-fast-charging-hubs-ev--evcharging)
+42. [Municipal City Metered Fares (`/fares`)](#42-municipal-city-metered-fares-fares)
+43. [Roads Geometry Snapping & Speed Limits (`/roads`)](#43-roads-geometry-snapping--speed-limits-roads)
+44. [Dynamic Vector Tiles & MapLibre Vector Styles (`/maps`, `/tiles`, `/maps-tiles`)](#44-dynamic-vector-tiles--maplibre-vector-styles-maps-tiles-maps-tiles)
+45. [Commercial Fleet Telemetry & Dispatch (`/fleet`)](#45-commercial-fleet-telemetry--dispatch-fleet)
+46. [Coordinate-to-Timezone Resolution (`/timezone`)](#46-coordinate-to-timezone-resolution-timezone)
+47. [User Ratings, Feedback & Community Reviews (`/ratings`)](#47-user-ratings-feedback--community-reviews-ratings)
+48. [Enterprise Admin Command Center & Control Portal (`/admin`)](#48-enterprise-admin-command-center--control-portal-admin)
+49. [Socket.IO Real-Time Telematics Gateway: 10 Event Domains](#49-socketio-real-time-telematics-gateway-10-event-domains)
+
+---
+
+## 1. Global Conventions, Headers & Standard Response Envelope
+
+### 1.1 Base URL & Content Negotiation
+- **Base Endpoint**: `http://localhost:8080/api/v1`
+- **Media Type**: `application/json`
+- **Compression**: Payloads support **Gzip / Deflate** decompression via HTTP header `Content-Encoding: gzip` with body payload limits up to **10MB**.
+
+### 1.2 Authentication & Security Headers
+All protected resources require a valid JSON Web Token (JWT) signed with HMAC-SHA256:
 ```http
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 Content-Type: application/json
 ```
 
-### Common Rate Limiting Headers
+Common Rate Limiting Response Headers:
 ```http
-RateLimit-Limit: 15
-RateLimit-Remaining: 14
+RateLimit-Limit: 100
+RateLimit-Remaining: 99
 RateLimit-Reset: 900
+```
+
+### 1.3 Standardized API Response Envelopes
+
+#### Success Envelope (2xx)
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Operation completed successfully",
+  "data": { ... },
+  "meta": {
+    "total": 120,
+    "page": 1,
+    "limit": 50,
+    "totalPages": 3
+  }
+}
+```
+
+#### Error Envelope (4xx / 5xx)
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Validation failed on input parameters",
+  "errors": [
+    {
+      "field": "coordinates",
+      "message": "Must be valid [longitude, latitude] GeoJSON pair"
+    }
+  ]
+}
 ```
 
 ---
 
-## 2. System Health & Diagnostics (`/health`)
+## 2. System Health Diagnostics & Sub-50ms Kubernetes Probes (`/health`)
 
 ### `GET /api/v1/health`
-Checks overall platform health, MongoDB status, Redis cache state, memory usage, and uptime.
+Performs deep end-to-end health verification checking MongoDB connection state, Redis connectivity, OSRM upstream routing engine, system memory, and uptime.
 - **Access Level**: Public
-- **Response**:
+- **Query Parameters**:
+  - `probe`: `boolean` (Optional). When `true`, activates the sub-50ms fast-path probe.
+- **Headers**:
+  - `x-k8s-probe`: `boolean` (Optional). Header-based fast-path trigger for Kubernetes HPA probes.
+- **Response (200 OK - Standard Mode)**:
 ```json
 {
   "success": true,
@@ -36,10 +133,10 @@ Checks overall platform health, MongoDB status, Redis cache state, memory usage,
   "message": "B-Map Navigation Backend API is healthy",
   "data": {
     "status": "UP",
-    "timestamp": "2026-10-12T22:38:23.000Z",
+    "timestamp": "2026-10-31T06:00:00.000Z",
     "uptimeSeconds": 1420,
     "version": "1.0.0",
-    "environment": "development",
+    "environment": "production",
     "services": {
       "mongodb": { "status": "UP", "readyState": 1 },
       "redis": { "status": "UP", "connected": true },
@@ -51,14 +148,32 @@ Checks overall platform health, MongoDB status, Redis cache state, memory usage,
   }
 }
 ```
+- **Response (200 OK - Sub-50ms Kubernetes Probe Mode: `?probe=true`)**:
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Kubernetes fast-path probe healthy",
+  "data": {
+    "status": "UP",
+    "timestamp": "2026-10-31T06:00:00.000Z",
+    "uptimeSeconds": 1420,
+    "version": "1.0.0",
+    "k8sProbe": true,
+    "environment": "production"
+  }
+}
+```
 
 ---
 
-## 3. Authentication & User Identity (`/auth`)
+## 3. Authentication, User Identity & Passwordless OTP (`/auth`)
 
-### `POST /api/v1/auth/signup`
-Registers a new user with Name, Age, Email, and Phone Number. Dispatches a 6-digit email OTP.
-- **Access Level**: Public (Rate-limited: 15 requests/15m)
+Passwordless cryptographic identity flow verified via 6-digit email OTPs, expiring in 5 minutes with a 30-second resend cooldown.
+
+### `POST /api/v1/auth/signup` (Alias: `POST /api/v1/auth/register`)
+Registers a new user and dispatches a 6-digit registration OTP to the supplied email.
+- **Access Level**: Public (Rate-limited: 15 requests / 15 minutes)
 - **Request Body**:
 ```json
 {
@@ -82,9 +197,8 @@ Registers a new user with Name, Age, Email, and Phone Number. Dispatches a 6-dig
 }
 ```
 
-### `POST /api/v1/auth/verify-registration-otp`
-Validates the 6-digit registration OTP, activates the account, and returns a signed JWT access token.
-- **Access Level**: Public (3 attempts maximum before lockout)
+### `POST /api/v1/auth/verify-registration-otp` (Alias: `POST /api/v1/auth/verify-email`)
+Verifies the 6-digit registration OTP, activates the account, and issues a 72-hour JWT Bearer token.
 - **Request Body**:
 ```json
 {
@@ -115,9 +229,8 @@ Validates the 6-digit registration OTP, activates the account, and returns a sig
 }
 ```
 
-### `POST /api/v1/auth/login`
+### `POST /api/v1/auth/login` (Alias: `POST /api/v1/auth/request-login-otp`)
 Initiates passwordless login by dispatching an OTP to the user's verified email.
-- **Access Level**: Public
 - **Request Body**:
 ```json
 {
@@ -125,9 +238,8 @@ Initiates passwordless login by dispatching an OTP to the user's verified email.
 }
 ```
 
-### `POST /api/v1/auth/verify-login-otp`
-Verifies login OTP and issues a fresh JWT session token.
-- **Access Level**: Public
+### `POST /api/v1/auth/verify-login-otp` (Alias: `POST /api/v1/auth/login/verify`)
+Verifies the login OTP and returns a fresh JWT access token.
 - **Request Body**:
 ```json
 {
@@ -137,7 +249,7 @@ Verifies login OTP and issues a fresh JWT session token.
 ```
 
 ### `POST /api/v1/auth/resend-otp`
-Requests a fresh OTP code subject to a mandatory 30-second cooldown window.
+Re-sends an OTP code. Subject to an enforced 30-second cooldown period between attempts.
 - **Request Body**:
 ```json
 {
@@ -147,329 +259,219 @@ Requests a fresh OTP code subject to a mandatory 30-second cooldown window.
 ```
 
 ### `GET /api/v1/auth/me`
-Retrieves authenticated user session profile.
-- **Access Level**: Authenticated User (`Bearer <token>`)
+Retrieves the profile of the currently authenticated user.
+- **Headers**: `Authorization: Bearer <token>`
 
 ### `PUT /api/v1/auth/me`
-Updates user profile information.
+Updates editable user profile fields (`name`, `age`, `phoneNumber`).
+- **Headers**: `Authorization: Bearer <token>`
 - **Request Body**:
 ```json
 {
   "name": "Aarav V. Sharma",
-  "age": 27,
-  "phoneNumber": "+919876543210"
+  "age": 27
 }
 ```
 
 ### `POST /api/v1/auth/logout`
-Terminates the user's current session.
-- **Access Level**: Authenticated User
+Blacklists the current JWT session in Redis until token expiration.
 
 ---
 
-## 4. Core Routing & Directions (`/routes`)
+## 4. High-Throughput Telemetry Ingestion, Fraud Detection & Async Queue (`/telemetry` & `/telemetry-ingest`)
 
-### `GET /api/v1/routes/directions`
-Calculates optimal routes between origin and destination coordinates.
-- **Access Level**: Public
-- **Query Parameters**:
-  - `origin` *(required)*: `lon,lat` (e.g., `77.1025,28.7041`)
-  - `destination` *(required)*: `lon,lat` (e.g., `77.2090,28.6139`)
-  - `profile` *(optional)*: `driving` | `bike` | `foot` (default: `driving`)
-  - `alternatives` *(optional)*: `true` | `false` (default: `false`)
+Enterprise-grade telematics ingestion capable of accepting high-frequency raw hardware, IMU, battery, and location signals. Decoupled from the database via an asynchronous in-memory worker queue, automated emulator/fraud scoring heuristics, client-side idempotency, and Gzip compression.
+
+### 4.1 Ingestion Architecture & Endpoints
+
+| Endpoint | Method | Purpose & Processing Model | Status Codes |
+| :--- | :--- | :--- | :--- |
+| `/api/v1/telemetry/ingest` | `POST` | **Unified Ingestion**: Accepts single event, flat array, or batch envelope. | `202 Accepted` / `200 OK` / `400` |
+| `/api/v1/telemetry/batch` | `POST` | **Mobile Buffered Batch**: Flushed every 30-60s or on app background transition. | `202 Accepted` / `200 OK` / `400` |
+| `/api/v1/telemetry/heartbeat` | `POST` | **Lightweight Heartbeat**: Periodic keepalive signal (e.g., 60-second intervals). | `202 Accepted` / `200 OK` / `400` |
+| `/api/v1/telemetry/stats` | `GET` | **Operational Telemetry Stats**: Queue depth, consumer throughput, fraud rate, open/stop rate. | `200 OK` |
+| `/api/v1/telemetry/logs` | `GET` | **Query Stored Logs**: Paginated telemetry history with multi-attribute filtering. | `200 OK` / `400` |
+
+### 4.2 `POST /api/v1/telemetry/ingest` (Unified Ingestion)
+Accepts telemetry events, parses ~120 dynamic hardware/sensor metrics with Zod schema validation, evaluates batch- and event-level idempotency, and immediately returns **HTTP 202 Accepted** without database bottleneck.
+- **Headers**:
+  - `x-idempotency-key`: `string` (Optional, 8-128 chars).
+  - `Content-Encoding`: `gzip` (Optional). When supplied, Express decompressor automatically inflates the binary body.
+  - `x-client-platform`: `ios` | `android` | `web` | `automotive` | `iot`
+- **Request Body (Single Event Example)**:
+```json
+{
+  "eventId": "evt_90f2ab87_6782_4fbb_a331",
+  "deviceId": "device_pixel8_pro_9918",
+  "sessionId": "sess_nav_1793197700_delhi",
+  "eventType": "heartbeat",
+  "platform": "android",
+  "appVersion": "2.4.0",
+  "timestamp": 1793197706738,
+  "clientTimezone": "Asia/Kolkata",
+  "sessionStartTime": 1793197406738,
+  "appState": "active",
+  "metrics": {
+    "batteryLevel": 84.5,
+    "batteryState": "unplugged",
+    "isCharging": false,
+    "batteryTemperature": 31.2,
+    "batteryVoltage": 4120,
+    "batteryHealth": "good",
+    "accelerometerX": 0.12,
+    "accelerometerY": 9.78,
+    "accelerometerZ": 0.45,
+    "gyroscopeX": 0.01,
+    "gyroscopeY": 0.02,
+    "gyroscopeZ": -0.01,
+    "latitude": 28.6139,
+    "longitude": 77.2090,
+    "altitude": 216.5,
+    "speed": 12.5,
+    "heading": 88.4,
+    "horizontalAccuracy": 3.2,
+    "satelliteCount": 11,
+    "hdop": 0.85,
+    "screenBrightness": 0.65,
+    "cpuUsagePercent": 28.4,
+    "networkType": "cellular",
+    "cellularGeneration": "5g",
+    "carrierName": "Jio 5G",
+    "signalStrengthDbm": -78,
+    "ambientLightLux": 340,
+    "proximityDistanceCm": 5.0,
+    "deviceModel": "Pixel 8 Pro",
+    "osVersion": "Android 14",
+    "isEmulator": false,
+    "isMockLocation": false
+  }
+}
+```
+- **Response (202 Accepted - New Signal Queued for Async Processing)**:
+```json
+{
+  "status": "queued",
+  "eventId": "evt_90f2ab87_6782_4fbb_a331",
+  "queuedCount": 1,
+  "duplicateCount": 0,
+  "timestamp": "2026-10-31T06:05:00.000Z"
+}
+```
+- **Response (200 OK - Duplicate Signal Ignored via Idempotency)**:
+```json
+{
+  "status": "already_processed",
+  "queuedCount": 0,
+  "duplicateCount": 1,
+  "timestamp": "2026-10-31T06:05:02.000Z"
+}
+```
+
+### 4.3 `POST /api/v1/telemetry/batch` (Buffered Mobile Batch)
+Recommended client integration pattern: mobile apps buffer events in SQLite/Room/CoreData and flush every 30-60 seconds in a single compressed batch envelope.
+- **Request Body**:
+```json
+{
+  "batchId": "batch_mob_1793197706738_8921",
+  "deviceId": "device_pixel8_pro_9918",
+  "platform": "android",
+  "appVersion": "2.4.0",
+  "clientTimezone": "Asia/Kolkata",
+  "events": [
+    {
+      "eventId": "evt_batch_01_1793197706738",
+      "deviceId": "device_pixel8_pro_9918",
+      "sessionId": "sess_nav_1793197700_delhi",
+      "eventType": "telematics",
+      "platform": "android",
+      "appVersion": "2.4.0",
+      "timestamp": 1793197650000,
+      "clientTimezone": "Asia/Kolkata",
+      "metrics": {
+        "speed": 14.2,
+        "batteryLevel": 85.0
+      }
+    },
+    {
+      "eventId": "evt_batch_02_1793197706738",
+      "deviceId": "device_pixel8_pro_9918",
+      "sessionId": "sess_nav_1793197700_delhi",
+      "eventType": "heartbeat",
+      "platform": "android",
+      "appVersion": "2.4.0",
+      "timestamp": 1793197700000,
+      "clientTimezone": "Asia/Kolkata",
+      "metrics": {
+        "speed": 13.8,
+        "batteryLevel": 84.5
+      }
+    }
+  ]
+}
+```
+- **Response (202 Accepted)**:
+```json
+{
+  "status": "queued",
+  "batchId": "batch_mob_1793197706738_8921",
+  "queuedCount": 2,
+  "duplicateCount": 0,
+  "timestamp": "2026-10-31T06:05:05.000Z"
+}
+```
+
+### 4.4 Automated Fraud Detection & Emulator Heuristics
+Each signal processed by the asynchronous telemetry worker is automatically evaluated against four heuristic security layers:
+1. **Timezone vs IP Geolocation Mismatch**: Compares client-reported `clientTimezone` country against the requesting IP geolocation. Flags mismatches (e.g. client claims `Asia/Kolkata` but requests from US IP).
+2. **Rapid Battery Jump Anomaly**: Detects impossible battery percentage swings ($> 30%$ within 30-60s) indicating simulated/mock emulator state.
+3. **Emulator Hardware Fingerprints**: Scans device metadata for emulator indicators (`sdk_gphone`, `ranchu`, `goldfish`, `qemu`, `vbox86`, `isEmulator = true`, `isMockLocation = true`).
+4. **Zero-Entropy IMU Check**: Detects mock sensors where accelerometer reports exactly `0, 0, 0`, missing physical Earth gravity ($1G approx 9.8	ext{ m/s}^2$).
+
+Signals with **FraudScore $ge 30$** are flagged with `isFraudDetected: true` and annotated with explicit diagnostic reason strings.
+
+### 4.5 `GET /api/v1/telemetry/stats`
+Returns real-time consumer operational telemetry, queue depth, and calculated session duration metrics.
 - **Response (200 OK)**:
 ```json
 {
   "success": true,
   "statusCode": 200,
+  "message": "Telemetry Ingestion & Processing Pipeline Statistics",
   "data": {
-    "routes": [
-      {
-        "distanceMeters": 16420.5,
-        "durationSeconds": 1380.2,
-        "geometry": "c`nnDghsfMv@k@...",
-        "legs": [
-          {
-            "distance": 16420.5,
-            "duration": 1380.2,
-            "steps": [
-              {
-                "maneuver": {
-                  "type": "depart",
-                  "location": [77.1025, 28.7041],
-                  "instruction": "Head south toward Outer Ring Road"
-                },
-                "distance": 450.0,
-                "duration": 42.0,
-                "name": "Outer Ring Road"
-              }
-            ]
-          }
-        ]
-      }
-    ],
-    "waypoints": [
-      { "location": [77.1025, 28.7041], "name": "Pitampura" },
-      { "location": [77.2090, 28.6139], "name": "Connaught Place" }
-    ]
+    "queue": {
+      "pendingCount": 0,
+      "isPaused": false
+    },
+    "worker": {
+      "processedBatches": 14,
+      "processedEvents": 2840,
+      "fraudEventsDetected": 12,
+      "openStopRate": 0.042,
+      "avgProcessingLatencyMs": 14.8
+    },
+    "systemTimestamp": "2026-10-31T06:10:00.000Z"
   }
 }
 ```
 
-### `POST /api/v1/routes/optimize-trip`
-Solves the Traveling Salesperson Problem (TSP) across multiple waypoints.
-- **Request Body**:
-```json
-{
-  "coordinates": [
-    [77.1025, 28.7041],
-    [77.1200, 28.6800],
-    [77.1850, 28.6300],
-    [77.2090, 28.6139]
-  ],
-  "roundtrip": true,
-  "source": "first",
-  "destination": "last"
-}
-```
-
-### `POST /api/v1/routes/match`
-Snaps noisy raw GPS coordinate traces onto the actual road graph.
-- **Request Body**:
-```json
-{
-  "coordinates": [
-    [77.1024, 28.7040],
-    [77.1026, 28.7038],
-    [77.1029, 28.7035]
-  ],
-  "timestamps": [1728770000, 1728770005, 1728770010]
-}
-```
-
----
-
-## 5. Geospatial Places & POIs (`/places`)
-
-### `GET /api/v1/places/nearby`
-Finds points of interest near coordinates using MongoDB `2dsphere` `$near` operator.
+### 4.6 `GET /api/v1/telemetry/logs`
+Queries persisted telemetry events from MongoDB with pagination and filtering.
 - **Query Parameters**:
-  - `longitude` *(required)*: e.g. `77.2090`
-  - `latitude` *(required)*: e.g. `28.6139`
-  - `maxDistance` *(optional)*: in meters (default: `5000`)
-  - `category` *(optional)*: e.g. `fuel`, `hospital`, `restaurant`, `ev_charging`, `toll`
-  - `limit` *(optional)*: default `20`
-- **Response**:
-```json
-{
-  "success": true,
-  "statusCode": 200,
-  "data": [
-    {
-      "id": "plc_670b18f0",
-      "name": "Indian Oil Petrol Pump & EV Fast Charger",
-      "category": "fuel",
-      "coordinates": [77.2150, 28.6180],
-      "distanceMeters": 640.2,
-      "rating": 4.6,
-      "address": { "city": "New Delhi", "state": "Delhi" }
-    }
-  ]
-}
-```
-
-### `GET /api/v1/places/search`
-Text search across place names, descriptions, and tags (ReDoS protected).
-- **Query Parameters**: `keyword=Apollo+Hospital&category=hospital`
+  - `deviceId`: Filter by specific hardware device ID.
+  - `sessionId`: Filter by navigation or app session ID.
+  - `eventType`: `heartbeat` | `session_start` | `session_end` | `sensor_batch` | `telematics` | `navigation_ping` | `app_state_change`
+  - `isFraudDetected`: `true` | `false`
+  - `page`: Integer (default: 1)
+  - `limit`: Integer (default: 50, max: 500)
 
 ---
 
-## 6. Active Navigation Engine (`/navigation`)
+## 5. Real-Time Crowdsourced Traffic, Dynamic ETAs & Anomaly Suppression (`/traffic`)
 
-### `POST /api/v1/navigation/start`
-Initializes a new turn-by-turn navigation session.
-- **Request Body**:
-```json
-{
-  "origin": [77.1025, 28.7041],
-  "destination": [77.2090, 28.6139],
-  "profile": "driving",
-  "vehicleType": "car"
-}
-```
-- **Response**:
-```json
-{
-  "success": true,
-  "statusCode": 201,
-  "data": {
-    "sessionId": "nav_sess_1791825000",
-    "route": { ... },
-    "socketRoom": "nav:nav_sess_1791825000",
-    "offRouteThresholdMeters": 40
-  }
-}
-```
+Calculates live road network speeds, Bureau of Public Roads (BPR) congestion penalties, and ETAs strictly in **travel time minutes (not static distance)**. Models intersections as nodes and road segments as directed edges.
 
-### `POST /api/v1/navigation/update-location`
-Streams vehicle position, computes cross-track error, updates HUD, and triggers automatic reroute if off-route.
-- **Request Body**:
-```json
-{
-  "sessionId": "nav_sess_1791825000",
-  "currentLocation": [77.1080, 28.6990],
-  "bearing": 185.4,
-  "speedKmph": 48.2
-}
-```
-
----
-
-## 7. Real-Time Tracking & Proximity (`/tracking`)
-
-### `POST /api/v1/tracking/update`
-Ingests driver position into Redis `GEOADD` and broadcasts to tracking rooms.
-- **Request Body**:
-```json
-{
-  "driverId": "drv_delhi_902",
-  "longitude": 77.2100,
-  "latitude": 28.6200,
-  "status": "available",
-  "vehicleType": "auto_rickshaw"
-}
-```
-
-### `GET /api/v1/tracking/nearby`
-Finds all active drivers within a radius using Redis `GEOSEARCH`.
-- **Query Parameters**: `longitude=77.2100&latitude=28.6200&radiusKm=3`
-
----
-
-## 8. Sovereign Indian GIS Modules
-
-### 8.1 ISRO NavIC Dual-Band Processing (`/navic`)
-- `POST /api/v1/navic/process`: Ingests dual-frequency L5/S-band raw measurements and applies ionospheric delay cancellation.
-- `GET /api/v1/navic/status`: Returns NavIC constellation status and visible IRNSS satellite count (1A through 1I).
-
-### 8.2 DigiPIN Hierarchical Grid Addressing (`/digipin`)
-- `GET /api/v1/digipin/encode?lat=28.6139&lon=77.2090`: Generates a 10-character DigiPIN (e.g. `28J4-K8M2-9P`).
-- `GET /api/v1/digipin/decode?digipin=28J4-K8M2-9P`: Resolves DigiPIN to bounding box polygon and center coordinates.
-
-### 8.3 6-Digit Indian Postal Pincode (`/pincode`)
-- `GET /api/v1/pincode/lookup?code=110001`: Returns Connaught Place post offices, district, and spatial boundary.
-- `GET /api/v1/pincode/search?query=Gurugram`: Autocompletes PIN codes across Haryana.
-
-### 8.4 NHAI FASTag Toll Plazas (`/tolls`)
-- `GET /api/v1/tolls/calculate?origin=77.1025,28.7041&destination=75.8173,26.9124&vehicleClass=4`: Calculates total FASTag toll fees on Delhi-Jaipur highway.
-- `GET /api/v1/tolls/plazas`: Lists calibrated National Highway toll plazas.
-
-### 8.5 IMD Highway Weather Advisories (`/weather`)
-- `GET /api/v1/weather/corridor?corridor=Yamuna+Expressway`: Retrieves current IMD winter fog/monsoon advisories.
-
-### 8.6 Vernacular Direction TTS Localization (`/vernacular`)
-- `POST /api/v1/vernacular/translate`: Translates turn-by-turn guidance strings into any of 12 Indian languages (`hi`, `ta`, `te`, `bn`, `mr`, `gu`, `kn`, `ml`, `pa`, `or`, `as`, `en`).
-
----
-
-## 9. Next-Gen Automotive & Safety Modules
-
-### 9.1 High-Definition Lane Routing (`/lane-routing`)
-- `POST /api/v1/lane-routing/maneuver`: Returns multi-lane split recommendations for upcoming highway interchanges.
-
-### 9.2 Spatial Reality (SR) Navigation (`/sr-navigation`)
-- `GET /api/v1/sr-navigation/hud-elements`: Returns 3D vector points for Head-Up Display projection.
-
-### 9.3 Rider Mode Two-Wheeler Routing (`/rider-mode`)
-- `GET /api/v1/rider-mode/route`: Computes motorcycle-safe route, avoiding pedestrian bans and flyover weight restrictions.
-
-### 9.4 Multilevel Indoor Parking (`/parking`)
-- `GET /api/v1/parking/facility/:id`: Returns floor plans, available bays, and indoor navigation routes.
-
-### 9.5 Connected Vehicle V2X (`/v2x`)
-- `POST /api/v1/v2x/broadcast`: Broadcasts localized hazard alerts (emergency brake, obstacle) to vehicles within 500m.
-
----
-
-## 10. AI Copilot & Spatial Data Mining
-
-### 10.1 Natural Language Voice Copilot (`/ai-copilot`)
-- `POST /api/v1/ai-copilot/query`: Accepts driver voice transcriptions and generates routing recommendations.
-
-### 10.2 Spatial Data Mining (`/data-mining`)
-- `GET /api/v1/data-mining/congestion`: Returns predicted congestion heatmaps for road segments.
-
----
-
-## 11. Lifestyle, Super-App & Commercial Modules
-
-### 11.1 Multimodal Public Transit (`/transit`)
-- `GET /api/v1/transit/plan`: Generates multimodal journey plans combining Metro lines, feeder buses, and walking.
-
-### 11.2 Augmented Reality Walking (`/ar-walk-cycle`)
-- `GET /api/v1/ar-walk-cycle/path`: Returns pedestrian AR waypoints and safety crossings.
-
-### 11.3 EV Charging Network (`/ev`)
-- `GET /api/v1/ev/nearby`: Locates EV fast chargers filtered by connector type (`CCS2`, `Type2`, `GB/T`).
-
-### 11.4 Emergency SOS Dispatch (`/emergency`)
-- `POST /api/v1/emergency/sos`: Triggers emergency distress alert and notifies nearest highway patrol and ambulance units.
-
----
-
-## 12. Administrative Control Center (`/admin`)
-
-> **Note**: All administrative endpoints require `Authorization: Bearer <token>` where user has `role: admin`.
-
-### `GET /api/v1/admin/dashboard`
-Serves the self-contained, interactive glassmorphic web portal.
-
-### `GET /api/v1/admin/overview`
-Retrieves executive telemetry metrics: total users, verified counts, active alerts, average rating.
-
-### `GET /api/v1/admin/system/health`
-Detailed system diagnostics: database connections, memory allocation, and runtime environment.
-
-### `GET /api/v1/admin/system/config`
-Retrieves dynamic runtime flags (NavIC, Lane Guidance, AI Copilot, thresholds).
-
-### `PATCH /api/v1/admin/system/config`
-Dynamically mutates system parameters in real-time without server reload:
-```json
-{
-  "maintenance_mode": false,
-  "navic_enhancement_enabled": true,
-  "ai_copilot_enabled": true,
-  "lane_routing_enabled": true,
-  "off_route_threshold_meters": 45,
-  "reroute_cooldown_seconds": 6
-}
-```
-
-### `GET /api/v1/admin/users`
-Paginated search and filter across user directory:
-- `limit=20&page=1&role=user&search=Sharma`
-
-### `POST /api/v1/admin/traffic/override`
-Injects manual traffic delay advisory on specific highway:
-```json
-{
-  "corridor": "NH-48 Gurgaon-Manesar",
-  "speedLimitKmph": 30,
-  "severity": "CRITICAL",
-  "reason": "Waterlogging under IFFCO Chowk flyover"
-}
-```
-
-### `GET /api/v1/admin/audit-logs`
-Fetches immutable cryptographic audit trail of all administrative events.
-
----
-
-## 25. Real-Time Traffic & Dynamic ETAs (`/traffic`)
-
-### `POST /api/v1/traffic/telemetry`
-Aggregates real-time, anonymized velocity vectors from active devices to determine average segment speed using harmonic mean and multi-device clustering.
+### 5.1 `POST /api/v1/traffic/telemetry`
+Ingests anonymized velocity vectors. Applies cryptographic hashing to `deviceId` to ensure driver privacy, computes segment harmonic mean speeds, and updates road graph weights.
 - **Request Body**:
 ```json
 {
@@ -486,19 +488,45 @@ Aggregates real-time, anonymized velocity vectors from active devices to determi
 }
 ```
 
-### `POST /api/v1/traffic/eta`
-Calculates real-time traffic and turn-by-turn ETA weighted by travel time in **MINUTES (not kilometers)**. Models intersections as nodes and road segments as edges with dynamic congestion re-weighting.
+### 5.2 `POST /api/v1/traffic/eta`
+Computes turn-by-turn dynamic ETA weighted by live traffic travel times and signal cycle delays.
 - **Request Body**:
 ```json
 {
   "origin": [77.2185, 28.6328],
   "destination": [77.0715, 28.4725],
-  "departureTime": "2026-10-25T08:30:00.000Z"
+  "departureTime": "2026-10-31T08:30:00.000Z"
+}
+```
+- **Response (200 OK)**:
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Real-time traffic ETA computed successfully",
+  "data": {
+    "totalDistanceKm": 22.9,
+    "totalEtaMinutes": 46.8,
+    "totalDelayMinutes": 29.2,
+    "overallCongestion": "congested",
+    "stepsCount": 3,
+    "intersectionsCrossed": 3,
+    "steps": [
+      {
+        "segmentId": "SEG_CP_BARAKHAMBA_01",
+        "name": "Barakhamba Road Corridor",
+        "distanceKm": 1.4,
+        "travelTimeMinutes": 7.39,
+        "currentSpeedKmh": 18.2,
+        "congestionLevel": "congested"
+      }
+    ]
+  }
 }
 ```
 
-### `POST /api/v1/traffic/evaluate-anomaly`
-Evaluates multi-device clustering and outlier rejection to prevent false positives (like one scooter stopping at a roadside tea stall while other traffic flows freely).
+### 5.3 `POST /api/v1/traffic/evaluate-anomaly`
+Filters out single-device false positives (such as 1 scooter stopping at a roadside tea stall while other traffic flows at 58 km/h) using spatial DBSCAN clustering and quorum rules ($ge 3$ corroborated vehicles required for congestion confirmation).
 - **Request Body**:
 ```json
 {
@@ -512,26 +540,57 @@ Evaluates multi-device clustering and outlier rejection to prevent false positiv
   "targetSegmentId": "SEG_CYBER_IFFCO_06"
 }
 ```
+- **Response (200 OK)**:
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Anomaly evaluation completed",
+  "data": {
+    "lateralOffsetMeters": 15.7,
+    "speedKmh": 2.0,
+    "segmentAverageSpeedKmh": 58.0,
+    "activeClusterSize": 1,
+    "isExcludedFromAggregation": true,
+    "explanation": "Prevented false positive: 1 scooter stopped at roadside tea stall/shoulder while 3 surrounding devices flow at 58.0 km/h."
+  }
+}
+```
 
-### `GET /api/v1/traffic/graph`
-Returns directed road graph topology: intersections as nodes (signal cycle wait times) and road segments as edges weighted in minutes.
+### 5.4 `GET /api/v1/traffic/graph`
+Retrieves the directed road graph topology: intersections as nodes (signal cycle wait times) and road segments as edges weighted in minutes.
 
-### `GET /api/v1/traffic/segments`
-Retrieves all road segments with live speeds, congestion levels (`free_flow`, `slow`, `congested`, `severe_gridlock`), and travel times in minutes.
+### 5.5 `GET /api/v1/traffic/segments`
+Lists all monitored road segments with live speeds, congestion classifications (`free_flow`, `slow`, `congested`, `severe_gridlock`), and BPR travel times.
 
-### `GET /api/v1/traffic/predict?segmentId=SEG_CP_BARAKHAMBA_01&targetTime=2026-10-26T09:15:00.000Z`
+### 5.6 `GET /api/v1/traffic/predict`
 Combines live telemetry with historical speed distributions across 15-minute time windows (96 buckets per day).
+- **Query Parameters**: `segmentId=SEG_CP_BARAKHAMBA_01&targetTime=2026-10-31T09:15:00.000Z`
+
+### 5.7 `GET /api/v1/traffic/shockwave/:segmentId`
+Evaluates macroscopic Lighthill-Whitham-Richards (LWR) conservation dynamics: shockwave velocity ($w = Delta q / Delta k$), propagation direction (`BACKWARD_FORMING` vs `FORWARD_RECOVERING`), and exact spillback minutes until upstream junctions block.
+
+### 5.8 `POST /api/v1/traffic/eco`
+Physics-based multi-powertrain energy consumption comparison: Petrol ICE ($eta = 0.30$), Diesel ICE ($eta = 0.34$), and EV ($eta = 0.88$ with 70% regenerative braking credit).
+
+### 5.9 `POST /api/v1/traffic/security/anti-spoofing`
+Kinematic plausibility engine: blocks GPS teleportation ($v > 220	ext{ km/h}$) and impossible acceleration ($a > 6.5	ext{ m/s}^2$).
+
+### 5.10 `POST /api/v1/traffic/security/proof-of-presence`
+Issues an authenticated, tamper-proof Proof-of-Presence certificate signed with HMAC-SHA256.
+
+### 5.11 `POST /api/v1/traffic/security/proof-of-presence/verify`
+Verifies an issued Proof-of-Presence certificate against public verification authorities.
 
 ---
 
-## 19. App Version Control & Dynamic Frontend Patching (`/app-version` & `/version`)
+## 6. App Version Governance & Dynamic Frontend OTA Patching (`/app-version` & `/version`)
 
-Authoritative sovereign release version is **`1.0.0`**. Provides client semantic version verification, phased rollouts, force-update governance, and dynamic frontend OTA delta bundle patching via API.
+Authoritative sovereign release version is **`1.0.0`**. Enforces semantic versioning, minimum supported versions, and dynamic Over-The-Air (OTA) delta JavaScript bundle patching via REST API.
 
-### `GET /api/v1/app-version/current`
-Returns the authoritative running backend version.
-- **Access Level**: Public
-- **Response**:
+### 6.1 `GET /api/v1/app-version/current`
+Returns authoritative backend sovereign version.
+- **Response (200 OK)**:
 ```json
 {
   "success": true,
@@ -539,20 +598,18 @@ Returns the authoritative running backend version.
   "message": "Current authoritative backend version retrieved",
   "data": {
     "appVersion": "1.0.0",
-    "environment": "development",
+    "environment": "production",
     "service": "B-Map Sovereign Geospatial Platform",
-    "timestamp": "2026-10-25T00:00:00.000Z"
+    "timestamp": "2026-10-31T06:00:00.000Z"
   }
 }
 ```
 
-### `GET /api/v1/app-version/latest`
+### 6.2 `GET /api/v1/app-version/latest`
 Returns latest active version specifications and patch releases across all supported platforms (`web`, `android`, `ios`, `desktop`).
-- **Access Level**: Public
 
-### `GET /api/v1/app-version/check?platform=web&version=1.0.0&buildNumber=100`
-### `POST /api/v1/app-version/check`
-Evaluates installed frontend or mobile app version against current server release. Informs the client whether an update is available, mandatory (`forceUpdate: true`), or if an OTA delta patch bundle can be hot-reloaded immediately.
+### 6.3 `GET /api/v1/app-version/check` / `POST /api/v1/app-version/check`
+Evaluates installed client version against minimum required versions and available OTA hot-reload bundles.
 - **Request Parameters / Body**:
 ```json
 {
@@ -561,7 +618,7 @@ Evaluates installed frontend or mobile app version against current server releas
   "buildNumber": 100
 }
 ```
-- **Response**:
+- **Response (200 OK)**:
 ```json
 {
   "success": true,
@@ -589,8 +646,8 @@ Evaluates installed frontend or mobile app version against current server releas
 }
 ```
 
-### `PATCH /api/v1/app-version/patch`
-**Dynamic Frontend Version Patch API**: Dynamically updates client release versions, force update rules, release notes, and OTA JavaScript/bundle hot-reload URLs via REST API. Automatically emits a real-time WebSocket broadcast (`app_version:update_available`) to all connected active frontends.
+### 6.4 `PATCH /api/v1/app-version/patch`
+**Dynamic OTA Patch API**: Updates client release version metadata, release notes, and hot-reload bundle URLs via API. Emits a WebSocket broadcast (`app_version:update_available`) to active clients.
 - **Access Level**: Admin / System
 - **Request Body**:
 ```json
@@ -612,213 +669,398 @@ Evaluates installed frontend or mobile app version against current server releas
   "broadcastSocket": true
 }
 ```
-- **Response**:
-```json
-{
-  "success": true,
-  "statusCode": 200,
-  "message": "Frontend web version successfully patched to v1.0.1",
-  "data": {
-    "platform": "web",
-    "currentVersion": "1.0.1",
-    "minimumSupportedVersion": "1.0.0",
-    "latestBuildNumber": 101,
-    "patchBundleUrl": "https://cdn.bmap.io/bundles/web/v1.0.1/main.bundle.js",
-    "patchHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-    "patchSize": 492000,
-    "forceUpdate": false,
-    "releasedAt": "2026-10-25T00:03:00.000Z",
-    "updatedAt": "2026-10-25T00:03:00.000Z"
-  }
-}
-```
 
-### `POST /api/v1/app-version/broadcast`
-Manually triggers a real-time Socket.IO version update push to all connected frontend clients.
-- **Request Body**:
-```json
-{
-  "platform": "web"
-}
-```
+### 6.5 `POST /api/v1/app-version/broadcast`
+Manually triggers a real-time Socket.IO version push notification across connected frontends.
+- **Request Body**: `{ "platform": "web" }`
 
 ---
 
-## 20. Sovereign Indian GIS Stack & Advanced Telematics (`/tolls`, `/weather`, `/obfuscation`, `/vernacular`, `/navic`, `/digipin`)
+## 7. Core Routing Engine, Directions & TSP Multi-Stop Optimization (`/routes`)
 
-### 20.1 NHAI FASTag Dynamic Toll Engine (`/tolls`)
-Calculates real-time electronic toll tariffs across National Expressways (Delhi-Mumbai NE-4, Yamuna Expressway, Eastern Peripheral NE-2, Bengaluru-Mysuru NH-275, etc.) segmented across Vehicle Classes 4 through 9, paired with cashless RFID and ANPR lane guidance.
+Connects to OSRM with sub-millisecond Redis caching, alternative route discovery, Traveling Salesperson Problem (TSP) optimization, and GPS map matching.
 
-#### `POST /api/v1/tolls/calculate`
-Calculates cumulative tolls for a corridor or coordinate route path based on vehicle class.
+### `GET /api/v1/routes/directions`
+Computes turn-by-turn routes with polyline geometry, maneuvers, step instructions, and Redis caching.
+- **Query Parameters**:
+  - `origin`: `lon,lat` (e.g. `77.2185,28.6328`)
+  - `destination`: `lon,lat` (e.g. `77.0715,28.4725`)
+  - `waypoints`: Delimited `lon,lat|lon,lat`
+  - `profile`: `driving` | `bike` | `foot` (default: `driving`)
+  - `alternatives`: `true` | `false`
+
+### `POST /api/v1/routes/optimize`
+Solves Traveling Salesperson Problem (TSP) for courier delivery stop sequences.
 - **Request Body**:
 ```json
 {
-  "routeCoordinates": [
-    [77.0688, 28.2412],
-    [76.9855, 28.1255]
+  "coordinates": [
+    [77.2185, 28.6328],
+    [77.2295, 28.6128],
+    [77.2085, 28.6428]
   ],
-  "vehicleClass": "CLASS_4",
-  "expressway": "Delhi-Mumbai NE-4",
-  "fastagActive": true
-}
-```
-*Vehicle Class Options*: `CLASS_4` (Car/Jeep/Van, 1.0x), `CLASS_5` (Light Commercial Vehicle, 1.60x), `CLASS_6` (Bus/2-Axle Truck, 3.35x), `CLASS_7` (3-Axle Commercial, 3.65x), `CLASS_8` (4–6 Axle Heavy Truck, 5.25x), `CLASS_9` (7+ Axle Oversized Vehicle, 6.40x), `TWO_WHEELER_EXEMPT` (0 INR - Indian expressways toll-exempt for 2-wheelers).
-- **Response (200 OK)**:
-```json
-{
-  "success": true,
-  "statusCode": 200,
-  "message": "Dynamic FASTag tolls calculated successfully",
-  "data": {
-    "totalTollFee": 490,
-    "currency": "INR",
-    "vehicleClass": "CLASS_4",
-    "tollPlazasCount": 2,
-    "plazasEnRoute": [
-      {
-        "id": "toll_sohna_ne4",
-        "name": "Sohna KM 11 Toll Plaza",
-        "highway": "Delhi-Mumbai Expressway (NE-4)",
-        "baseTariff": 90,
-        "calculatedTariff": 90,
-        "cashlessGuidance": {
-          "fastagOnlyLanes": [1, 2, 3, 4, 6, 7, 8],
-          "cashPenaltyMultiplier": 2.0,
-          "anprBoomBarrierEnabled": true,
-          "recommendedLane": 3
-        }
-      },
-      {
-        "id": "toll_bhandarej_ne4",
-        "name": "Bhandarej Interchange Toll Plaza",
-        "highway": "Delhi-Mumbai Expressway (NE-4)",
-        "baseTariff": 400,
-        "calculatedTariff": 400,
-        "cashlessGuidance": {
-          "fastagOnlyLanes": [1, 2, 3, 5, 6, 7],
-          "cashPenaltyMultiplier": 2.0,
-          "anprBoomBarrierEnabled": true,
-          "recommendedLane": 2
-        }
-      }
-    ]
-  }
+  "profile": "driving",
+  "roundtrip": true
 }
 ```
 
-#### `GET /api/v1/tolls/nearby?lon=77.0688&lat=28.2412&radiusMeters=25000`
-Locates nearby NHAI FASTag toll plazas within a radial distance.
-
----
-
-### 20.2 IMD Severe Highway Weather Engine (`/weather`)
-Ingests India Meteorological Department (IMD) colour-coded highway alerts (`GREEN`, `YELLOW`, `ORANGE`, `RED`) to reroute around northern winter zero-visibility fog (<50m) and monsoon flooding.
-
-#### `GET /api/v1/weather/highway?highway=Delhi-Mumbai Expressway (NE-4)&lon=77.06&lat=28.24`
-Returns real-time weather advisories, visibility distance, and reroute recommendations for highway corridors.
-- **Response (200 OK)**:
-```json
-{
-  "success": true,
-  "statusCode": 200,
-  "message": "Highway weather conditions retrieved",
-  "data": {
-    "highway": "Delhi-Mumbai Expressway (NE-4)",
-    "alertLevel": "RED",
-    "condition": "ZERO_VISIBILITY_FOG",
-    "visibilityMeters": 35,
-    "denseFogActive": true,
-    "floodWarning": false,
-    "speedReductionPercent": 60,
-    "safeSpeedLimitKmh": 40,
-    "isRerouteRecommended": true,
-    "rerouteReason": "ZERO_VISIBILITY_WINTER_FOG",
-    "advisory": "IMD Red Alert: Zero-visibility dense fog (<50m) reported. Proactive alternate route recommended."
-  }
-}
-```
-
-#### `POST /api/v1/weather/override`
-Admin or automated meteorological feed override for emergency highway weather alerts.
-
----
-
-### 20.3 Defense Area Polygon Obfuscation (`/obfuscation`)
-Enforces the National Geospatial Policy by applying 200m–500m spatial coordinate jitter and polygon masking over sensitive defense installations and strategic facilities.
-
-#### `POST /api/v1/obfuscation/defense-mask`
-Applies defense zone checks and differential privacy masking to a coordinate or array of coordinates.
+### `POST /api/v1/routes/match`
+Snaps noisy GPS tracks to the underlying road network using Hidden Markov Model (HMM) map matching.
 - **Request Body**:
 ```json
 {
-  "coordinate": [76.8175, 30.3705]
+  "coordinates": [
+    [77.2185, 28.6328],
+    [77.2187, 28.6331]
+  ],
+  "timestamps": [1793197700000, 1793197705000]
 }
 ```
-- **Response (200 OK)**:
+
+### `GET /api/v1/routes/matrix`
+Calculates $N 	imes M$ distance and duration matrix.
+- **Query Parameters**: `coordinates=77.21,28.63;77.22,28.64;77.23,28.65`
+
+---
+
+## 8. Geospatial Places & POI Proximity Search (`/places`)
+
+Indexed with MongoDB `2dsphere` indexes for sub-meter radial distance lookups and GeoJSON polygon searches.
+
+### `POST /api/v1/places`
+Creates a Point of Interest (POI).
+- **Request Body**:
+```json
+{
+  "name": "DLF CyberHub Gurugram",
+  "category": "commercial_complex",
+  "coordinates": [77.0885, 28.4955],
+  "tags": ["food", "offices", "ev_charging"]
+}
+```
+
+### `GET /api/v1/places/nearby`
+Finds POIs ordered by spherical geodesic distance via MongoDB `$near`.
+- **Query Parameters**: `longitude=77.0885&latitude=28.4955&maxDistance=5000&category=food`
+
+### `POST /api/v1/places/within-polygon`
+Queries POIs enclosed within a GeoJSON polygon boundary via `$geoWithin`.
+
+### `GET /api/v1/places/search`
+Text search across names, tags, and categories.
+- **Query Parameters**: `q=CyberHub&category=commercial_complex`
+
+### `GET /api/v1/places/:id`
+Retrieves detailed POI metadata.
+
+---
+
+## 9. Active Navigation Sessions & Sub-Second Dynamic Rerouting (`/navigation`)
+
+Manages client active navigation sessions, lateral cross-track error (XTD) monitoring, step progression, and instant rerouting.
+
+### `POST /api/v1/navigation/start`
+Initializes an active navigation session.
+- **Request Body**:
+```json
+{
+  "userId": "usr_driver_amit_01",
+  "origin": [77.2185, 28.6328],
+  "destination": [77.0715, 28.4725],
+  "profile": "driving"
+}
+```
+- **Response (201 Created)**:
 ```json
 {
   "success": true,
-  "statusCode": 200,
-  "message": "Coordinate defense assessment completed",
+  "statusCode": 201,
+  "message": "Navigation session started",
   "data": {
-    "isInsideDefenseZone": true,
-    "zoneName": "Ambala Air Force Base Restricted Zone",
-    "maskedCoordinate": [76.8198, 30.3729],
-    "jitterDistanceMeters": 310.4,
-    "compliance": "National Geospatial Policy 2022 - Section 7 Spatial Masking Mandate"
+    "sessionId": "nav_1793197778_64a255ec",
+    "route": { ... }
   }
 }
 ```
 
-#### `GET /api/v1/obfuscation/defense-zones`
-Returns the GeoJSON polygon boundary index of sensitive strategic installations.
-
----
-
-### 20.4 12-Language Vernacular Voice Synthesis (`/vernacular`)
-Delivers localized turn-by-turn voice prompts and Text-to-Speech (TTS) strings across 12 scheduled Indian languages: Hindi (`hi`), Tamil (`ta`), Telugu (`te`), Bengali (`bn`), Marathi (`mr`), Gujarati (`gu`), Kannada (`kn`), Malayalam (`ml`), Punjabi (`pa`), Odia (`or`), Assamese (`as`), and English (`en`).
-
-#### `POST /api/v1/vernacular/prompt`
-Translates and formats navigation instructions into target vernacular language with phonetic cues.
+### `POST /api/v1/navigation/progress`
+Submits continuous GPS progress. If vehicle's geodesic Cross-Track Distance exceeds 40m, triggers an automatic sub-second reroute ($< 1000\text{ ms}$).
 - **Request Body**:
 ```json
 {
-  "language": "or",
-  "maneuver": "turn-left",
-  "distanceMeters": 300,
-  "streetName": "Janpath Road"
-}
-```
-- **Response (200 OK)**:
-```json
-{
-  "success": true,
-  "statusCode": 200,
-  "message": "Localized vernacular navigation prompt generated",
-  "data": {
-    "language": "or",
-    "languageCode": "or-IN",
-    "languageName": "Odia",
-    "localizedPrompt": "300 meters pare Janpath Road re bama ku bulantu",
-    "phoneticHint": "300 meters pare Janpath Road re bama ku bulantu",
-    "ttsVoiceEngine": "hi-IN-Neural2-F",
-    "audioFormat": "audio/mp3"
-  }
+  "sessionId": "nav_1793197778_64a255ec",
+  "currentLocation": [77.1500, 28.5200],
+  "bearing": 185.4,
+  "speedKmph": 48.2
 }
 ```
 
-#### `GET /api/v1/vernacular/languages`
-Lists all 12 supported sovereign Indian vernacular languages with metadata and dialect support.
+### `GET /api/v1/navigation/:sessionId`
+Retrieves active session state, current step, remaining distance, and ETA.
+
+### `POST /api/v1/navigation/:sessionId/end`
+Terminates the navigation session.
 
 ---
 
-### 20.5 ISRO NavIC Dual-Frequency & GAGAN (`/navic`)
-Ingests dual-frequency L5 (1176.45 MHz) and S-band (2492.028 MHz) pseudorange observations alongside GAGAN SBAS augmentation to eliminate equatorial ionospheric delays, achieving sub-meter horizontal precision across India and 1,500 km beyond national borders.
+## 10. Live Vehicle & Driver Tracking Primitives (`/tracking`)
 
-#### `POST /api/v1/navic/fix`
-Processes raw multi-constellation satellite observables (NavIC L5/S, GPS L1, GAGAN).
+High-throughput driver location ingestion and radial proximity queries using Redis in-memory geospatial indexes (`GEOADD` and `GEOSEARCH`).
+
+### `POST /api/v1/tracking/update`
+Ingests driver position into Redis geospatial index.
 - **Request Body**:
+```json
+{
+  "driverId": "drv_delhi_902",
+  "longitude": 77.2100,
+  "latitude": 28.6200,
+  "status": "available",
+  "vehicleType": "auto_rickshaw"
+}
+```
+
+### `GET /api/v1/tracking/nearby`
+Finds active online drivers within a radial distance.
+- **Query Parameters**: `longitude=77.2100&latitude=28.6200&radiusKm=3&vehicleType=auto_rickshaw`
+
+### `GET /api/v1/tracking/:userId`
+Retrieves real-time tracking coordinates for a specific user or driver.
+
+---
+
+## 11. Location Access, Ephemeral Tokenization & Permissions (`/location` & `/location-access`)
+
+Zero-trust driver location privacy lifecycle, time-limited trip tokenization, and granular permission revocation.
+- `POST /api/v1/location/ingest`: Ingests privacy-sanitized coordinates.
+- `POST /api/v1/location/lifecycle-mode`: Switches driver tracking between `off`, `foreground_only`, and `background_active`.
+- `POST /api/v1/location/session/register`: Initiates trip token session.
+- `POST /api/v1/location/session/:tripId/terminate`: Concludes trip tracking.
+- `POST /api/v1/location/session/tokenize-trip`: Issues a privacy-safe ephemeral trip token.
+- `POST /api/v1/location/session/refresh-trip-token`: Renews an active trip token.
+- `POST /api/v1/location/permissions/revoke`: Instantly revokes client location access.
+- `GET /api/v1/location/permissions/:userId`: Retrieves user location permissions.
+- `PUT /api/v1/location/permissions/state`: Modifies granular permissions.
+
+---
+
+## 12. Motion, Physical Fitness & Stationary Detection (`/motion` & `/motion-fitness`)
+
+Fused IMU pedometer step counting, activity state classification (`stationary`, `walking`, `cycling`, `in_vehicle`), and trip fitness analytics.
+- `POST /api/v1/motion/activity`: Submits physical sensor motion frame.
+- `POST /api/v1/motion/resume`: Resumes paused fitness session.
+- `GET /api/v1/motion/trip/:tripId`: Retrieves distance, cadence, and calorie burn summaries.
+
+---
+
+## 13. Targeted Notifications, APNS/FCM & Spatial Geofencing (`/notifications`)
+
+Device push token registration, targeted dispatch, and polygon geofence breach evaluation.
+- `POST /api/v1/notifications/devices/register`: Registers APNS / FCM device token.
+- `DELETE /api/v1/notifications/devices/:token`: Unregisters push token.
+- `GET /api/v1/notifications/devices/:userId`: Lists user registered devices.
+- `POST /api/v1/notifications/send-targeted`: Sends targeted alert to device.
+- `POST /api/v1/notifications/geofence/register`: Creates circular or polygon geofence.
+- `POST /api/v1/notifications/geofence/evaluate`: Evaluates vehicle coordinates against geofence triggers.
+- `GET /api/v1/notifications/geofence/list`: Lists active geofences.
+
+---
+
+## 14. Nearby Peripherals, Bluetooth & Indoor BLE Beacon Registry (`/nearby-devices` & `/bluetooth`)
+
+Underground BLE beacon trilateration and Bluetooth peripheral management.
+- `POST /api/v1/nearby-devices/permissions/verify`: Verifies Bluetooth scan authorization.
+- `POST /api/v1/nearby-devices/beacons/translate`: Converts BLE UUID, Major, Minor, and RSSI into calibrated underground floor coordinates.
+- `GET /api/v1/nearby-devices/beacons`: Lists registered BLE beacons.
+- `GET /api/v1/nearby-devices/beacons/:beaconId`: Details for specific beacon.
+- `POST /api/v1/nearby-devices/beacons`: Registers a new calibrated beacon.
+
+---
+
+## 15. High-Precision Positioning, RTK Decimeter & Weak-Signal Fusion (`/positioning`)
+
+Continuous-Time White Noise Acceleration (CWNA) Extended Kalman Filter (EKF) sensor fusion, RTK CORS baseline corrections, and tunnel dead-reckoning.
+- `POST /api/v1/positioning/fuse`: Ingests GNSS + IMU accelerometer/gyro + Odometry packet and outputs sub-meter smoothed position.
+- `POST /api/v1/positioning/anchors`: Registers indoor/tunnel ground-truth anchors.
+- `GET /api/v1/positioning/anchors/nearby`: Finds nearby positioning anchors.
+- `POST /api/v1/positioning/rtk/base-station`: Connects CORS RTK base station.
+
+---
+
+## 16. HD Lane-Level Routing & "Veteran Driver" Layering (`/lane-routing`)
+
+Multi-lane highway guidance, Bus/HOV lane time restrictions, and crowdsourced local shortcuts.
+- `POST /api/v1/lane-routing/guidance`: Returns exact lane assignment and proactive lane-change maneuvers before highway exits.
+- `POST /api/v1/lane-routing/plan`: Routes with Veteran Driver personas (`veteran_fast`, `veteran_smooth`, `novice_friendly`, `commuter_smart`).
+- `POST /api/v1/lane-routing/veteran/experience`: Crowdsources local shortcut links.
+- `POST /api/v1/lane-routing/segments`: Registers HD lane topology.
+
+---
+
+## 17. Spatial Reality (SR) HUD Navigation & 3D Junction Cards (`/sr-navigation`)
+
+Windshield Head-Up Display (HUD) projection, Lane Departure Warning (LDW), Forward Collision Warning (FCW), and photorealistic 3D Junction Cards.
+- `POST /api/v1/sr-navigation/hud-state`: Computes lateral lane offset, LDW unblinker drift, and forward collision metrics.
+- `POST /api/v1/sr-navigation/roads`: Registers 3D lane markings.
+- `GET /api/v1/sr-navigation/roads/:segmentId`: Retrieves HD road model.
+
+---
+
+## 18. Automotive IVI, CAN-Bus & Apple CarPlay / Android Auto (`/automotive`)
+
+Connected vehicle in-cabin infotainment templates and OBD-II / CAN-Bus streaming.
+- `POST /api/v1/automotive/carplay/template`: Generates Apple CarPlay `CPNavigationTemplate`.
+- `POST /api/v1/automotive/android-auto/template`: Generates Android Auto `NavigationTemplate`.
+- `POST /api/v1/automotive/aaos/properties`: Ingests native Android Automotive OS (AAOS) VHAL properties.
+- `POST /api/v1/automotive/telemetry/can`: Ingests CAN Bus frames; computes Eco-Driving score (0-100).
+- `POST /api/v1/automotive/ev/plan`: Smart EV route planning with battery thermal pre-conditioning.
+- `POST /api/v1/automotive/hud/frame`: Compact 8-byte optical waveguide HUD binary hex serialization.
+
+---
+
+## 19. Rider Mode Motorcycle Dynamics & e-Call Crash Detection (`/rider-mode`)
+
+Specialized two-wheeler routing, lean angle dynamics, bridge crosswind alerts, and autonomous crash detection.
+- `POST /api/v1/rider-mode/route/plan`: Two-wheeler routing avoiding flyover bans and toll gates.
+- `POST /api/v1/rider-mode/dynamics`: Ingests IMU roll/pitch; computes lean angle and cornering speed.
+- `POST /api/v1/rider-mode/weather-safety`: Evaluates crosswind warnings on bridges ($> 35\text{ km/h}$).
+- `POST /api/v1/rider-mode/helmet/cue`: Audio cues formatted for Bluetooth intercoms with audio ducking.
+- `GET /api/v1/rider-mode/glove-ui`: 4-button oversized touchscreen layout for gloves.
+- `POST /api/v1/rider-mode/crash/detect`: Fall detection e-Call ($G > 3.8g$, $\text{tilt} > 65^\circ$).
+- `POST /api/v1/rider-mode/crash/cancel/:eventId`: Rider cancels distress dispatch.
+- `GET /api/v1/rider-mode/hazards/nearby`: Queries two-wheeler road hazards.
+- `POST /api/v1/rider-mode/hazards/report`: Crowdsources road hazards.
+
+---
+
+## 20. Multilevel Space-Level Indoor Parking Navigation (`/parking`)
+
+Seamless outdoor-to-indoor transition, multi-floor A* ramp pathfinding, and reverse Find My Car guidance.
+- `POST /api/v1/parking/entrance/detect`: Detects facility gate arrival.
+- `GET /api/v1/parking/facilities/:facilityId`: Facility floor plans, ramps, and elevators.
+- `GET /api/v1/parking/facilities/:facilityId/bays`: Query bays filtered by floor, EV charger type, and vacancy.
+- `POST /api/v1/parking/indoor/plan`: Turn-by-turn guidance from entrance barrier directly into designated bay.
+- `POST /api/v1/parking/find-my-car`: Reverse pedestrian route from elevator to parked vehicle.
+- `POST /api/v1/parking/reserve`: 30-minute space reservation with PIN.
+- `POST /api/v1/parking/check-in`: Check-in arrival confirmation.
+- `POST /api/v1/parking/check-out`: Concludes parking session and calculates fees.
+
+---
+
+## 21. Multi-Mode: Intelligent Car Navigation & Speed Radars (`/car-nav` & `/car-navigation`)
+
+Multi-strategy car routing, multi-stop sequence optimization, and speed radar camera queries.
+- `POST /api/v1/car-nav/plan`: Evaluates `fastest`, `shortest`, `avoid_tolls`, `avoid_highways`, and `eco_friendly` strategies.
+- `POST /api/v1/car-nav/optimize-stops`: TSP multi-stop optimizer with arrival time windows.
+- `GET /api/v1/car-nav/cameras/nearby`: Queries speed enforcement, red-light, and average speed section control cameras.
+
+---
+
+## 22. Multi-Mode: Multimodal Public Transit Mastery (`/transit` & `/public-transit`)
+
+Subway, commuter rail, tram, and feeder bus journeys with carriage boarding advice and real-time departure boards.
+- `POST /api/v1/transit/itinerary`: Plans multimodal transit journeys with walking legs and platform transfer tips.
+- `GET /api/v1/transit/stations/:stationId/departures`: Live station departure board with platform numbers and vehicle IDs.
+- `GET /api/v1/transit/stations/nearby`: Discovers nearby transit interchanges.
+
+---
+
+## 23. Multi-Mode: Augmented Reality (AR) Walk & Cycle Navigation (`/ar-walk-cycle`)
+
+AR viewport world anchors, accessible pedestrian paths (no stairs, curb ramps), and bicycle elevation profiles.
+- `POST /api/v1/ar-walk-cycle/ar/hud-frame`: Projects 3D world anchors onto camera coordinates (`screenX%`, `screenY%`, depth distance).
+- `POST /api/v1/ar-walk-cycle/walk/plan`: Accessible pedestrian walking routes.
+- `POST /api/v1/ar-walk-cycle/cycle/plan`: Bicycle routing with elevation profile, slope percentage, and calories burned.
+- `GET /api/v1/ar-walk-cycle/cycle/amenities`: Locates air pumps, bike repair stands, and e-bike charging hubs.
+
+---
+
+## 24. Conversational AI Voice Copilot & Gemma LLM Engine (`/ai-copilot`)
+
+Natural language conversational copilot with local Gemma LLM fallback, multimodal vision OCR, and predictive travel time forecasting.
+- `POST /api/v1/ai-copilot/chat`: Multi-turn conversational voice copilot. Employs agentic tool execution (`search_pois_along_route`, `reroute_traffic_avoidance`, `find_fatigue_rest_stop`, `query_smart_parking_bay`).
+- `GET /api/v1/ai-copilot/conversations/:conversationId`: Retrieves dialogue context.
+- `POST /api/v1/ai-copilot/vision/analyze`: Vision AI frame analyzer detecting potholes, debris, and reading traffic signs.
+- `GET /api/v1/ai-copilot/vision/incidents/nearby`: Discovers vision-detected hazards nearby.
+- `POST /api/v1/ai-copilot/traffic/forecast`: Spatio-temporal predictive departure time optimizer.
+- `GET /api/v1/ai-copilot/poi/intelligence`: Generates in-car destination audio arrival briefings.
+- `GET /api/v1/ai-copilot/health`: Checks Gemma LLM microservice connection.
+- `GET /api/v1/ai-copilot/status`: AI copilot service state.
+- `GET /api/v1/ai-copilot/model/status`: Local LLM weights and VRAM status.
+- `POST /api/v1/ai-copilot/model/start`: Spins up local LLM worker.
+
+---
+
+## 25. AI-Powered Data Production & Big-Data Trajectory Mining (`/data-mining` & `/ai-data-mining`)
+
+ST-DBSCAN stay-point extraction, curbside PUDO entrance mining, POI deduplication, and automated road network change detection.
+- `POST /api/v1/data-mining/trajectories/mine-staypoints`: Mines dwell points and curbside PUDO building entrances.
+- `POST /api/v1/data-mining/poi/resolve`: Entity resolution and Master Golden Record fusion.
+- `POST /api/v1/data-mining/road-production/detect-new-roads`: Extracts new road centerlines from trajectory clusters.
+- `POST /api/v1/data-mining/road-production/detect-closure`: Anomaly detection for unmapped road closures.
+- `GET /api/v1/data-mining/road-production/changes`: Lists AI-identified road changes.
+
+---
+
+## 26. Unified Underlying Navigation Lifecycle Engine (`/unified` & `/unified-engine`)
+
+Coordinates positioning, routing, lane guidance, and proactive contextual recommendations in sub-10ms.
+- `POST /api/v1/unified/session/start`: Binds positioning, routing, and recommendations into a unified session.
+- `POST /api/v1/unified/tick`: Ingests high-frequency sensor ticks (GNSS + IMU + Odo + Battery).
+- `POST /api/v1/unified/recommendations/accept`: Accepts recommendation (faster route bypass, parking spot).
+- `POST /api/v1/unified/recommendations/dismiss`: Dismisses recommendation.
+
+---
+
+## 27. 4D Dynamic Space Rendering, 3D Digital Twins & 360° Street View (`/spatial-vis` & `/spatial-visualization`)
+
+360-degree spherical panoramas covering >95% Indian urban centers, interactive multi-floor indoor digital twins, and diurnal 4D time-slider space rendering.
+- `GET /api/v1/spatial-vis/buildings/3d`: 3D building vector meshes.
+- `GET /api/v1/spatial-vis/tiles/:z/:x/:y`: Vector map tile slice.
+- `POST /api/v1/spatial-vis/heatmaps/hexagonal`: H3 hexagonal density aggregation.
+- `GET /api/v1/spatial-vis/street-view/coverage`: Street View coverage statistics (>520 urban centers, 1.25M+ km mapped).
+- `GET /api/v1/spatial-vis/street-view/cities`: Directory of Indian cities with street view.
+- `GET /api/v1/spatial-vis/street-view/nearest`: Nearest 8K spherical panorama lookup by coordinate.
+- `GET /api/v1/spatial-vis/street-view/panorama/:panoId`: 8K equirectangular panorama with LiDAR depth buffers and Metro pillar AR markers.
+- `POST /api/v1/spatial-vis/street-view/sequence`: Drive-through 360 sequence along corridor.
+- `POST /api/v1/spatial-vis/street-view/depth-measure`: Sub-meter LiDAR depth measurement from pixels.
+- `GET /api/v1/spatial-vis/indoor/facilities`: Catalog of international airports, railway mega-hubs, and malls.
+- `GET /api/v1/spatial-vis/indoor/facilities/:facilityId`: Multi-floor digital twin metadata.
+- `GET /api/v1/spatial-vis/indoor/facilities/:facilityId/floors/:floorLevel`: Interactive floor plan (DigiYatra gates, CISF checkpoints, baggage carousels).
+- `POST /api/v1/spatial-vis/indoor/facilities/:facilityId/route`: Multi-floor indoor turn-by-turn routing with vertical elevators/escalators.
+- `GET /api/v1/spatial-vis/dynamic-4d/scene`: 4D space rendering with diurnal lighting phases and monsoon reflections.
+- `POST /api/v1/spatial-vis/dynamic-4d/time-slider`: 4D temporal evolution interpolation.
+
+---
+
+## 28. Unified Lifestyle & Commercial Super-App Ecosystem (`/super-app`)
+
+Ride-hailing lifecycle, lifestyle venue dining/wellness reservations, and offline map delta bundle synchronization.
+- `POST /api/v1/super-app/rides/quote`: Real-time ride fare quotes across Auto, Bike, Prime Sedan, and EV.
+- `GET /api/v1/super-app/rides/drivers/nearby`: Active drivers within radius.
+- `POST /api/v1/super-app/rides/request`: Requests ride and generates 4-digit start OTP.
+- `GET /api/v1/super-app/rides/:bookingId`: Live ride tracking and assigned driver details.
+- `POST /api/v1/super-app/rides/:bookingId/verify-otp`: Verifies 4-digit OTP to start trip.
+- `POST /api/v1/super-app/rides/:bookingId/complete`: Concludes trip and settles digital fare invoice.
+- `POST /api/v1/super-app/rides/:bookingId/cancel`: Cancels ride with grace-period fee logic.
+- `GET /api/v1/super-app/lifestyle/places`: Lifestyle search with dietary tags (`Pure Veg`, `Jain Available`) and price tiers.
+- `GET /api/v1/super-app/lifestyle/places/:poiId`: Venue details and booking slots.
+- `POST /api/v1/super-app/lifestyle/book`: Table reservations and appointments with QR code vouchers (`BMAP-XXXXXX`).
+- `GET /api/v1/super-app/lifestyle/bookings/:bookingId`: Retrieves booking confirmation.
+- `POST /api/v1/super-app/lifestyle/bookings/:bookingId/cancel`: Cancels booking with refund processing.
+- `GET /api/v1/super-app/offline/bundles`: Regional offline map bundle directory (Delhi NCR, Mumbai MMR, Bengaluru).
+- `GET /api/v1/super-app/offline/bundles/:bundleId`: Bundle manifest (vector tiles, routing graph, SQLite index).
+- `GET /api/v1/super-app/offline/bundles/:bundleId/delta`: Differential delta sync (~82.5% bandwidth savings).
+- `POST /api/v1/super-app/offline/route-fallback`: Turn-by-turn routing with zero cellular connectivity.
+- `GET /api/v1/super-app/offline/storage-quota`: Device storage quota and bundle pruning advisor.
+
+---
+
+## 29. Sovereign Indian GIS: ISRO NavIC Dual-Band Processing (`/navic`)
+
+Dual-frequency L5 (1176.45 MHz) and S-band (2492.028 MHz) pseudorange processing with GAGAN SBAS augmentation to eliminate ionospheric delay, achieving sub-meter accuracy across India and 1,500 km beyond borders.
+- `POST /api/v1/navic/fix`: Processes raw NavIC L5/S pseudorange observables.
+  - **Request Body**:
 ```json
 {
   "pseudoranges": {
@@ -830,7 +1072,7 @@ Processes raw multi-constellation satellite observables (NavIC L5/S, GPS L1, GAG
   "rawCoordinate": [77.2185, 28.6328]
 }
 ```
-- **Response (200 OK)**:
+  - **Response (200 OK)**:
 ```json
 {
   "success": true,
@@ -845,14 +1087,45 @@ Processes raw multi-constellation satellite observables (NavIC L5/S, GPS L1, GAG
   }
 }
 ```
+- `GET /api/v1/navic/constellation`: Real-time constellation orbital status for NavIC IRNSS satellites (1A through 1I).
 
 ---
 
-### 20.6 DigiPIN 4m×4m Hierarchical Addressing (`/digipin`)
-Encodes geographic coordinates into India's Department of Posts 10-character deterministic digital address (`XX-XX-XX-XX-XX`) accurate to a 4m×4m micro-grid, strictly using unambiguous characters `2-9` and consonants (excluding `0, 1, O, I`).
+## 30. Sovereign Indian GIS: NHAI FASTag Electronic Toll Tariffs (`/tolls`)
 
-#### `GET /api/v1/digipin/encode?lon=77.2185&lat=28.6328`
-- **Response (200 OK)**:
+Dynamic electronic toll tariffs across National Expressways (Delhi-Mumbai NE-4, Yamuna Expressway, Bengaluru-Mysuru NH-275) segmented across Vehicle Classes 4 through 9, with cashless RFID/ANPR lane guidance.
+- `POST /api/v1/tolls/calculate`: Calculates cumulative tolls for a corridor route based on vehicle class.
+  - **Request Body**:
+```json
+{
+  "routeCoordinates": [
+    [77.0688, 28.2412],
+    [76.9855, 28.1255]
+  ],
+  "vehicleClass": "CLASS_4",
+  "expressway": "Delhi-Mumbai NE-4",
+  "fastagActive": true
+}
+```
+  - **Vehicle Classes**: `CLASS_4` (Car/Jeep, 1.0x), `CLASS_5` (LCV, 1.6x), `CLASS_6` (Bus/Truck, 3.35x), `CLASS_7` (3-Axle, 3.65x), `CLASS_8` (4-6 Axle MAV, 5.25x), `CLASS_9` (7+ Axle OSV, 6.4x), `TWO_WHEELER_EXEMPT` (0 INR).
+- `GET /api/v1/tolls/nearby`: Locates nearby NHAI toll plazas within a radial distance.
+
+---
+
+## 31. Sovereign Indian GIS: 6-Digit Department of Posts PINcode Registry (`/pincode`)
+
+Comprehensive Indian postal PIN code database, unformatted address entity parsing, and reverse geocoding.
+- `GET /api/v1/pincode/:pincode`: Looks up 6-digit PIN code (post office, district, state, and coordinates).
+- `POST /api/v1/pincode/parse-address`: NLP entity parser extracting structured components from messy Indian address strings.
+- `GET /api/v1/pincode/reverse`: Resolves latitude and longitude coordinates to the nearest PIN code.
+
+---
+
+## 32. Sovereign Indian GIS: 4m×4m National DigiPIN Micro-Grid Addressing (`/digipin`)
+
+India Department of Posts 10-character deterministic digital addressing system (`XX-XX-XX-XX-XX`) accurate to a 4m×4m micro-grid, strictly using alphanumeric characters `2-9` and consonants (excluding ambiguous glyphs `0, 1, O, I`).
+- `GET /api/v1/digipin/encode?lon=77.2185&lat=28.6328`: Encodes coordinates into DigiPIN and 4m×4m bounding polygon.
+  - **Response (200 OK)**:
 ```json
 {
   "success": true,
@@ -872,60 +1145,249 @@ Encodes geographic coordinates into India's Department of Posts 10-character det
   }
 }
 ```
-
-#### `GET /api/v1/digipin/decode/HM-X6-TZ-RN-3H`
-Decodes a 10-character DigiPIN back into its geographic centroid and 4m×4m bounding polygon.
+- `GET /api/v1/digipin/decode/:code`: Decodes a 10-character DigiPIN back into its centroid and bounding polygon.
 
 ---
 
-### 20.7 Shockwave, Eco-Routing & Spatial Proof-of-Presence (`/traffic`)
+## 33. Sovereign Indian GIS: Emergency SOS & Highway Trauma Dispatch (`/emergency`)
 
-#### `GET /api/v1/traffic/shockwave/:segmentId`
-Computes macroscopic LWR shockwave propagation velocity ($w = \Delta q / \Delta k$), shockwave direction (`BACKWARD_FORMING` vs `FORWARD_RECOVERING`), and exact spillback minutes until upstream junctions block.
-
-#### `POST /api/v1/traffic/eco`
-Evaluates multi-criteria physics-based energy consumption across Petrol ICE ($\eta = 0.30$), Diesel ICE ($\eta = 0.34$), and EV ($\eta = 0.88$ with 70% regenerative braking recovery credit).
-
-#### `POST /api/v1/traffic/security/proof-of-presence`
-Generates an authenticated, tamper-proof Proof-of-Presence certificate with a cryptographic HMAC-SHA256 signature for verified geofence entry and automated toll/valet gate access.
+Automated emergency SOS dispatch to national emergency helplines (112, NHAI 1033) and nearest trauma centers.
+- `POST /api/v1/emergency/sos`: Triggers an emergency SOS event with device coordinates and vehicle profile.
+- `GET /api/v1/emergency/facilities/nearby`: Locates nearby trauma hospitals, highway patrol stations, police units, and towing services.
 
 ---
 
-## 21. Real-Time Telematics Gateway & Kubernetes Probes
+## 34. Sovereign Indian GIS: IMD Severe Highway Weather & Fog Advisories (`/weather`)
 
-### 21.1 Sub-50ms Kubernetes HPA Probes (`/health`)
-Designed for high-frequency Kubernetes readiness and liveness checks (HPA) without waiting for upstream network timeouts:
-- **`GET /api/v1/health?probe=true`** (or Header `x-k8s-probe: true`)
-- **Latency Guarantee**: Returns within `< 50ms` (typically `1-2ms`).
-- **Response (200 OK)**:
+India Meteorological Department (IMD) colour-coded highway advisories (`GREEN`, `YELLOW`, `ORANGE`, `RED`) with zero-visibility fog (<50m) speed reductions and proactive alternate routing.
+- `GET /api/v1/weather/highway`: Real-time weather advisories, visibility distance in meters, and reroute suggestions.
+- `GET /api/v1/weather/overrides`: Lists active weather overrides on highway corridors.
+- `POST /api/v1/weather/override`: Injects emergency weather override (e.g. dense winter fog, flash flooding).
+- `DELETE /api/v1/weather/override/:name`: Removes weather override by corridor name.
+
+---
+
+## 35. Sovereign Indian GIS: 12-Language Vernacular Audio Synthesis (`/vernacular`)
+
+Generates localized turn-by-turn voice prompts and phonetic cues across 12 scheduled Indian languages:
+Hindi (`hi`), Tamil (`ta`), Telugu (`te`), Bengali (`bn`), Marathi (`mr`), Gujarati (`gu`), Kannada (`kn`), Malayalam (`ml`), Punjabi (`pa`), Odia (`or`), Assamese (`as`), and English (`en`).
+- `POST /api/v1/vernacular/prompt`: Formats navigation instruction into vernacular language with TTS engine hints.
+  - **Request Body**:
+```json
+{
+  "language": "or",
+  "maneuver": "turn-left",
+  "distanceMeters": 300,
+  "streetName": "Janpath Road"
+}
+```
+  - **Response (200 OK)**:
 ```json
 {
   "success": true,
   "statusCode": 200,
-  "message": "Kubernetes fast-path probe healthy",
+  "message": "Localized vernacular navigation prompt generated",
   "data": {
-    "status": "UP",
-    "timestamp": "2026-10-25T01:38:25.000Z",
-    "uptimeSeconds": 1420,
-    "version": "1.0.0",
-    "k8sProbe": true,
-    "environment": "development"
+    "language": "or",
+    "languageCode": "or-IN",
+    "languageName": "Odia",
+    "localizedPrompt": "300 meters pare Janpath Road re bama ku bulantu",
+    "phoneticHint": "300 meters pare Janpath Road re bama ku bulantu",
+    "ttsVoiceEngine": "hi-IN-Neural2-F",
+    "audioFormat": "audio/mp3"
   }
 }
 ```
+- `GET /api/v1/vernacular/languages`: Lists all 12 supported Indian languages with dialect details.
 
-### 21.2 Socket.IO Real-Time Telematics Gateway (10 Event Domains)
+---
 
-| Socket.IO Event Domain | Core Bidirectional Event Channels | Room Scoping & Target Consumer |
-| :--- | :--- | :--- |
-| **1. Live Driver Tracking** | `location:update`, `location:broadcast`, `location:subscribe` | Room `driver:<driverId>` (1Hz–5Hz fleet & ride tracking) |
-| **2. Active Turn-by-Turn Nav** | `nav:join`, `nav:update_progress`, `nav:off_route_alert`, `nav:reroute_success` | Room `nav:<sessionId>` (Instant off-route geometry push) |
-| **3. Weak-Signal Positioning** | `positioning:telemetry`, `positioning:fused_state` | EKF tunnel dead reckoning & urban canyon state sync |
-| **4. HD Lane Guidance** | `lane:guidance_stream`, `lane:guidance_broadcast`, `veteran:hazard_alert` | Multi-lane highway exit & lane-drift alerts |
-| **5. SR Mixed Reality HUD** | `sr:telemetry_stream`, `sr:hud_broadcast`, `sr:collision_warning` | Spatial Reality windshield HUD & ADAS alerts |
-| **6. Automotive CAN & IVI** | `auto:can_stream`, `auto:cockpit_sync`, `auto:eco_score_broadcast` | Room `auto:<vehicleId>` (CarPlay / Android Auto & OBD powertrain telemetry) |
-| **7. Rider Mode Two-Wheeler** | `rider:dynamics_stream`, `rider:lean_broadcast`, `rider:crash_alert` | Room `rider:<sessionId>` (Two-wheeler lean angle & SOS crash detection) |
-| **8. Indoor Bay Parking** | `parking:entrance_detect`, `parking:indoor_guidance`, `parking:bay_status` | Room `parking:<facilityId>` (BLE beacon gate handoff & live slot occupancy) |
-| **9. AI Voice Copilot (Gemma)** | `copilot:message_stream`, `copilot:processing_status`, `copilot:message_response` | Streaming natural language voice intent & TTS replies |
-| **10. Traffic & LWR Shockwave** | `traffic:telemetry_stream`, `traffic:segment_update`, `traffic:eta_update`, `traffic:anomaly_filtered` | Room `segment:<segmentId>` (Live BPR speeds & spillback warnings) |
+## 36. Connected Vehicle V2X, SPaT & GLOSA Green Wave Advisory (`/v2x`)
 
+Vehicle-to-Everything (V2X) Signal Phase and Timing (SPaT) and Green Light Optimal Speed Advisory (GLOSA) to ride the green wave without stopping.
+- `GET /api/v1/v2x/signals/nearby`: Discovers connected municipal smart traffic lights.
+- `GET /api/v1/v2x/signals/:id`: Specific signal phase, current state, and countdown seconds.
+- `POST /api/v1/v2x/glosa/advisory`: Calculates optimal target driving speed (km/h) to clear next intersection on green.
+
+---
+
+## 37. Environmental Intelligence: CPCB AQI, Rooftop Solar & Pollen (`/environment`)
+
+Central Pollution Control Board (CPCB) real-time Air Quality Index, rooftop photovoltaic solar potential, and pollen indices.
+- `GET /api/v1/environment/air-quality`: Real-time AQI, PM2.5, PM10, and health category.
+- `GET /api/v1/environment/solar`: Annual sunshine hours, solar PV potential, and carbon reduction estimates.
+- `GET /api/v1/environment/pollen`: Tree, weed, and grass pollen risk indices.
+
+---
+
+## 38. Crowdsourced Road Hazards, Potholes & Speed Breakers (`/hazards`)
+
+Crowdsourced lookahead warnings for unmarked speed breakers, potholes, road construction, and stray cattle.
+- `GET /api/v1/hazards/ahead`: Lookahead query for road hazards within vehicle trajectory cone.
+- `POST /api/v1/hazards/report`: Submits hazard report with coordinate, type, and severity.
+
+---
+
+## 39. Differential Privacy & Defense Installation Obfuscation (`/obfuscation`)
+
+National Geospatial Policy compliance: applies 200m–500m spatial coordinate jitter and polygon masking over strategic defense installations.
+- `POST /api/v1/obfuscation/defense-mask`: Evaluates coordinate against restricted military polygons and applies spatial jitter.
+- `GET /api/v1/obfuscation/defense-zones`: Returns GeoJSON boundary index of restricted defense installations.
+- `POST /api/v1/obfuscation/transform`: Datum transformations between WGS84, GCJ02, and BD09.
+- `POST /api/v1/obfuscation/fuzz`: Injects planar Geo-Indistinguishability Laplace noise for privacy.
+
+---
+
+## 40. Survey of India (SOI) Territorial Boundaries & Masking (`/boundaries`)
+
+Official Survey of India (SOI) mandated international and territorial boundaries.
+- `GET /api/v1/boundaries/territorial`: Sovereign boundary LineString compliant with National Geospatial Policy.
+- `GET /api/v1/boundaries/region-highlight`: Sovereign boundary polygon highlight with world dimming mask.
+
+---
+
+## 41. Electric Vehicle (EV) Fast Charging Hubs (`/ev` & `/evcharging`)
+
+Fast-charging hub registry filtered by connector standards (`CCS2`, `Type2`, `Ather Grid`, `Bharat AC001`).
+- `GET /api/v1/ev/stations`: Finds nearby EV chargers within radius.
+- `GET /api/v1/ev/stations/:id`: Real-time port availability, power ratings (kW), and pricing.
+
+---
+
+## 42. Municipal City Metered Fares (`/fares`)
+
+Official Regional Transport Office (RTO) metered fare estimation for Auto-Rickshaws, Kaali-Peeli taxis, and radio cabs.
+- `POST /api/v1/fares/estimate`: Calculates base fare, per-km distance tariff, and night surcharges (23:00 - 05:00).
+
+---
+
+## 43. Roads Geometry Snapping & Speed Limits (`/roads`)
+
+Snaps raw coordinate traces to road centerlines and returns posted speed limits.
+- `POST /api/v1/roads/snap-to-roads`: Snaps GPS points to road geometry.
+- `GET /api/v1/roads/speed-limits`: Queries speed limits for highway and arterial segments.
+
+---
+
+## 44. Dynamic Vector Tiles & MapLibre Vector Styles (`/maps`, `/tiles`, `/maps-tiles`)
+
+MapLibre/Mapbox compatible dynamic vector tiles and static SVG map rendering.
+- `GET /api/v1/maps/style.json`: Vector tile style specification across light, dark, and satellite themes.
+- `GET /api/v1/maps/static`: Server-rendered static SVG map with paths and markers.
+- `GET /api/v1/maps/clusters`: Server-side geospatial POI clustering.
+- `GET /api/v1/tiles/:z/:x/:y`: Dynamic Mapbox Vector Tiles (MVT / GeoJSON).
+
+---
+
+## 45. Commercial Fleet Telemetry & Dispatch (`/fleet`)
+
+Commercial driver telemetry, nearest fleet discovery, and automated trip dispatch.
+- `POST /api/v1/fleet/location`: Streams commercial fleet vehicle location.
+- `GET /api/v1/fleet/nearby`: Discovers available commercial fleet units within radius.
+- `POST /api/v1/fleet/trips/request`: Requests commercial trip dispatch.
+
+---
+
+## 46. Coordinate-to-Timezone Resolution (`/timezone`)
+
+Resolves geographic coordinates to official IANA timezone identifiers.
+- `GET /api/v1/timezone?lon=77.2185&lat=28.6328`: Resolves to `Asia/Kolkata` (IST, UTC+05:30).
+
+---
+
+## 47. User Ratings, Feedback & Community Reviews (`/ratings`)
+
+User review submission, aggregate star statistics, and moderation.
+- `POST /api/v1/ratings`: Submits 1-5 star rating and review comments.
+- `GET /api/v1/ratings/my-rating`: Retrieves current user's rating history.
+- `GET /api/v1/ratings/stats`: Aggregated ratings breakdown and average score.
+- `GET /api/v1/ratings`: Public feed of verified reviews.
+
+---
+
+## 48. Enterprise Admin Command Center & Control Portal (`/admin`)
+
+Executive operational telemetry, dynamic runtime feature flags, manual overrides, and audit trails.
+*Requires `Authorization: Bearer <token>` with `role: admin`.*
+
+### 48.1 Executive Metrics & Dashboard
+- `GET /api/v1/admin/dashboard`: Interactive dark-mode glassmorphic Web Portal.
+- `GET /api/v1/admin/overview`: Total users, active sessions, Redis/Mongo status, and average rating.
+- `GET /api/v1/admin/analytics/users`: User registration and active session trends.
+- `GET /api/v1/admin/analytics/feature-usage`: Usage analytics across tolls, NavIC, routing, and SOS.
+
+### 48.2 User Administration & Access Control
+- `GET /api/v1/admin/users`: Paginated, searchable user directory.
+- `POST /api/v1/admin/users`: Direct administrative user creation.
+- `GET /api/v1/admin/users/:id`: User profile details.
+- `PATCH /api/v1/admin/users/:id`: Updates user profile, role (`admin` / `user`), or verification status.
+- `DELETE /api/v1/admin/users/:id`: Deletes user (with root admin protection).
+- `GET /api/v1/admin/users/stats`: User breakdown statistics.
+- `GET /api/v1/admin/users/active`: Currently active users.
+
+### 48.3 System Diagnostics & Dynamic Runtime Configuration
+- `GET /api/v1/admin/system/health`: Detailed health diagnostic (DB readyState, Redis keys, Socket connections).
+- `GET /api/v1/admin/system/cache`: Redis cache key counts and memory usage.
+- `POST /api/v1/admin/system/cache/flush`: Flushes routing cache (`routes`) or all keys (`all`).
+- `GET /api/v1/admin/system/config`: Retrieves runtime sovereign feature flags.
+- `PATCH /api/v1/admin/system/config`: Dynamically updates flags in real-time without restarting server:
+```json
+{
+  "maintenance_mode": false,
+  "navic_enhancement_enabled": true,
+  "ai_copilot_enabled": true,
+  "lane_routing_enabled": true,
+  "off_route_threshold_meters": 45,
+  "reroute_cooldown_seconds": 6
+}
+```
+
+### 48.4 Traffic & Weather Overrides
+- `GET /api/v1/admin/traffic/overrides`: Lists manual highway traffic overrides.
+- `POST /api/v1/admin/traffic/override`: Injects road segment traffic speed multipliers.
+- `DELETE /api/v1/admin/traffic/override/:id`: Removes traffic override.
+- `GET /api/v1/admin/weather/overrides`: Lists manual weather overrides.
+- `POST /api/v1/admin/weather/override`: Injects emergency weather advisory.
+- `DELETE /api/v1/admin/weather/override/:name`: Removes weather override.
+
+### 48.5 Road Hazards, Tolls, POIs, Emergencies & Audit Logs
+- `GET /api/v1/admin/hazards`: Lists reported road hazards.
+- `POST /api/v1/admin/hazards`: Broadcasts official hazard alert.
+- `PATCH /api/v1/admin/hazards/:id/verify`: Verifies crowdsourced hazard report.
+- `DELETE /api/v1/admin/hazards/:id`: Resolves/deletes hazard.
+- `GET /api/v1/admin/tolls`: Lists toll plaza registry.
+- `POST /api/v1/admin/tolls`: Registers new toll plaza.
+- `PATCH /api/v1/admin/tolls/:id`: Updates toll rates and FASTag status.
+- `DELETE /api/v1/admin/tolls/:id`: Deletes toll plaza.
+- `GET /api/v1/admin/places`: Master POI directory.
+- `POST /api/v1/admin/places`: Creates verified POI.
+- `DELETE /api/v1/admin/places/:id`: Deletes POI.
+- `GET /api/v1/admin/emergency/incidents`: Real-time log of Highway SOS incidents.
+- `PATCH /api/v1/admin/emergency/incidents/:id`: Updates incident status (`ACKNOWLEDGED`, `DISPATCHED`, `RESOLVED`).
+- `GET /api/v1/admin/ratings`: Moderation feed of user reviews.
+- `DELETE /api/v1/admin/ratings/:id`: Removes spam/inappropriate review.
+- `GET /api/v1/admin/audit-logs`: Immutable cryptographic audit trail of all administrative actions.
+
+---
+
+## 49. Socket.IO Real-Time Telematics Gateway: 10 Event Domains
+
+WebSocket Endpoint: `ws://localhost:8080` (or `wss://`)  
+Transport: `websocket`, `polling`
+
+| Domain | Event Channel Name | Direction | Room Scoping | Payload Specification & Purpose |
+| :--- | :--- | :--- | :--- | :--- |
+| **1. Live Driver Tracking** | `location:update`<br/>`location:broadcast`<br/>`location:subscribe` | Bi-directional | Room `driver:<driverId>`<br/>Room `track:<driverId>` | High-frequency 1Hz–5Hz driver coordinates, Redis `GEOADD` ingestion, and subscriber fan-out. |
+| **2. Active Turn-by-Turn Nav** | `nav:join`<br/>`nav:update_progress`<br/>`nav:off_route_alert`<br/>`nav:reroute_success` | Bi-directional | Room `nav:<sessionId>` | Continuous step progress, sub-second reroute geometry pushes, and arrival triggers. |
+| **3. Weak-Signal Positioning** | `positioning:telemetry`<br/>`positioning:fused_state`<br/>`positioning:subscribe` | Bi-directional | Device Room | EKF 6-state vector, tunnel dead reckoning (up to 10s), and indoor BLE trilateration. |
+| **4. HD Lane Guidance** | `lane:guidance_stream`<br/>`lane:guidance_broadcast`<br/>`veteran:hazard_alert` | Bi-directional | Session Room | Sub-meter lateral offset, Bus/HOV restrictions, and early highway lane-change prompts. |
+| **5. SR Mixed Reality HUD** | `sr:telemetry_stream`<br/>`sr:hud_broadcast`<br/>`sr:lane_drift_alert`<br/>`sr:collision_warning` | Bi-directional | Vehicle Room | 3D Junction Cards with overhead gantries, Lane Departure Warnings (LDW), and Forward Collision Warnings (FCW). |
+| **6. Automotive CAN & IVI** | `auto:can_stream`<br/>`auto:cockpit_sync`<br/>`auto:eco_score_broadcast`<br/>`auto:hud_frame_stream` | Bi-directional | Room `auto:<vehicleId>` | OBD-II / CAN-Bus frame streaming, 0-100 Eco-Driving scores, and 8-byte optical HUD binary serialization. |
+| **7. Rider Mode Two-Wheeler** | `rider:dynamics_stream`<br/>`rider:lean_broadcast`<br/>`rider:crash_alert`<br/>`rider:crash_cancel` | Bi-directional | Room `rider:<sessionId>` | Motorcycle IMU roll/pitch dynamics, lean angle advisories, and autonomous e-Call fall/crash detection. |
+| **8. Indoor Bay Parking** | `parking:entrance_detect`<br/>`parking:indoor_guidance`<br/>`parking:bay_status` | Bi-directional | Room `parking:<facilityId>` | BLE gate handoff, multi-floor A* ramp pathfinding, and live parking bay occupancy. |
+| **9. AI Voice Copilot (Gemma)** | `copilot:message_stream`<br/>`copilot:processing_status`<br/>`copilot:message_response` | Bi-directional | Session Room | Streaming voice transcription tokens, agentic tool execution, and synthesized TTS audio scripts. |
+| **10. Traffic & LWR Shockwave** | `traffic:telemetry_stream`<br/>`traffic:segment_update`<br/>`traffic:eta_update`<br/>`traffic:anomaly_filtered` | Bi-directional | Room `segment:<segmentId>` | Real-time crowdsourced velocity streams, BPR speed re-weighting, and LWR shockwave spillback warnings. |
+
+---
+
+*Authoritative Reference generated and verified for B-Map Sovereign Platform Architecture v1.0.0.*

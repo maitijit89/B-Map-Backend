@@ -1,6 +1,60 @@
 # 📡 B-Map Platform Complete REST API Reference
 
-> *Note: This document is identical to [apiendpoint.md](file:///e:/B-Map-Backend/apiendpoint.md), provided for compatibility with both singular and plural filename conventions.*
+> *Note: This document provides direct compatibility for both singular (`apiendpoint.md`) and plural (`apiendpoints.md`) filename conventions.*
 
-Please refer to the full, authoritative API endpoint reference located at:
+Please refer to the full, authoritative, 49-section API endpoint reference located at:
 👉 **[apiendpoint.md](file:///e:/B-Map-Backend/apiendpoint.md)**
+
+---
+
+## 📑 Quick Index of All 49 Documented Modules
+
+1. [Global Conventions, Headers & Standard Response Envelope](file:///e:/B-Map-Backend/apiendpoint.md#1-global-conventions-headers--standard-response-envelope)
+2. [System Health Diagnostics & Sub-50ms Kubernetes Probes (`/health`)](file:///e:/B-Map-Backend/apiendpoint.md#2-system-health-diagnostics--sub-50ms-kubernetes-probes-health)
+3. [Authentication, User Identity & Passwordless OTP (`/auth`)](file:///e:/B-Map-Backend/apiendpoint.md#3-authentication-user-identity--passwordless-otp-auth)
+4. [High-Throughput Telemetry Ingestion, Fraud Detection & Async Queue (`/telemetry` & `/telemetry-ingest`)](file:///e:/B-Map-Backend/apiendpoint.md#4-high-throughput-telemetry-ingestion-fraud-detection--async-queue-telemetry--telemetry-ingest)
+5. [Real-Time Crowdsourced Traffic, Dynamic ETAs & Anomaly Suppression (`/traffic`)](file:///e:/B-Map-Backend/apiendpoint.md#5-real-time-crowdsourced-traffic-dynamic-etas--anomaly-suppression-traffic)
+6. [App Version Governance & Dynamic Frontend OTA Patching (`/app-version` & `/version`)](file:///e:/B-Map-Backend/apiendpoint.md#6-app-version-governance--dynamic-frontend-ota-patching-app-version--version)
+7. [Core Routing Engine, Directions & TSP Multi-Stop Optimization (`/routes`)](file:///e:/B-Map-Backend/apiendpoint.md#7-core-routing-engine-directions--tsp-multi-stop-optimization-routes)
+8. [Geospatial Places & POI Proximity Search (`/places`)](file:///e:/B-Map-Backend/apiendpoint.md#8-geospatial-places--poi-proximity-search-places)
+9. [Active Navigation Sessions & Sub-Second Dynamic Rerouting (`/navigation`)](file:///e:/B-Map-Backend/apiendpoint.md#9-active-navigation-sessions--sub-second-dynamic-rerouting-navigation)
+10. [Live Vehicle & Driver Tracking Primitives (`/tracking`)](file:///e:/B-Map-Backend/apiendpoint.md#10-live-vehicle--driver-tracking-primitives-tracking)
+11. [Location Access, Ephemeral Tokenization & Permissions (`/location` & `/location-access`)](file:///e:/B-Map-Backend/apiendpoint.md#11-location-access-ephemeral-tokenization--permissions-location--location-access)
+12. [Motion, Physical Fitness & Stationary Detection (`/motion` & `/motion-fitness`)](file:///e:/B-Map-Backend/apiendpoint.md#12-motion-physical-fitness--stationary-detection-motion--motion-fitness)
+13. [Targeted Notifications, APNS/FCM & Spatial Geofencing (`/notifications`)](file:///e:/B-Map-Backend/apiendpoint.md#13-targeted-notifications-apnsfcm--spatial-geofencing-notifications)
+14. [Nearby Peripherals, Bluetooth & Indoor BLE Beacon Registry (`/nearby-devices` & `/bluetooth`)](file:///e:/B-Map-Backend/apiendpoint.md#14-nearby-peripherals-bluetooth--indoor-ble-beacon-registry-nearby-devices--bluetooth)
+15. [High-Precision Positioning, RTK Decimeter & Weak-Signal Fusion (`/positioning`)](file:///e:/B-Map-Backend/apiendpoint.md#15-high-precision-positioning-rtk-decimeter--weak-signal-fusion-positioning)
+16. [HD Lane-Level Routing & "Veteran Driver" Layering (`/lane-routing`)](file:///e:/B-Map-Backend/apiendpoint.md#16-hd-lane-level-routing--veteran-driver-layering-lane-routing)
+17. [Spatial Reality (SR) HUD Navigation & 3D Junction Cards (`/sr-navigation`)](file:///e:/B-Map-Backend/apiendpoint.md#17-spatial-reality-sr-hud-navigation--3d-junction-cards-sr-navigation)
+18. [Automotive IVI, CAN-Bus & Apple CarPlay / Android Auto (`/automotive`)](file:///e:/B-Map-Backend/apiendpoint.md#18-automotive-ivi-can-bus--apple-carplay--android-auto-automotive)
+19. [Rider Mode Motorcycle Dynamics & e-Call Crash Detection (`/rider-mode`)](file:///e:/B-Map-Backend/apiendpoint.md#19-rider-mode-motorcycle-dynamics--e-call-crash-detection-rider-mode)
+20. [Multilevel Space-Level Indoor Parking Navigation (`/parking`)](file:///e:/B-Map-Backend/apiendpoint.md#20-multilevel-space-level-indoor-parking-navigation-parking)
+21. [Multi-Mode: Intelligent Car Navigation & Speed Radars (`/car-nav` & `/car-navigation`)](file:///e:/B-Map-Backend/apiendpoint.md#21-multi-mode-intelligent-car-navigation--speed-radars-car-nav--car-navigation)
+22. [Multi-Mode: Multimodal Public Transit Mastery (`/transit` & `/public-transit`)](file:///e:/B-Map-Backend/apiendpoint.md#22-multi-mode-multimodal-public-transit-mastery-transit--public-transit)
+23. [Multi-Mode: Augmented Reality (AR) Walk & Cycle Navigation (`/ar-walk-cycle`)](file:///e:/B-Map-Backend/apiendpoint.md#23-multi-mode-augmented-reality-ar-walk--cycle-navigation-ar-walk-cycle)
+24. [Conversational AI Voice Copilot & Gemma LLM Engine (`/ai-copilot`)](file:///e:/B-Map-Backend/apiendpoint.md#24-conversational-ai-voice-copilot--gemma-llm-engine-ai-copilot)
+25. [AI-Powered Data Production & Big-Data Trajectory Mining (`/data-mining` & `/ai-data-mining`)](file:///e:/B-Map-Backend/apiendpoint.md#25-ai-powered-data-production--big-data-trajectory-mining-data-mining--ai-data-mining)
+26. [Unified Underlying Navigation Lifecycle Engine (`/unified` & `/unified-engine`)](file:///e:/B-Map-Backend/apiendpoint.md#26-unified-underlying-navigation-lifecycle-engine-unified--unified-engine)
+27. [4D Dynamic Space Rendering, 3D Digital Twins & 360° Street View (`/spatial-vis` & `/spatial-visualization`)](file:///e:/B-Map-Backend/apiendpoint.md#27-4d-dynamic-space-rendering-3d-digital-twins--360-street-view-spatial-vis--spatial-visualization)
+28. [Unified Lifestyle & Commercial Super-App Ecosystem (`/super-app`)](file:///e:/B-Map-Backend/apiendpoint.md#28-unified-lifestyle--commercial-super-app-ecosystem-super-app)
+29. [Sovereign Indian GIS: ISRO NavIC Dual-Band Processing (`/navic`)](file:///e:/B-Map-Backend/apiendpoint.md#29-sovereign-indian-gis-isro-navic-dual-band-processing-navic)
+30. [Sovereign Indian GIS: NHAI FASTag Electronic Toll Tariffs (`/tolls`)](file:///e:/B-Map-Backend/apiendpoint.md#30-sovereign-indian-gis-nhai-fastag-electronic-toll-tariffs-tolls)
+31. [Sovereign Indian GIS: 6-Digit Department of Posts PINcode Registry (`/pincode`)](file:///e:/B-Map-Backend/apiendpoint.md#31-sovereign-indian-gis-6-digit-department-of-posts-pincode-registry-pincode)
+32. [Sovereign Indian GIS: 4m×4m National DigiPIN Micro-Grid Addressing (`/digipin`)](file:///e:/B-Map-Backend/apiendpoint.md#32-sovereign-indian-gis-4m4m-national-digipin-micro-grid-addressing-digipin)
+33. [Sovereign Indian GIS: Emergency SOS & Highway Trauma Dispatch (`/emergency`)](file:///e:/B-Map-Backend/apiendpoint.md#33-sovereign-indian-gis-emergency-sos--highway-trauma-dispatch-emergency)
+34. [Sovereign Indian GIS: IMD Severe Highway Weather & Fog Advisories (`/weather`)](file:///e:/B-Map-Backend/apiendpoint.md#34-sovereign-indian-gis-imd-severe-highway-weather--fog-advisories-weather)
+35. [Sovereign Indian GIS: 12-Language Vernacular Audio Synthesis (`/vernacular`)](file:///e:/B-Map-Backend/apiendpoint.md#35-sovereign-indian-gis-12-language-vernacular-audio-synthesis-vernacular)
+36. [Connected Vehicle V2X, SPaT & GLOSA Green Wave Advisory (`/v2x`)](file:///e:/B-Map-Backend/apiendpoint.md#36-connected-vehicle-v2x-spat--glosa-green-wave-advisory-v2x)
+37. [Environmental Intelligence: CPCB AQI, Rooftop Solar & Pollen (`/environment`)](file:///e:/B-Map-Backend/apiendpoint.md#37-environmental-intelligence-cpcb-aqi-rooftop-solar--pollen-environment)
+38. [Crowdsourced Road Hazards, Potholes & Speed Breakers (`/hazards`)](file:///e:/B-Map-Backend/apiendpoint.md#38-crowdsourced-road-hazards-potholes--speed-breakers-hazards)
+39. [Differential Privacy & Defense Installation Obfuscation (`/obfuscation`)](file:///e:/B-Map-Backend/apiendpoint.md#39-differential-privacy--defense-installation-obfuscation-obfuscation)
+40. [Survey of India (SOI) Territorial Boundaries & Masking (`/boundaries`)](file:///e:/B-Map-Backend/apiendpoint.md#40-survey-of-india-soi-territorial-boundaries--masking-boundaries)
+41. [Electric Vehicle (EV) Fast Charging Hubs (`/ev` & `/evcharging`)](file:///e:/B-Map-Backend/apiendpoint.md#41-electric-vehicle-ev-fast-charging-hubs-ev--evcharging)
+42. [Municipal City Metered Fares (`/fares`)](file:///e:/B-Map-Backend/apiendpoint.md#42-municipal-city-metered-fares-fares)
+43. [Roads Geometry Snapping & Speed Limits (`/roads`)](file:///e:/B-Map-Backend/apiendpoint.md#43-roads-geometry-snapping--speed-limits-roads)
+44. [Dynamic Vector Tiles & MapLibre Vector Styles (`/maps`, `/tiles`, `/maps-tiles`)](file:///e:/B-Map-Backend/apiendpoint.md#44-dynamic-vector-tiles--maplibre-vector-styles-maps-tiles-maps-tiles)
+45. [Commercial Fleet Telemetry & Dispatch (`/fleet`)](file:///e:/B-Map-Backend/apiendpoint.md#45-commercial-fleet-telemetry--dispatch-fleet)
+46. [Coordinate-to-Timezone Resolution (`/timezone`)](file:///e:/B-Map-Backend/apiendpoint.md#46-coordinate-to-timezone-resolution-timezone)
+47. [User Ratings, Feedback & Community Reviews (`/ratings`)](file:///e:/B-Map-Backend/apiendpoint.md#47-user-ratings-feedback--community-reviews-ratings)
+48. [Enterprise Admin Command Center & Control Portal (`/admin`)](file:///e:/B-Map-Backend/apiendpoint.md#48-enterprise-admin-command-center--control-portal-admin)
+49. [Socket.IO Real-Time Telematics Gateway: 10 Event Domains](file:///e:/B-Map-Backend/apiendpoint.md#49-socketio-real-time-telematics-gateway-10-event-domains)

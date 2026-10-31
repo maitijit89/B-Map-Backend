@@ -112,7 +112,9 @@ docker-compose up --build
 
 ## 📡 REST API Reference
 
-Base URL: `http://localhost:4000/api/v1`
+> 📖 **Authoritative Exhaustive Reference**: For full schema definitions, request payloads, response contracts, and all 49 modular domains, see **[apiendpoint.md](file:///e:/B-Map-Backend/apiendpoint.md)**.
+
+Base URL: `http://localhost:8080/api/v1` (or `http://localhost:4000/api/v1`)
 
 ### 1. Routing Engine (`/routes`)
 - **`GET /routes/directions`**: Turn-by-turn route calculation (cached in Redis).
@@ -359,6 +361,33 @@ Base URL: `http://localhost:4000/api/v1`
 - **`GET /admin/ratings`**: Moderation feed of user ratings and reviews.
 - **`DELETE /admin/ratings/:id`**: Remove inappropriate or spam user review.
 - **`GET /admin/audit-logs`**: Compliance audit trail recording administrative actions, timestamps, and actor details.
+
+### 38. High-Throughput Telemetry Ingestion, Fraud Detection & Async Queue (`/telemetry` & `/telemetry-ingest`)
+- **`POST /telemetry/ingest`**: High-throughput telematics ingestion (single event, array, or batch envelope) supporting ~120 dynamic hardware/IMU/battery metrics, Gzip decompression, and sub-10ms async queue enqueuing returning HTTP 202 Accepted.
+- **`POST /telemetry/batch`**: Dedicated mobile client buffered batch ingestion flushed every 30-60s with batch-level idempotency deduplication.
+- **`POST /telemetry/heartbeat`**: Lightweight periodic keepalive heartbeat ingestion.
+- **`GET /telemetry/stats`**: Operational telemetry statistics (queue depth, consumer throughput, fraud detection rate, session open/stop rate).
+- **`GET /telemetry/logs`**: Paginated query interface for stored telemetry events with device, session, and fraud-detection filters.
+
+### 39. Real-Time Crowdsourced Traffic & Dynamic ETAs (`/traffic`)
+- **`POST /traffic/telemetry`**: Ingests anonymized velocity vectors, computes segment harmonic mean speeds, and dynamically re-weights road network edges.
+- **`POST /traffic/eta`**: Computes turn-by-turn dynamic ETA weighted by travel times strictly in **minutes (not kilometers)** and signal cycle delays.
+- **`POST /traffic/evaluate-anomaly`**: Multi-device DBSCAN clustering and tea-stall outlier filter ($\ge 3$ vehicles required to confirm congestion).
+- **`GET /traffic/graph`**: Directed road network graph topology with intersection wait times.
+- **`GET /traffic/segments`**: Live road segments with BPR congestion levels (`free_flow`, `slow`, `congested`, `severe_gridlock`).
+- **`GET /traffic/predict`**: Blends live telemetry with historical speed distributions across 15-minute time windows.
+- **`GET /traffic/shockwave/:segmentId`**: Macroscopic LWR shockwave velocity ($w = \Delta q / \Delta k$) and junction spillback prediction.
+- **`POST /traffic/eco`**: Physics-based multi-powertrain energy consumption comparison (Petrol, Diesel, EV with regenerative braking).
+- **`POST /traffic/security/anti-spoofing`**: Kinematic plausibility engine blocking GPS teleportation and impossible acceleration ($a > 6.5\text{ m/s}^2$).
+- **`POST /traffic/security/proof-of-presence`**: Issues tamper-proof HMAC-SHA256 signed Proof-of-Presence certificate.
+- **`POST /traffic/security/proof-of-presence/verify`**: Verifies Proof-of-Presence certificates against public key registry.
+
+### 40. App Version Governance & Dynamic OTA Patching (`/app-version` & `/version`)
+- **`GET /app-version/current`**: Authoritative sovereign release version (1.0.0).
+- **`GET /app-version/latest`**: Latest version specifications across client platforms (`web`, `android`, `ios`, `desktop`).
+- **`GET /app-version/check` / `POST /app-version/check`**: Evaluates installed client version against minimum required release and available OTA bundles.
+- **`PATCH /app-version/patch`**: Dynamically mutates client release version, release notes, and OTA JavaScript bundle URLs with real-time WebSocket broadcast.
+- **`POST /app-version/broadcast`**: Manually triggers real-time WebSocket update push across connected frontends.
 
 ---
 
@@ -670,6 +699,9 @@ src/
 │   ├── timezone/                           # Geospatial coordinate to timezone resolver (Asia/Kolkata)
 │   ├── ratings/                            # User ratings and reviews moderation feed
 │   ├── admin/                              # Admin command center, live metrics, and operational overrides
+│   ├── traffic/                            # Real-time BPR speeds, LWR shockwaves, tea-stall outlier filter
+│   ├── app-version/                        # Sovereign release governance, OTA bundle patching & broadcast
+│   ├── telemetry-ingestion/                # High-throughput async worker, 120+ metrics, fraud scoring
 │   └── index.ts                            # Master barrel export for all domain modules
 │
 ├── routes/                                 # Global router mounting modular endpoints (with legacy facades)
